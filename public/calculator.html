@@ -443,24 +443,53 @@ body{
 
 <script>
 var CAR_MODELS = [
-  {id:"saga",   name:"PROTON SAGA",       image:"images/saga.jpg",    video:"cars/saga.mp4",
-   variants:[{name:"1.5 Standard",otr:40400,ins:1410},{name:"1.5 Executive",otr:46570,ins:1580},{name:"1.5 Premium",otr:51710,ins:1720}]},
-  {id:"persona",name:"PROTON PERSONA",    image:"images/persona.jpg",
-   variants:[{name:"1.6 Standard",otr:49560,ins:1760},{name:"1.6 Executive",otr:55220,ins:1920},{name:"1.6 Premium",otr:60360,ins:2060}]},
-  {id:"s70",    name:"PROTON S70",        image:"images/s70.jpg",
-   variants:[{name:"1.5 Executive",otr:76480,ins:2680},{name:"1.5 Premium",otr:82660,ins:2860},{name:"1.5 Flagship",otr:92950,ins:3150},{name:"1.5 Flagship X",otr:98100,ins:3300}]},
-  {id:"x50",    name:"PROTON X50",        image:"images/x50.jpg",     video:"cars/x50.mp4",
-   variants:[{name:"1.5 Executive",otr:92700,ins:2900},{name:"1.5 Premium",otr:105070,ins:3270},{name:"1.5 Flagship",otr:116900,ins:3600}]},
-  {id:"x70",    name:"PROTON X70",        image:"images/x70.jpg",
-   variants:[{name:"1.5 Executive",otr:110320,ins:3520},{name:"1.5 Premium",otr:123680,ins:3880}]},
-  {id:"x90",    name:"PROTON X90",        image:"images/x90.jpg",     video:"cars/x90.mp4",
-   variants:[{name:"Lite",otr:109650,ins:2850},{name:"Prime",otr:119870,ins:3070},{name:"Prime X",otr:126010,ins:3600}]},
-  {id:"emas5",  name:"PROTON e.MAS 5",    image:"images/e5.jpg",
-   variants:[{name:"Prime",otr:62800,ins:2800},{name:"Premium",otr:75800,ins:3000}]},
-  {id:"emas7ev",name:"PROTON e.MAS 7 EV", image:"images/e7.jpg",
-   variants:[{name:"Prime",otr:103800,ins:3379},{name:"Premium",otr:119800,ins:3689},{name:"Premium Plus",otr:125800,ins:3900}]},
+  {id:"saga",   name:"PROTON SAGA",         image:"images/saga.jpg",  video:"cars/saga.mp4",
+   variants:[
+     {name:"Standard 1.5 i-GT 4AT",  otr:40400,  ins:1410},
+     {name:"Executive 1.5 i-GT 4AT", otr:46570,  ins:1580},
+     {name:"Premium 1.5 i-GT CVT",   otr:51710,  ins:1720}]},
+  {id:"persona",name:"PROTON PERSONA",       image:"images/persona.jpg",
+   variants:[
+     {name:"Standard 1.6 CVT",  otr:49560,  ins:1760},
+     {name:"Executive 1.6 CVT", otr:55220,  ins:1920},
+     {name:"Premium 1.6 CVT",   otr:60360,  ins:2060}]},
+  {id:"s70",    name:"PROTON S70",           image:"images/s70.jpg",
+   variants:[
+     {name:"Executive 1.5T i-GT DCT",  otr:76480,  ins:2680},
+     {name:"Premium 1.5T i-GT DCT",    otr:82660,  ins:2860},
+     {name:"Flagship 1.5T i-GT DCT",   otr:92950,  ins:3150},
+     {name:"Flagship X 1.5T i-GT DCT", otr:98100,  ins:3300}]},
+  {id:"x50",    name:"PROTON X50",           image:"images/x50.jpg",  video:"cars/x50.mp4",
+   variants:[
+     {name:"Standard 1.5T i-GT DCT",  otr:86000,  ins:2650},
+     {name:"Executive 1.5T i-GT DCT", otr:92700,  ins:2900},
+     {name:"Premium 1.5T i-GT DCT",   otr:105070, ins:3270},
+     {name:"Flagship 1.5T i-GT DCT",  otr:116900, ins:3600}]},
+  {id:"x70",    name:"PROTON X70",           image:"images/x70.jpg",
+   variants:[
+     {name:"Standard 1.5T i-GT DCT",   otr:102500, ins:3200},
+     {name:"Executive 1.5T i-GT DCT",  otr:110320, ins:3520},
+     {name:"Premium 1.5T i-GT DCT",    otr:123680, ins:3880},
+     {name:"Premium X 1.5T i-GT DCT",  otr:127000, ins:4100}]},
+  {id:"x90",    name:"PROTON X90",           image:"images/x90.jpg",  video:"cars/x90.mp4",
+   variants:[
+     {name:"Executive 1.5T i-GT Hybrid DCT", otr:109650, ins:2850},
+     {name:"Premium 1.5T i-GT Hybrid DCT",   otr:119870, ins:3070},
+     {name:"Flagship 1.5T i-GT Hybrid DCT",  otr:126010, ins:3600}]},
+  {id:"emas5",  name:"PROTON e.MAS 5",       image:"images/e5.jpg",
+   variants:[
+     {name:"Prime EV",   otr:62800, ins:2800},
+     {name:"Premium EV", otr:75800, ins:3000}]},
+  {id:"emas7ev",name:"PROTON e.MAS 7 EV",    image:"images/e7.jpg",
+   variants:[
+     {name:"Prime EV",        otr:103800, ins:3379},
+     {name:"Premium EV",      otr:119800, ins:3689},
+     {name:"Premium Plus EV", otr:125800, ins:3900}]},
   {id:"emas7phev",name:"PROTON e.MAS 7 PHEV",image:"images/e7phev.jpg",
-   variants:[{name:"PHEV Prime",otr:113631,ins:3811},{name:"PHEV Premium",otr:128015,ins:4195},{name:"PHEV Premium Plus",otr:134179,ins:4359}]}
+   variants:[
+     {name:"PHEV Prime",        otr:113631, ins:3811},
+     {name:"PHEV Premium",      otr:128015, ins:4195},
+     {name:"PHEV Premium Plus", otr:134179, ins:4359}]}
 ];
 
 var state = {modelId:"saga",variantIdx:0,otrMode:"dengan",rebate:0,depositSel:"10",customDeposit:0,loanYears:9,interestPct:2.28,ncdPct:0};
