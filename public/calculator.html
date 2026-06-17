@@ -20,7 +20,7 @@ body{
 }
 
 #app{
-  width:100%;max-width:900px;
+  width:100%;max-width:512px;
   background:#0a0a0a;
   box-shadow:0 30px 60px -12px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.04);
   overflow:hidden;
@@ -28,7 +28,8 @@ body{
 
 /* ── HEADER 220px ── */
 #model-header{
-  position:relative;width:100%;height:220px;
+  position:relative;width:100%;
+  aspect-ratio:16/9;
   overflow:hidden;background:#111;
 }
 #model-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -38,29 +39,29 @@ body{
   pointer-events:none;
 }
 #model-title{
-  position:absolute;bottom:12px;left:18px;
-  font-weight:900;font-size:clamp(32px,6vw,56px);
+  position:absolute;bottom:10px;left:14px;
+  font-weight:900;font-size:clamp(16px,5vw,28px);
   text-transform:uppercase;line-height:1;
   text-shadow:0 4px 16px rgba(0,0,0,.6);color:#fff;
 }
 
 /* ── CALC BAR  60×0.8=48px ── */
 #calc-bar{
-  display:flex;align-items:center;gap:10px;
-  padding:0 18px;height:48px;
+  display:flex;align-items:center;gap:8px;
+  padding:0 12px;height:36px;
   background:linear-gradient(90deg,#C62828,#E53935);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.12);
 }
-#calc-bar svg{width:20px;height:20px;color:#fff;flex-shrink:0}
+#calc-bar svg{width:15px;height:15px;color:#fff;flex-shrink:0}
 #calc-bar span{
-  font-weight:900;font-size:16px;
+  font-weight:900;font-size:13px;
   text-transform:uppercase;letter-spacing:.08em;color:#fff;
 }
 
 /* ── TAB BAR  56×0.8=45px — ABOVE input rows ── */
 #tab-bar{
   display:flex;overflow-x:auto;align-items:center;
-  padding:0 10px;gap:5px;height:45px;
+  padding:0 4px;gap:3px;height:auto;min-height:26px;
   background:#111;border-bottom:1px solid rgba(255,255,255,.06);
   scrollbar-width:none;
 }
@@ -68,8 +69,8 @@ body{
 .tab-btn{
   flex-shrink:0;
   font-family:'Montserrat',sans-serif;font-weight:900;
-  font-size:11px;letter-spacing:.04em;
-  padding:7px 13px;border-radius:7px;border:none;
+  font-size:10px;letter-spacing:.04em;
+  padding:8px 4px;border-radius:6px;border:none;
   cursor:pointer;text-transform:uppercase;white-space:nowrap;
   background:#1a1a1a;color:#666;
   transition:all .18s ease;
@@ -84,7 +85,7 @@ body{
 /* ── INPUT ROWS  54×0.8=43px ── */
 .row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;height:43px;
+  padding:6px 12px;height:auto;min-height:30px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);
   transition:transform .15s ease;
 }
@@ -92,11 +93,11 @@ body{
 .row-yellow{background:linear-gradient(90deg,#FDE047,#FACC15)}
 .row-amber {background:linear-gradient(90deg,#FCD34D,#FBBF24)}
 
-.row-label{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.row-label{display:flex;align-items:center;gap:6px;flex-shrink:0}
 /* Input Labels: 20×0.8=16px weight 900 */
-.row-label svg{width:18px;height:18px;color:rgba(0,0,0,.65);flex-shrink:0}
+.row-label svg{width:14px;height:14px;color:rgba(0,0,0,.65);flex-shrink:0}
 .row-label span{
-  font-weight:900;font-size:16px;
+  font-weight:900;font-size:14px;
   text-transform:uppercase;letter-spacing:.04em;color:rgba(0,0,0,.85);
 }
 .row-control{width:50%;min-width:0}
@@ -105,11 +106,12 @@ body{
 .field-select,.field-input{
   appearance:none;-webkit-appearance:none;
   width:100%;border-radius:5px;border:1px solid rgba(0,0,0,.12);
-  padding:5px 28px 5px 10px;
-  font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;
+  padding:2px 22px 2px 8px;
+  font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;
+  height:28px;
   background:rgba(0,0,0,.15);color:#000;cursor:pointer;outline:none;
 }
-.field-input{padding:5px 10px;cursor:text}
+.field-input{padding:2px 8px;height:28px;cursor:text}
 .field-select:focus,.field-input:focus{box-shadow:0 0 0 2px rgba(229,57,53,.35)}
 .select-wrap{position:relative}
 .select-wrap::after{
@@ -120,14 +122,14 @@ body{
 
 /* ── NCD ROW — auto height ── */
 #ncd-row{
-  height:auto;min-height:43px;
-  padding-top:8px;padding-bottom:8px;
-  align-items:center;flex-wrap:wrap;gap:6px;
+  height:auto;min-height:30px;
+  padding-top:6px;padding-bottom:6px;
+  align-items:center;flex-wrap:wrap;gap:4px;
 }
-.ncd-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ncd-btns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .ncd-btn{
-  font-family:'Montserrat',sans-serif;font-weight:900;font-size:13px;
-  padding:5px 11px;border-radius:6px;border:none;cursor:pointer;
+  font-family:'Montserrat',sans-serif;font-weight:900;font-size:11px;
+  padding:4px 8px;border-radius:5px;border:none;cursor:pointer;
   background:#fff;color:#000;
   box-shadow:0 1px 3px rgba(0,0,0,.12);transition:all .18s ease;
 }
@@ -138,31 +140,31 @@ body{
 
 /* ── CUSTOM DEPOSIT ── */
 #custom-row{overflow:hidden;max-height:0;opacity:0;transition:max-height .22s ease,opacity .22s ease}
-#custom-row.visible{max-height:43px;opacity:1}
+#custom-row.visible{max-height:30px;opacity:1}
 
 /* ── OUTPUT ROWS  56×0.8=45px ── */
 .result-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;height:45px;
+  padding:6px 12px;height:auto;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);
 }
 /* Result Labels: 26×0.8=21px weight 900 */
 .result-label{
-  display:flex;align-items:center;gap:8px;
-  font-weight:900;font-size:21px;
+  display:flex;align-items:center;gap:6px;
+  font-weight:900;font-size:13px;
   text-transform:uppercase;letter-spacing:.03em;color:rgba(0,0,0,.8);
 }
-.result-label svg{width:17px;height:17px;color:rgba(0,0,0,.5);flex-shrink:0}
+.result-label svg{width:13px;height:13px;color:rgba(0,0,0,.5);flex-shrink:0}
 /* Result Values: 42×0.8=34px weight 900 */
 .result-value{
-  font-weight:900;font-size:34px;
+  font-weight:900;font-size:16px;
   font-variant-numeric:tabular-nums;color:#000;white-space:nowrap;
 }
 
 /* ── MONTHLY BOX  120×0.8=96px ── */
 #monthly-box{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 22px;height:96px;
+  padding:24px 20px;height:auto;
   background:#E53935;position:relative;overflow:hidden;
 }
 #monthly-box::before{
@@ -179,20 +181,20 @@ body{
 .monthly-left{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
 /* MONTHLY: 50×0.8=40px weight 900 */
 .monthly-title{
-  font-weight:900;font-size:40px;
+  font-weight:900;font-size:30px;
   text-transform:uppercase;letter-spacing:.06em;line-height:1;
   color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.22);
 }
 /* BULAN: 24×0.8=19px weight 800 */
 .monthly-bulan{
-  font-weight:800;font-size:19px;
+  font-weight:800;font-size:13px;
   text-transform:uppercase;letter-spacing:.1em;
-  color:rgba(255,255,255,.75);margin-top:4px;line-height:1;
+  color:rgba(255,255,255,.75);margin-top:3px;line-height:1;
 }
 .monthly-right{position:relative;z-index:1;text-align:right}
 /* Monthly Value: 96×0.8=77px weight 900 */
 #monthly-value{
-  font-weight:900;font-size:77px;
+  font-weight:900;font-size:48px;
   letter-spacing:-.02em;line-height:1;
   text-shadow:0 4px 14px rgba(0,0,0,.28);
   font-variant-numeric:tabular-nums;color:#fff;display:inline-block;
@@ -201,7 +203,7 @@ body{
 @keyframes pop{0%{transform:scale(.88);opacity:.5}100%{transform:scale(1);opacity:1}}
 
 /* ── FOOTER ── */
-#footer{text-align:center;padding:12px 0 16px;background:#0a0a0a}
+#footer{text-align:center;padding:8px 0 10px;background:#0a0a0a}
 #footer p:first-child{font-weight:700;font-size:11px;color:#555;letter-spacing:.06em;text-transform:uppercase}
 #footer p:last-child{font-weight:700;font-size:9px;color:#444;margin-top:3px}
 
