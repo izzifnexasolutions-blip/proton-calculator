@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Media Settings — Proton Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:24px 16px 48px}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.page-header h1{font-size:22px;font-weight:800;letter-spacing:.02em}
+.page-header p{font-size:12px;color:#555;margin-top:3px}
+.back{color:#555;font-size:13px;text-decoration:none;padding:8px 14px;border:1px solid #222;border-radius:8px;display:inline-block}
+.back:hover{color:#fff;border-color:#444}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{background:#141414;border:1px solid #222;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card-title{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#ccc;display:flex;align-items:center;gap:6px}
+.badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}
+.badge-custom{background:#1d4ed820;color:#60a5fa;border:1px solid #1d4ed850}
+.badge-default{background:#1f1f1f;color:#444;border:1px solid #2a2a2a}
+.preview{width:100%;aspect-ratio:16/9;background:#0f0f0f;border-radius:10px;overflow:hidden;border:1px solid #1f1f1f;position:relative}
+.preview img,.preview video{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.preview .empty{display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:11px}
+.actions{display:flex;gap:6px}
+.btn{padding:8px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;flex:1}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn-choose{background:#1f1f1f;color:#ccc}
+.btn-save{background:#2563eb;color:#fff}
+.btn-remove{background:#1f1f1f;color:#ef4444;flex:0 0 auto;padding:8px 10px}
+.filename{font-size:10px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:13px}
+.status{font-size:10px;min-height:13px;font-weight:600}
+.status.ok{color:#22c55e}
+.status.err{color:#ef4444}
+input[type=file]{display:none}
+.note{background:#111;border:1px solid #1f1f1f;border-radius:10px;padding:14px 16px;font-size:11px;color:#555;line-height:1.6;margin-bottom:20px}
+.note strong{color:#888}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <div><h1>⚙ Media Settings</h1><p>Upload images or videos for each model. No code editing needed.</p></div>
+  <a href="/calculator.html" class="back">← Back to Calculator</a>
+</div>
+<div class="note"><strong>How it works:</strong> Choose File → Save → Open calculator. Supported: <strong>jpg · jpeg · png · webp · mp4</strong>. Media stored in your browser.</div>
+<div class="grid" id="grid"></div>
+<script>
+const MODELS=[
+  {id:'saga',     label:'PROTON SAGA',        def:'images/saga.jpg'},
+  {id:'persona',  label:'PROTON PERSONA',      def:'images/persona.jpg'},
+  {id:'s70',      label:'PROTON S70',          def:'images/s70.jpg'},
+  {id:'x50',      label:'PROTON X50',          def:'images/x50.jpg'},
+  {id:'x70',      label:'PROTON X70',          def:'images/x70.jpg'},
+  {id:'x90',      label:'PROTON X90',          def:'images/x90.jpg'},
+  {id:'emas5',    label:'PROTON e.MAS 5',      def:'images/e5.jpg'},
+  {id:'emas7ev',  label:'PROTON e.MAS 7 EV',   def:'images/e7.jpg'},
+  {id:'emas7phev',label:'PROTON e.MAS 7 PHEV', def:'images/e7phev.jpg'},
+];
+let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('ProtonMediaDB',1);r.onupgradeneeded=e=>e.target.result.createObjectStore('media',{keyPath:'id'});r.onsuccess=e=>{db=e.target.result;res(db)};r.onerror=e=>rej(e)});}
+function dbGet(id){return new Promise(res=>{const r=db.transaction('media').objectStore('media').get(id);r.onsuccess=e=>res(e.target.result||null);r.onerror=()=>res(null)});}
+function dbPut(id,file){return new Promise((res,rej)=>{const tx=db.transaction('media','readwrite');tx.objectStore('media').put({id,blob:file,type:file.type,name:file.name});tx.oncomplete=res;tx.onerror=rej});}
+function dbDel(id){return new Promise((res,rej)=>{const tx=db.transaction('media','readwrite');tx.objectStore('media').delete(id);tx.oncomplete=res;tx.onerror=rej});}
+function mkPreview(src,type){
+  const w=document.createElement('div');w.className='preview';
+  if(!src){w.innerHTML='<div class="empty">NO MEDIA</div>';return w;}
+  if(type&&type.startsWith('video/')){const v=document.createElement('video');v.src=src;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;w.appendChild(v);}
+  else{const i=document.createElement('img');i.src=src;w.appendChild(i);}
+  return w;
+}
+function buildCard(m,record){
+  const card=document.createElement('div');card.className='card';card.id='card-'+m.id;
+  let pending=null,objURL=null;
+  const isCustom=!!record;
+  const title=document.createElement('div');title.className='card-title';
+  title.innerHTML=`${m.label} <span class="badge ${isCustom?'badge-custom':'badge-default'}">${isCustom?'CUSTOM':'DEFAULT'}</span>`;
+  card.appendChild(title);
+  const pw=document.createElement('div');pw.id='pw-'+m.id;
+  const initSrc=record?URL.createObjectURL(record.blob):m.def;
+  pw.appendChild(mkPreview(initSrc,record?record.type:'image/jpeg'));
+  card.appendChild(pw);
+  const fi=document.createElement('input');fi.type='file';fi.accept='image/jpeg,image/png,image/webp,video/mp4';card.appendChild(fi);
+  const actions=document.createElement('div');actions.className='actions';
+  const bChoose=document.createElement('button');bChoose.className='btn btn-choose';bChoose.textContent='📂 Choose File';
+  const bSave=document.createElement('button');bSave.className='btn btn-save';bSave.textContent='💾 Save';bSave.disabled=true;
+  const bRem=document.createElement('button');bRem.className='btn btn-remove';bRem.title='Remove';bRem.textContent='✕';bRem.disabled=!isCustom;
+  actions.appendChild(bChoose);actions.appendChild(bSave);actions.appendChild(bRem);card.appendChild(actions);
+  const fname=document.createElement('div');fname.className='filename';if(record)fname.textContent=record.name||'';card.appendChild(fname);
+  const status=document.createElement('div');status.className='status';card.appendChild(status);
+  bChoose.onclick=()=>fi.click();
+  fi.onchange=function(){
+    const f=this.files[0];if(!f)return;pending=f;
+    if(objURL)URL.revokeObjectURL(objURL);objURL=URL.createObjectURL(f);
+    const p=document.getElementById('pw-'+m.id);p.innerHTML='';p.appendChild(mkPreview(objURL,f.type));
+    fname.textContent=f.name+' ('+(f.size/1024).toFixed(0)+' KB)';bSave.disabled=false;status.textContent='';status.className='status';
+  };
+  bSave.onclick=async function(){
+    if(!pending)return;bSave.disabled=true;bSave.textContent='⏳ Saving…';
+    try{await dbPut(m.id,pending);status.textContent='✓ Saved! Open calculator to see it.';status.className='status ok';
+    title.innerHTML=`${m.label} <span class="badge badge-custom">CUSTOM</span>`;bRem.disabled=false;pending=null;bSave.textContent='💾 Save';}
+    catch(e){status.textContent='✗ Error. Try smaller file.';status.className='status err';bSave.disabled=false;bSave.textContent='💾 Save';}
+  };
+  bRem.onclick=async function(){
+    if(!confirm('Remove custom media for '+m.label+'?'))return;
+    await dbDel(m.id);pending=null;if(objURL){URL.revokeObjectURL(objURL);objURL=null;}
+    const nc=buildCard(m,null);card.parentNode.replaceChild(nc,card);
+    nc.querySelector('.status').textContent='✓ Removed. Using default.';nc.querySelector('.status').className='status ok';
+  };
+  return card;
+}
+async function init(){
+  await openDB();const grid=document.getElementById('grid');
+  for(const m of MODELS){const r=await dbGet(m.id);grid.appendChild(buildCard(m,r));}
+}
+init();
+</script>
+</body>
+</html>
