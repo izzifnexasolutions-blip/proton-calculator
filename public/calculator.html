@@ -505,9 +505,9 @@ var CAR_MODELS = [
      {name:"Premium X 1.5T i-GT DCT",  otr:127000, ins:4100}]},
   {id:"x90",    name:"PROTON X90",           image:"images/x90.jpg",  video:"cars/x90.mp4",
    variants:[
-     {name:"Executive 1.5T i-GT Hybrid DCT", otr:109650, ins:2850},
-     {name:"Premium 1.5T i-GT Hybrid DCT",   otr:119870, ins:3070},
-     {name:"Flagship 1.5T i-GT Hybrid DCT",  otr:126010, ins:3600}]},
+     {name:"Lite 1.5",    otr:109650, ins:2850},
+     {name:"Prime 1.5",   otr:119870, ins:3070},
+     {name:"Prime X 1.5", otr:126010, ins:3600}]},
   {id:"emas5",  name:"PROTON e.MAS 5",       image:"images/e5.jpg",
    variants:[
      {name:"Prime EV",   otr:62800, ins:2800},
@@ -524,7 +524,9 @@ var CAR_MODELS = [
      {name:"PHEV Premium Plus", otr:134179, ins:4359}]}
 ];
 
-var state = {modelId:"saga",variantIdx:0,otrMode:"dengan",rebate:0,depositSel:"10",customDeposit:0,loanYears:9,interestPct:2.28,ncdPct:0};
+var state = {modelId:"saga",variantIdx:0,otrMode:"dengan",rebateByVariant:{},depositSel:"10",customDeposit:0,loanYears:9,interestPct:2.28,ncdPct:0};
+function _rebateKey(){return state.modelId+'_'+state.variantIdx;}
+function _getRebate(){return state.rebateByVariant[_rebateKey()]||0;}
 
 function getModel(){return CAR_MODELS.find(function(m){return m.id===state.modelId})}
 
@@ -534,7 +536,7 @@ function calc(){
   var baseIns=v.ins;
   var selling=v.otr - baseIns;
   var insurance=state.otrMode==="dengan" ? Math.round(baseIns*(1-state.ncdPct/100)) : 0;
-  var otr=selling+insurance-state.rebate;
+  var otr=selling+insurance-_getRebate();
   var dp=0;
   if(state.depositSel==="custom") dp=state.customDeposit;
   else if(state.depositSel==="0") dp=0;
@@ -646,6 +648,8 @@ function render(){
     sel.innerHTML=m.variants.map(function(v,i){return'<option value="'+i+'">'+v.name+'</option>'}).join("");
   }
   sel.value=state.variantIdx;
+  /* rebate — load per model+variant */
+  document.getElementById("input-rebate").value=_getRebate()||'';
   /* custom row */
   document.getElementById("custom-row").classList.toggle("visible",state.depositSel==="custom");
   /* tabs */
@@ -782,7 +786,7 @@ function init(){
   /* inputs */
   document.getElementById("select-variant").addEventListener("change",function(e){state.variantIdx=Number(e.target.value);render()});
   document.getElementById("select-otr").addEventListener("change",function(e){state.otrMode=e.target.value;render()});
-  document.getElementById("input-rebate").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.rebate=isNaN(v)||v<0?0:v;render()});
+  document.getElementById("input-rebate").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.rebateByVariant[_rebateKey()]=isNaN(v)||v<0?0:v;render()});
   document.getElementById("select-deposit").addEventListener("change",function(e){state.depositSel=e.target.value;render()});
   document.getElementById("input-custom-deposit").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.customDeposit=isNaN(v)||v<0?0:v;render()});
   document.getElementById("select-years").addEventListener("change",function(e){state.loanYears=Number(e.target.value);render()});
