@@ -8,870 +8,550 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-  body {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    background: #000;
-    color: #fff;
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-    min-height: 100dvh;
-    display: flex;
-    justify-content: center;
-  }
+body{
+  font-family:'Montserrat',sans-serif;
+  background:#000;color:#fff;
+  overscroll-behavior-y:none;
+  -webkit-tap-highlight-color:transparent;
+  min-height:100dvh;
+  display:flex;justify-content:center;
+}
 
-  #app {
-    width: 100%;
-    max-width: 900px;
-    background: #0a0a0a;
-    box-shadow: 0 30px 60px -12px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.04);
-    overflow: hidden;
-  }
+#app{
+  width:100%;max-width:900px;
+  background:#0a0a0a;
+  box-shadow:0 30px 60px -12px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.04);
+  overflow:hidden;
+}
 
-  /* ── VIDEO / IMAGE HEADER ── */
-  #model-header {
-    position: relative;
-    width: 100%;
-    height: 220px;
-    overflow: hidden;
-    background: #111;
-  }
+/* ── HEADER 220px ── */
+#model-header{
+  position:relative;width:100%;height:220px;
+  overflow:hidden;background:#111;
+}
+#model-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#header-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 55%,transparent 100%);
+  pointer-events:none;
+}
+#model-title{
+  position:absolute;bottom:12px;left:18px;
+  font-weight:900;font-size:clamp(32px,6vw,56px);
+  text-transform:uppercase;line-height:1;
+  text-shadow:0 4px 16px rgba(0,0,0,.6);color:#fff;
+}
 
-  #model-media {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+/* ── CALC BAR  60×0.8=48px ── */
+#calc-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:0 18px;height:48px;
+  background:linear-gradient(90deg,#C62828,#E53935);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.12);
+}
+#calc-bar svg{width:20px;height:20px;color:#fff;flex-shrink:0}
+#calc-bar span{
+  font-weight:900;font-size:16px;
+  text-transform:uppercase;letter-spacing:.08em;color:#fff;
+}
 
-  #header-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.15) 55%, transparent 100%);
-    pointer-events: none;
-  }
+/* ── TAB BAR  56×0.8=45px — ABOVE input rows ── */
+#tab-bar{
+  display:flex;overflow-x:auto;align-items:center;
+  padding:0 10px;gap:5px;height:45px;
+  background:#111;border-bottom:1px solid rgba(255,255,255,.06);
+  scrollbar-width:none;
+}
+#tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{
+  flex-shrink:0;
+  font-family:'Montserrat',sans-serif;font-weight:900;
+  font-size:11px;letter-spacing:.04em;
+  padding:7px 13px;border-radius:7px;border:none;
+  cursor:pointer;text-transform:uppercase;white-space:nowrap;
+  background:#1a1a1a;color:#666;
+  transition:all .18s ease;
+}
+.tab-btn.active{
+  background:#E53935;color:#fff;
+  box-shadow:0 2px 8px rgba(229,57,53,.35);
+  transform:scale(1.05);
+}
+.tab-btn:active{transform:scale(.94)}
 
-  #model-title {
-    position: absolute;
-    bottom: 14px;
-    left: 20px;
-    font-weight: 900;
-    font-size: clamp(40px, 7vw, 68px);
-    text-transform: uppercase;
-    line-height: 1;
-    text-shadow: 0 4px 16px rgba(0,0,0,.6);
-    color: #fff;
-  }
+/* ── INPUT ROWS  54×0.8=43px ── */
+.row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;height:43px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);
+  transition:transform .15s ease;
+}
+.row:hover{transform:translateY(-1px)}
+.row-yellow{background:linear-gradient(90deg,#FDE047,#FACC15)}
+.row-amber {background:linear-gradient(90deg,#FCD34D,#FBBF24)}
 
-  /* ── CALC BAR — height: 60px per spec ── */
-  #calc-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 20px;
-    height: 60px;
-    background: linear-gradient(90deg, #C62828, #E53935);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.2);
-  }
+.row-label{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* Input Labels: 20×0.8=16px weight 900 */
+.row-label svg{width:18px;height:18px;color:rgba(0,0,0,.65);flex-shrink:0}
+.row-label span{
+  font-weight:900;font-size:16px;
+  text-transform:uppercase;letter-spacing:.04em;color:rgba(0,0,0,.85);
+}
+.row-control{width:50%;min-width:0}
 
-  #calc-bar svg { width: 24px; height: 24px; color: #fff; flex-shrink: 0; }
+/* Input values: 20×0.8=16px weight 800 */
+.field-select,.field-input{
+  appearance:none;-webkit-appearance:none;
+  width:100%;border-radius:5px;border:1px solid rgba(0,0,0,.12);
+  padding:5px 28px 5px 10px;
+  font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;
+  background:rgba(0,0,0,.15);color:#000;cursor:pointer;outline:none;
+}
+.field-input{padding:5px 10px;cursor:text}
+.field-select:focus,.field-input:focus{box-shadow:0 0 0 2px rgba(229,57,53,.35)}
+.select-wrap{position:relative}
+.select-wrap::after{
+  content:'';position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:6px solid rgba(0,0,0,.5);pointer-events:none;
+}
 
-  #calc-bar span {
-    font-weight: 900;
-    font-size: 20px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #fff;
-    text-shadow: 0 1px 0 rgba(255,255,255,.25), 0 2px 8px rgba(0,0,0,.25);
-  }
+/* ── NCD ROW — auto height ── */
+#ncd-row{
+  height:auto;min-height:43px;
+  padding-top:8px;padding-bottom:8px;
+  align-items:center;flex-wrap:wrap;gap:6px;
+}
+.ncd-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ncd-btn{
+  font-family:'Montserrat',sans-serif;font-weight:900;font-size:13px;
+  padding:5px 11px;border-radius:6px;border:none;cursor:pointer;
+  background:#fff;color:#000;
+  box-shadow:0 1px 3px rgba(0,0,0,.12);transition:all .18s ease;
+}
+.ncd-btn.active{
+  background:#E53935;color:#fff;
+  box-shadow:0 2px 8px rgba(229,57,53,.38);transform:scale(1.06);
+}
 
-  /* ── INPUT ROWS — height: 54px per spec ── */
-  .row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    height: 54px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.08);
-    transition: transform .2s ease, box-shadow .2s ease;
-  }
+/* ── CUSTOM DEPOSIT ── */
+#custom-row{overflow:hidden;max-height:0;opacity:0;transition:max-height .22s ease,opacity .22s ease}
+#custom-row.visible{max-height:43px;opacity:1}
 
-  .row:hover {
-    transform: translateY(-1px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.32), inset 0 -1px 0 rgba(0,0,0,.1), 0 4px 12px rgba(0,0,0,.12);
-  }
+/* ── OUTPUT ROWS  56×0.8=45px ── */
+.result-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;height:45px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);
+}
+/* Result Labels: 26×0.8=21px weight 900 */
+.result-label{
+  display:flex;align-items:center;gap:8px;
+  font-weight:900;font-size:21px;
+  text-transform:uppercase;letter-spacing:.03em;color:rgba(0,0,0,.8);
+}
+.result-label svg{width:17px;height:17px;color:rgba(0,0,0,.5);flex-shrink:0}
+/* Result Values: 42×0.8=34px weight 900 */
+.result-value{
+  font-weight:900;font-size:34px;
+  font-variant-numeric:tabular-nums;color:#000;white-space:nowrap;
+}
 
-  .row-yellow { background: linear-gradient(90deg, #FDE047, #FACC15); }
-  .row-amber  { background: linear-gradient(90deg, #FCD34D, #FBBF24); }
+/* ── MONTHLY BOX  120×0.8=96px ── */
+#monthly-box{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;height:96px;
+  background:#E53935;position:relative;overflow:hidden;
+}
+#monthly-box::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 45%);
+  pointer-events:none;
+}
+#monthly-box::after{
+  content:'';position:absolute;bottom:-24px;right:-24px;
+  width:160px;height:160px;
+  background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.monthly-left{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
+/* MONTHLY: 50×0.8=40px weight 900 */
+.monthly-title{
+  font-weight:900;font-size:40px;
+  text-transform:uppercase;letter-spacing:.06em;line-height:1;
+  color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.22);
+}
+/* BULAN: 24×0.8=19px weight 800 */
+.monthly-bulan{
+  font-weight:800;font-size:19px;
+  text-transform:uppercase;letter-spacing:.1em;
+  color:rgba(255,255,255,.75);margin-top:4px;line-height:1;
+}
+.monthly-right{position:relative;z-index:1;text-align:right}
+/* Monthly Value: 96×0.8=77px weight 900 */
+#monthly-value{
+  font-weight:900;font-size:77px;
+  letter-spacing:-.02em;line-height:1;
+  text-shadow:0 4px 14px rgba(0,0,0,.28);
+  font-variant-numeric:tabular-nums;color:#fff;display:inline-block;
+}
+#monthly-value.pop{animation:pop .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{0%{transform:scale(.88);opacity:.5}100%{transform:scale(1);opacity:1}}
 
-  .row-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
+/* ── FOOTER ── */
+#footer{text-align:center;padding:12px 0 16px;background:#0a0a0a}
+#footer p:first-child{font-weight:700;font-size:11px;color:#555;letter-spacing:.06em;text-transform:uppercase}
+#footer p:last-child{font-weight:700;font-size:9px;color:#444;margin-top:3px}
 
-  /* Input Labels: 20px weight 900 per spec */
-  .row-label svg { width: 22px; height: 22px; color: rgba(0,0,0,.65); flex-shrink: 0; }
-
-  .row-label span {
-    font-weight: 900;
-    font-size: 20px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: rgba(0,0,0,.85);
-  }
-
-  .row-control { width: 50%; min-width: 0; }
-
-  /* ── SELECT / INPUT — value: 20px weight 800 per spec ── */
-  .field-select, .field-input {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 100%;
-    border-radius: 6px;
-    border: 1px solid rgba(0,0,0,.12);
-    padding: 6px 32px 6px 12px;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 800;
-    font-size: 20px;
-    background: rgba(0,0,0,.15);
-    color: #000;
-    cursor: pointer;
-    outline: none;
-  }
-
-  .field-input { padding: 6px 12px; cursor: text; }
-
-  .field-select:focus, .field-input:focus {
-    box-shadow: 0 0 0 2px rgba(229,57,53,.35);
-  }
-
-  .select-wrap { position: relative; }
-
-  .select-wrap::after {
-    content: '';
-    position: absolute;
-    right: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0; height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 7px solid rgba(0,0,0,.5);
-    pointer-events: none;
-  }
-
-  /* ── NCD ROW — auto height for buttons ── */
-  #ncd-row {
-    height: auto;
-    min-height: 54px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .ncd-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-
-  .ncd-btn {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900;
-    font-size: 15px;
-    padding: 6px 13px;
-    border-radius: 7px;
-    border: none;
-    cursor: pointer;
-    background: #fff;
-    color: #000;
-    box-shadow: 0 1px 3px rgba(0,0,0,.12);
-    transition: all .2s ease;
-  }
-
-  .ncd-btn.active {
-    background: #E53935;
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(229,57,53,.38);
-    transform: scale(1.06);
-  }
-
-  /* ── CUSTOM DEPOSIT ROW ── */
-  #custom-row {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height .22s ease, opacity .22s ease;
-    opacity: 0;
-  }
-
-  #custom-row.visible { max-height: 54px; opacity: 1; }
-
-  /* ── OUTPUT ROWS — height: 56px per spec ── */
-  .result-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    height: 56px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.08);
-  }
-
-  /* Result Labels: 26px weight 900 per spec */
-  .result-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 900;
-    font-size: 26px;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    color: rgba(0,0,0,.8);
-  }
-
-  .result-label svg { width: 20px; height: 20px; color: rgba(0,0,0,.5); flex-shrink: 0; }
-
-  /* Result Values: 42px weight 900 per spec */
-  .result-value {
-    font-weight: 900;
-    font-size: 42px;
-    font-variant-numeric: tabular-nums;
-    color: #000;
-    white-space: nowrap;
-  }
-
-  /* ── MONTHLY BOX — height: 120px per spec ── */
-  #monthly-box {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    height: 120px;
-    background: #E53935;
-    position: relative;
-    overflow: hidden;
-  }
-
-  #monthly-box::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 45%);
-    pointer-events: none;
-  }
-
-  #monthly-box::after {
-    content: '';
-    position: absolute;
-    bottom: -30px;
-    right: -30px;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .monthly-left { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; }
-
-  /* MONTHLY: 50px weight 900 per spec */
-  .monthly-title {
-    font-weight: 900;
-    font-size: 50px;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    line-height: 1;
-    color: #fff;
-    text-shadow: 0 3px 10px rgba(0,0,0,.22);
-  }
-
-  /* 108 BULAN: 24px weight 800 per spec */
-  .monthly-bulan {
-    font-weight: 800;
-    font-size: 24px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: rgba(255,255,255,.75);
-    margin-top: 6px;
-    line-height: 1;
-  }
-
-  .monthly-right { position: relative; z-index: 1; text-align: right; }
-
-  /* Monthly Value: 96px weight 900 per spec */
-  #monthly-value {
-    font-weight: 900;
-    font-size: 96px;
-    letter-spacing: -.02em;
-    text-shadow: 0 4px 14px rgba(0,0,0,.28);
-    font-variant-numeric: tabular-nums;
-    color: #fff;
-    display: inline-block;
-    line-height: 1;
-  }
-
-  #monthly-value.pop {
-    animation: pop .35s cubic-bezier(.34,1.56,.64,1);
-  }
-
-  @keyframes pop {
-    0%   { transform: scale(.88); opacity: .5; }
-    100% { transform: scale(1);   opacity: 1; }
-  }
-
-  /* ── TAB BAR — height: 56px per spec ── */
-  #tab-bar {
-    display: flex;
-    overflow-x: auto;
-    align-items: center;
-    padding: 0 12px;
-    gap: 6px;
-    height: 56px;
-    background: #0a0a0a;
-    scrollbar-width: none;
-  }
-  #tab-bar::-webkit-scrollbar { display: none; }
-
-  .tab-btn {
-    flex-shrink: 0;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900;
-    font-size: 13px;
-    letter-spacing: .04em;
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    text-transform: uppercase;
-    white-space: nowrap;
-    background: #111;
-    color: #777;
-    transition: all .2s ease;
-  }
-
-  .tab-btn.active {
-    background: #E53935;
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(229,57,53,.32);
-    transform: scale(1.04);
-  }
-
-  .tab-btn:active { transform: scale(.95); }
-
-  /* ── FOOTER ── */
-  #footer {
-    text-align: center;
-    padding: 14px 0 18px;
-    background: #0a0a0a;
-  }
-
-  #footer p:first-child {
-    font-weight: 700;
-    font-size: 12px;
-    color: #555;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-
-  #footer p:last-child {
-    font-weight: 700;
-    font-size: 10px;
-    color: #444;
-    margin-top: 3px;
-  }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 520px) {
-    .row-label span { font-size: 13px; }
-    .field-select, .field-input { font-size: 13px; }
-    .result-label { font-size: 17px; }
-    .result-value { font-size: 26px; }
-    .monthly-title { font-size: 32px; }
-    .monthly-bulan { font-size: 15px; }
-    #monthly-value { font-size: 58px; }
-    #monthly-box { height: 96px; padding: 0 16px; }
-    .result-row { height: 50px; }
-    .row { height: 46px; }
-    #calc-bar { height: 52px; }
-    #tab-bar { height: 50px; }
-  }
+/* ── RESPONSIVE ── */
+@media(max-width:480px){
+  .row-label span{font-size:11px}
+  .field-select,.field-input{font-size:11px}
+  .result-label{font-size:14px}
+  .result-value{font-size:22px}
+  .monthly-title{font-size:28px}
+  .monthly-bulan{font-size:13px}
+  #monthly-value{font-size:52px}
+  #monthly-box{height:76px;padding:0 14px}
+  .result-row{height:40px}
+  .row{height:38px}
+}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- VIDEO / IMAGE HEADER -->
-  <div id="model-header">
-    <img id="model-media" src="" alt="" />
-    <div id="header-overlay"></div>
-    <div id="model-title"></div>
-  </div>
-
-  <!-- CALC BAR -->
-  <div id="calc-bar">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="14"/><line x1="16" x2="16" y1="18" y2="18"/><line x1="8" x2="12" y1="14" y2="14"/><line x1="8" x2="12" y1="18" y2="18"/><line x1="12" x2="12" y1="14" y2="14"/></svg>
-    <span id="calc-bar-title"></span>
-  </div>
-
-  <!-- INPUT ROWS -->
-  <div id="input-rows">
-
-    <!-- VARIAN -->
-    <div class="row row-yellow">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-        <span>VARIAN</span>
-      </div>
-      <div class="row-control select-wrap">
-        <select id="select-variant" class="field-select"></select>
-      </div>
-    </div>
-
-    <!-- OTR MODE -->
-    <div class="row row-amber">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>OTR MODE</span>
-      </div>
-      <div class="row-control select-wrap">
-        <select id="select-otr" class="field-select">
-          <option value="dengan">Dengan Insurans</option>
-          <option value="tanpa">Tanpa Insurans</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- REBATE -->
-    <div class="row row-yellow">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-        <span>REBATE</span>
-      </div>
-      <div class="row-control">
-        <input id="input-rebate" type="number" class="field-input" placeholder="0" min="0" />
-      </div>
-    </div>
-
-    <!-- JENIS DEPOSIT -->
-    <div class="row row-amber">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-        <span>JENIS DEPOSIT</span>
-      </div>
-      <div class="row-control select-wrap">
-        <select id="select-deposit" class="field-select">
-          <option value="0">Full Loan</option>
-          <option value="10" selected>10%</option>
-          <option value="20">20%</option>
-          <option value="30">30%</option>
-          <option value="40">40%</option>
-          <option value="50">50%</option>
-          <option value="60">60%</option>
-          <option value="70">70%</option>
-          <option value="10000">10,000</option>
-          <option value="15000">15,000</option>
-          <option value="20000">20,000</option>
-          <option value="25000">25,000</option>
-          <option value="30000">30,000</option>
-          <option value="custom">Custom Deposit</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- CUSTOM DEPOSIT (hidden) -->
-    <div id="custom-row">
-      <div class="row row-amber" style="height:54px">
-        <div class="row-label">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
-          <span>CUSTOM (RM)</span>
-        </div>
-        <div class="row-control">
-          <input id="input-custom-deposit" type="number" class="field-input" placeholder="0" min="0" />
-        </div>
-      </div>
-    </div>
-
-    <!-- TAHUN LOAN -->
-    <div class="row row-yellow">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-        <span>TAHUN LOAN</span>
-      </div>
-      <div class="row-control select-wrap">
-        <select id="select-years" class="field-select">
-          <option value="1">1 tahun</option>
-          <option value="2">2 tahun</option>
-          <option value="3">3 tahun</option>
-          <option value="4">4 tahun</option>
-          <option value="5">5 tahun</option>
-          <option value="6">6 tahun</option>
-          <option value="7">7 tahun</option>
-          <option value="8">8 tahun</option>
-          <option value="9" selected>9 tahun</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- INTEREST % -->
-    <div class="row row-amber">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-        <span>INTEREST %</span>
-      </div>
-      <div class="row-control">
-        <input id="input-interest" type="number" class="field-input" value="2.28" min="0" step="0.01" />
-      </div>
-    </div>
-
-    <!-- NCD % -->
-    <div class="row row-yellow" id="ncd-row">
-      <div class="row-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>NCD %</span>
-      </div>
-      <div class="ncd-btns" id="ncd-btns"></div>
-    </div>
-
-  </div><!-- /input-rows -->
-
-  <!-- OUTPUT ROWS -->
-  <div id="output-rows">
-
-    <div class="result-row" style="background:#CFE8A9">
-      <div class="result-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-        SELLING PRICE
-      </div>
-      <div class="result-value" id="out-selling"></div>
-    </div>
-
-    <div class="result-row" style="background:#B8E0F0">
-      <div class="result-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        INSURANCE EST.
-      </div>
-      <div class="result-value" id="out-insurance"></div>
-    </div>
-
-    <div class="result-row" style="background:#FFD200">
-      <div class="result-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-        OTR PRICE
-      </div>
-      <div class="result-value" id="out-otr"></div>
-    </div>
-
-    <div class="result-row" style="background:#F0B8D0">
-      <div class="result-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
-        DOWNPAYMENT
-      </div>
-      <div class="result-value" id="out-dp"></div>
-    </div>
-
-    <div class="result-row" style="background:#A8D8F0">
-      <div class="result-label">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-        LOAN AMOUNT
-      </div>
-      <div class="result-value" id="out-loan"></div>
-    </div>
-
-  </div>
-
-  <!-- MONTHLY BOX -->
-  <div id="monthly-box">
-    <div class="monthly-left">
-      <div class="monthly-title">MONTHLY</div>
-      <div class="monthly-bulan" id="monthly-bulan">108 BULAN</div>
-    </div>
-    <div class="monthly-right">
-      <span id="monthly-value">0.00</span>
-    </div>
-  </div>
-
-  <!-- TAB BAR -->
-  <div id="tab-bar"></div>
-
-  <!-- FOOTER -->
-  <div id="footer">
-    <p>Fariz Proton Cacu Calculator</p>
-    <p>* Anggaran sahaja. Harga tertakluk kepada terma dan syarat.</p>
-  </div>
-
+<!-- HEADER -->
+<div id="model-header">
+  <img id="model-media" src="" alt="" />
+  <div id="header-overlay"></div>
+  <div id="model-title">PROTON SAGA</div>
 </div>
 
+<!-- CALC BAR -->
+<div id="calc-bar">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="14"/><line x1="16" x2="16" y1="18" y2="18"/><line x1="8" x2="12" y1="14" y2="14"/><line x1="8" x2="12" y1="18" y2="18"/><line x1="12" x2="12" y1="14" y2="14"/></svg>
+  <span id="calc-bar-title">PROTON SAGA CALCULATOR</span>
+</div>
+
+<!-- TAB BAR — car selection, above inputs -->
+<div id="tab-bar">
+  <button class="tab-btn active" data-id="saga">SAGA</button>
+  <button class="tab-btn" data-id="persona">PERSONA</button>
+  <button class="tab-btn" data-id="s70">S70</button>
+  <button class="tab-btn" data-id="x50">X50</button>
+  <button class="tab-btn" data-id="x70">X70</button>
+  <button class="tab-btn" data-id="x90">X90</button>
+  <button class="tab-btn" data-id="emas5">E.MAS 5</button>
+  <button class="tab-btn" data-id="emas7ev">E7 EV</button>
+  <button class="tab-btn" data-id="emas7phev">E7 PHEV</button>
+</div>
+
+<!-- INPUT ROWS -->
+<div id="input-rows">
+
+  <!-- VARIAN -->
+  <div class="row row-yellow">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      <span>VARIAN</span>
+    </div>
+    <div class="row-control select-wrap">
+      <select id="select-variant" class="field-select">
+        <option value="0">1.5 Standard</option>
+        <option value="1">1.5 Executive</option>
+        <option value="2">1.5 Premium</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- OTR MODE -->
+  <div class="row row-amber">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>OTR MODE</span>
+    </div>
+    <div class="row-control select-wrap">
+      <select id="select-otr" class="field-select">
+        <option value="dengan">Dengan Insurans</option>
+        <option value="tanpa">Tanpa Insurans</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- REBATE -->
+  <div class="row row-yellow">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      <span>REBATE</span>
+    </div>
+    <div class="row-control">
+      <input id="input-rebate" type="number" class="field-input" placeholder="0" min="0" value="0" />
+    </div>
+  </div>
+
+  <!-- JENIS DEPOSIT -->
+  <div class="row row-amber">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+      <span>JENIS DEPOSIT</span>
+    </div>
+    <div class="row-control select-wrap">
+      <select id="select-deposit" class="field-select">
+        <option value="0">Full Loan</option>
+        <option value="10" selected>10%</option>
+        <option value="20">20%</option>
+        <option value="30">30%</option>
+        <option value="40">40%</option>
+        <option value="50">50%</option>
+        <option value="60">60%</option>
+        <option value="70">70%</option>
+        <option value="10000">RM 10,000</option>
+        <option value="15000">RM 15,000</option>
+        <option value="20000">RM 20,000</option>
+        <option value="25000">RM 25,000</option>
+        <option value="30000">RM 30,000</option>
+        <option value="custom">Custom Deposit</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- CUSTOM DEPOSIT -->
+  <div id="custom-row">
+    <div class="row row-amber" style="height:43px">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        <span>CUSTOM (RM)</span>
+      </div>
+      <div class="row-control">
+        <input id="input-custom-deposit" type="number" class="field-input" placeholder="0" min="0" />
+      </div>
+    </div>
+  </div>
+
+  <!-- TAHUN LOAN -->
+  <div class="row row-yellow">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+      <span>TAHUN LOAN</span>
+    </div>
+    <div class="row-control select-wrap">
+      <select id="select-years" class="field-select">
+        <option value="1">1 tahun</option>
+        <option value="2">2 tahun</option>
+        <option value="3">3 tahun</option>
+        <option value="4">4 tahun</option>
+        <option value="5">5 tahun</option>
+        <option value="6">6 tahun</option>
+        <option value="7">7 tahun</option>
+        <option value="8">8 tahun</option>
+        <option value="9" selected>9 tahun</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- INTEREST % -->
+  <div class="row row-amber">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+      <span>INTEREST %</span>
+    </div>
+    <div class="row-control">
+      <input id="input-interest" type="number" class="field-input" value="2.28" min="0" step="0.01" />
+    </div>
+  </div>
+
+  <!-- NCD % -->
+  <div class="row row-yellow" id="ncd-row">
+    <div class="row-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>NCD %</span>
+    </div>
+    <div class="ncd-btns" id="ncd-btns">
+      <button class="ncd-btn active" data-ncd="0">0%</button>
+      <button class="ncd-btn" data-ncd="25">25%</button>
+      <button class="ncd-btn" data-ncd="30">30%</button>
+      <button class="ncd-btn" data-ncd="38.33">38.33%</button>
+      <button class="ncd-btn" data-ncd="45">45%</button>
+      <button class="ncd-btn" data-ncd="55">55%</button>
+    </div>
+  </div>
+
+</div><!-- /input-rows -->
+
+<!-- OUTPUT ROWS -->
+<div id="output-rows">
+  <div class="result-row" style="background:#CFE8A9">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+      SELLING PRICE
+    </div>
+    <div class="result-value" id="out-selling">—</div>
+  </div>
+  <div class="result-row" style="background:#B8E0F0">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      INSURANCE EST.
+    </div>
+    <div class="result-value" id="out-insurance">—</div>
+  </div>
+  <div class="result-row" style="background:#FFD200">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+      OTR PRICE
+    </div>
+    <div class="result-value" id="out-otr">—</div>
+  </div>
+  <div class="result-row" style="background:#F0B8D0">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+      DOWNPAYMENT
+    </div>
+    <div class="result-value" id="out-dp">—</div>
+  </div>
+  <div class="result-row" style="background:#A8D8F0">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+      LOAN AMOUNT
+    </div>
+    <div class="result-value" id="out-loan">—</div>
+  </div>
+</div>
+
+<!-- MONTHLY BOX -->
+<div id="monthly-box">
+  <div class="monthly-left">
+    <div class="monthly-title">MONTHLY</div>
+    <div class="monthly-bulan" id="monthly-bulan">108 BULAN</div>
+  </div>
+  <div class="monthly-right">
+    <span id="monthly-value">0.00</span>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div id="footer">
+  <p>Fariz Proton Cacu Calculator</p>
+  <p>* Anggaran sahaja. Harga tertakluk kepada terma dan syarat.</p>
+</div>
+
+</div><!-- /app -->
+
 <script>
-/* ─────────────────────────────────────────────
-   CAR DATA — per updated spec
-   X50: Executive, Premium, Flagship (removed Standard 86000)
-   X70: Executive, Premium (removed Standard 102500 & Premium X 127000)
-───────────────────────────────────────────── */
-const CAR_MODELS = [
-  {
-    id: "saga", name: "PROTON SAGA", shortName: "SAGA",
-    image: "images/saga.jpg", video: "cars/saga.mp4",
-    variants: [
-      { name: "1.5 Standard",  otr: 40400,  insurance: 1410 },
-      { name: "1.5 Executive", otr: 46570,  insurance: 1580 },
-      { name: "1.5 Premium",   otr: 51710,  insurance: 1720 },
-    ],
-  },
-  {
-    id: "persona", name: "PROTON PERSONA", shortName: "PERSONA",
-    image: "images/persona.jpg",
-    variants: [
-      { name: "1.6 Standard",  otr: 49560,  insurance: 1760 },
-      { name: "1.6 Executive", otr: 55220,  insurance: 1920 },
-      { name: "1.6 Premium",   otr: 60360,  insurance: 2060 },
-    ],
-  },
-  {
-    id: "s70", name: "PROTON S70", shortName: "S70",
-    image: "images/s70.jpg",
-    variants: [
-      { name: "1.5 Executive",  otr: 76480,  insurance: 2680 },
-      { name: "1.5 Premium",    otr: 82660,  insurance: 2860 },
-      { name: "1.5 Flagship",   otr: 92950,  insurance: 3150 },
-      { name: "1.5 Flagship X", otr: 98100,  insurance: 3300 },
-    ],
-  },
-  {
-    id: "x50", name: "PROTON X50", shortName: "X50",
-    image: "images/x50.jpg", video: "cars/x50.mp4",
-    variants: [
-      { name: "1.5 Executive", otr: 92700,  insurance: 2900 },
-      { name: "1.5 Premium",   otr: 105070, insurance: 3270 },
-      { name: "1.5 Flagship",  otr: 116900, insurance: 3600 },
-    ],
-  },
-  {
-    id: "x70", name: "PROTON X70", shortName: "X70",
-    image: "images/x70.jpg",
-    variants: [
-      { name: "1.5 Executive", otr: 110320, insurance: 3520 },
-      { name: "1.5 Premium",   otr: 123680, insurance: 3880 },
-    ],
-  },
-  {
-    id: "x90", name: "PROTON X90", shortName: "X90",
-    image: "images/x90.jpg", video: "cars/x90.mp4",
-    variants: [
-      { name: "Lite",    otr: 109650, insurance: 2850 },
-      { name: "Prime",   otr: 119870, insurance: 3070 },
-      { name: "Prime X", otr: 126010, insurance: 3600 },
-    ],
-  },
-  {
-    id: "emas5", name: "PROTON e.MAS 5", shortName: "E5",
-    image: "images/e5.jpg",
-    variants: [
-      { name: "Prime",   otr: 62800, insurance: 2800 },
-      { name: "Premium", otr: 75800, insurance: 3000 },
-    ],
-  },
-  {
-    id: "emas7ev", name: "PROTON e.MAS 7 EV", shortName: "E7 EV",
-    image: "images/e7.jpg",
-    variants: [
-      { name: "Prime",        otr: 103800, insurance: 3379 },
-      { name: "Premium",      otr: 119800, insurance: 3689 },
-      { name: "Premium Plus", otr: 125800, insurance: 3900 },
-    ],
-  },
-  {
-    id: "emas7phev", name: "PROTON e.MAS 7 PHEV", shortName: "E7 PHEV",
-    image: "images/e7phev.jpg",
-    variants: [
-      { name: "PHEV Prime",        otr: 113631, insurance: 3811 },
-      { name: "PHEV Premium",      otr: 128015, insurance: 4195 },
-      { name: "PHEV Premium Plus", otr: 134179, insurance: 4359 },
-    ],
-  },
+var CAR_MODELS = [
+  {id:"saga",   name:"PROTON SAGA",       image:"images/saga.jpg",    video:"cars/saga.mp4",
+   variants:[{name:"1.5 Standard",otr:40400,ins:1410},{name:"1.5 Executive",otr:46570,ins:1580},{name:"1.5 Premium",otr:51710,ins:1720}]},
+  {id:"persona",name:"PROTON PERSONA",    image:"images/persona.jpg",
+   variants:[{name:"1.6 Standard",otr:49560,ins:1760},{name:"1.6 Executive",otr:55220,ins:1920},{name:"1.6 Premium",otr:60360,ins:2060}]},
+  {id:"s70",    name:"PROTON S70",        image:"images/s70.jpg",
+   variants:[{name:"1.5 Executive",otr:76480,ins:2680},{name:"1.5 Premium",otr:82660,ins:2860},{name:"1.5 Flagship",otr:92950,ins:3150},{name:"1.5 Flagship X",otr:98100,ins:3300}]},
+  {id:"x50",    name:"PROTON X50",        image:"images/x50.jpg",     video:"cars/x50.mp4",
+   variants:[{name:"1.5 Executive",otr:92700,ins:2900},{name:"1.5 Premium",otr:105070,ins:3270},{name:"1.5 Flagship",otr:116900,ins:3600}]},
+  {id:"x70",    name:"PROTON X70",        image:"images/x70.jpg",
+   variants:[{name:"1.5 Executive",otr:110320,ins:3520},{name:"1.5 Premium",otr:123680,ins:3880}]},
+  {id:"x90",    name:"PROTON X90",        image:"images/x90.jpg",     video:"cars/x90.mp4",
+   variants:[{name:"Lite",otr:109650,ins:2850},{name:"Prime",otr:119870,ins:3070},{name:"Prime X",otr:126010,ins:3600}]},
+  {id:"emas5",  name:"PROTON e.MAS 5",    image:"images/e5.jpg",
+   variants:[{name:"Prime",otr:62800,ins:2800},{name:"Premium",otr:75800,ins:3000}]},
+  {id:"emas7ev",name:"PROTON e.MAS 7 EV", image:"images/e7.jpg",
+   variants:[{name:"Prime",otr:103800,ins:3379},{name:"Premium",otr:119800,ins:3689},{name:"Premium Plus",otr:125800,ins:3900}]},
+  {id:"emas7phev",name:"PROTON e.MAS 7 PHEV",image:"images/e7phev.jpg",
+   variants:[{name:"PHEV Prime",otr:113631,ins:3811},{name:"PHEV Premium",otr:128015,ins:4195},{name:"PHEV Premium Plus",otr:134179,ins:4359}]}
 ];
 
-const NCD_OPTIONS = [0, 25, 30, 38.33, 45, 55];
+var state = {modelId:"saga",variantIdx:0,otrMode:"dengan",rebate:0,depositSel:"10",customDeposit:0,loanYears:9,interestPct:2.28,ncdPct:0};
 
-/* ── STATE ── */
-const state = {
-  modelId: "saga",
-  variantIdx: 0,
-  otrMode: "dengan",
-  rebate: 0,
-  depositSel: "10",
-  customDeposit: 0,
-  loanYears: 9,
-  interestPct: 2.28,
-  ncdPct: 0,
-};
+function getModel(){return CAR_MODELS.find(function(m){return m.id===state.modelId})}
 
-/* ── CALCULATE ── */
-function calculate() {
-  const model   = CAR_MODELS.find(m => m.id === state.modelId);
-  const variant = model.variants[state.variantIdx];
+function calc(){
+  var m=getModel(), v=m.variants[state.variantIdx];
+  var selling=v.otr;
+  var insurance=state.otrMode==="dengan" ? Math.round(v.ins*(1-state.ncdPct/100)) : 0;
+  var otr=selling+insurance-state.rebate;
+  var dp=0;
+  if(state.depositSel==="custom") dp=state.customDeposit;
+  else if(state.depositSel==="0") dp=0;
+  else { var n=Number(state.depositSel); dp=n>=100?n:Math.round(otr*n/100); }
+  var loan=Math.max(0,otr-dp);
+  var monthly=loan>0&&state.loanYears>0 ? (loan+loan*(state.interestPct/100)*state.loanYears)/(state.loanYears*12) : 0;
+  return {selling:selling,insurance:insurance,otr:otr,dp:dp,loan:loan,monthly:monthly};
+}
 
-  const sellingPrice = variant.otr;
+function fmt2(n){return Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtI(n){return Math.round(n).toLocaleString("en-US")}
 
-  let insuranceEstimate = 0;
-  if (state.otrMode === "dengan") {
-    insuranceEstimate = Math.round(variant.insurance * (1 - state.ncdPct / 100));
-  }
+var currentSrc="", prevMonthly=null;
 
-  const otrPrice = sellingPrice + insuranceEstimate - state.rebate;
-
-  let downpayment = 0;
-  const dep = state.depositSel;
-  if (dep === "custom") {
-    downpayment = state.customDeposit;
-  } else if (dep === "0") {
-    downpayment = 0;
+function swapMedia(m){
+  var src=m.video||m.image;
+  if(src===currentSrc) return;
+  currentSrc=src;
+  var old=document.getElementById("model-media");
+  if(m.video){
+    if(old.tagName==="VIDEO"){old.src=src;old.load();old.play().catch(function(){})}
+    else{var v=document.createElement("video");v.id="model-media";v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;v.className=old.className;v.src=src;old.parentNode.replaceChild(v,old)}
   } else {
-    const num = Number(dep);
-    downpayment = num >= 100 ? num : Math.round(otrPrice * (num / 100));
-  }
-
-  const loanAmount = Math.max(0, otrPrice - downpayment);
-
-  let monthly = 0;
-  if (loanAmount > 0 && state.loanYears > 0) {
-    const totalInterest = loanAmount * (state.interestPct / 100) * state.loanYears;
-    monthly = (loanAmount + totalInterest) / (state.loanYears * 12);
-  }
-
-  return { sellingPrice, insuranceEstimate, otrPrice, downpayment, loanAmount, monthly };
-}
-
-function fmt(n)    { return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function fmtInt(n) { return Math.round(n).toLocaleString("en-US"); }
-
-/* ── MEDIA SWAP ── */
-let currentSrc = "";
-
-function swapMedia(model) {
-  const src = model.video || model.image;
-  if (src === currentSrc) return;
-  currentSrc = src;
-
-  const old = document.getElementById("model-media");
-
-  if (model.video) {
-    if (old.tagName === "VIDEO") {
-      old.src = src; old.load(); old.play().catch(()=>{});
-    } else {
-      const vid = document.createElement("video");
-      vid.id = "model-media"; vid.autoplay = true; vid.muted = true;
-      vid.loop = true; vid.playsInline = true;
-      vid.className = old.className; vid.src = src;
-      old.replaceWith(vid);
-    }
-  } else {
-    if (old.tagName === "IMG") {
-      old.src = src; old.alt = model.name;
-    } else {
-      const img = document.createElement("img");
-      img.id = "model-media"; img.className = old.className;
-      img.src = src; img.alt = model.name;
-      old.replaceWith(img);
-    }
+    if(old.tagName==="IMG"){old.src=src;old.alt=m.name}
+    else{var i=document.createElement("img");i.id="model-media";i.className=old.className;i.src=src;i.alt=m.name;old.parentNode.replaceChild(i,old)}
   }
 }
 
-/* ── RENDER ── */
-let prevMonthly = null;
-
-function render() {
-  const model  = CAR_MODELS.find(m => m.id === state.modelId);
-  const result = calculate();
-
-  /* Header */
-  swapMedia(model);
-  document.getElementById("model-title").textContent = model.name;
-  document.getElementById("calc-bar-title").textContent = model.name + " CALCULATOR";
-
-  /* Variant select */
-  const varSel = document.getElementById("select-variant");
-  if (varSel.dataset.model !== state.modelId) {
-    varSel.dataset.model = state.modelId;
-    varSel.innerHTML = model.variants
-      .map((v, i) => `<option value="${i}">${v.name}</option>`)
-      .join("");
+function render(){
+  var m=getModel(), r=calc();
+  swapMedia(m);
+  document.getElementById("model-title").textContent=m.name;
+  document.getElementById("calc-bar-title").textContent=m.name+" CALCULATOR";
+  /* variant select */
+  var sel=document.getElementById("select-variant");
+  if(sel.getAttribute("data-model")!==state.modelId){
+    sel.setAttribute("data-model",state.modelId);
+    sel.innerHTML=m.variants.map(function(v,i){return'<option value="'+i+'">'+v.name+'</option>'}).join("");
   }
-  varSel.value = state.variantIdx;
-
-  /* Custom deposit toggle */
-  document.getElementById("custom-row")
-    .classList.toggle("visible", state.depositSel === "custom");
-
-  /* NCD buttons */
-  document.querySelectorAll(".ncd-btn").forEach(btn =>
-    btn.classList.toggle("active", Number(btn.dataset.ncd) === state.ncdPct)
-  );
-
-  /* Output values */
-  document.getElementById("out-selling").textContent   = fmtInt(result.sellingPrice);
-  document.getElementById("out-insurance").textContent = fmtInt(result.insuranceEstimate);
-  document.getElementById("out-otr").textContent       = fmtInt(result.otrPrice);
-  document.getElementById("out-dp").textContent        = fmtInt(result.downpayment);
-  document.getElementById("out-loan").textContent      = fmtInt(result.loanAmount);
-
-  /* Monthly with pop animation */
-  const monthlyEl = document.getElementById("monthly-value");
-  if (prevMonthly !== null && Math.abs(prevMonthly - result.monthly) > 0.01) {
-    monthlyEl.classList.remove("pop");
-    void monthlyEl.offsetWidth;
-    monthlyEl.classList.add("pop");
-  }
-  prevMonthly = result.monthly;
-  monthlyEl.textContent = fmt(result.monthly);
-  document.getElementById("monthly-bulan").textContent = (state.loanYears * 12) + " BULAN";
-
-  /* Tabs */
-  document.querySelectorAll(".tab-btn").forEach(btn =>
-    btn.classList.toggle("active", btn.dataset.id === state.modelId)
-  );
+  sel.value=state.variantIdx;
+  /* custom row */
+  document.getElementById("custom-row").classList.toggle("visible",state.depositSel==="custom");
+  /* tabs */
+  document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b.getAttribute("data-id")===state.modelId)});
+  /* ncd */
+  document.querySelectorAll(".ncd-btn").forEach(function(b){b.classList.toggle("active",Number(b.getAttribute("data-ncd"))===state.ncdPct)});
+  /* outputs */
+  document.getElementById("out-selling").textContent=fmtI(r.selling);
+  document.getElementById("out-insurance").textContent=fmtI(r.insurance);
+  document.getElementById("out-otr").textContent=fmtI(r.otr);
+  document.getElementById("out-dp").textContent=fmtI(r.dp);
+  document.getElementById("out-loan").textContent=fmtI(r.loan);
+  /* monthly */
+  var mEl=document.getElementById("monthly-value");
+  if(prevMonthly!==null&&Math.abs(prevMonthly-r.monthly)>0.01){mEl.classList.remove("pop");void mEl.offsetWidth;mEl.classList.add("pop")}
+  prevMonthly=r.monthly;
+  mEl.textContent=fmt2(r.monthly);
+  document.getElementById("monthly-bulan").textContent=(state.loanYears*12)+" BULAN";
 }
 
-/* ── INIT ── */
-function init() {
-  /* Build tabs */
-  const tabBar = document.getElementById("tab-bar");
-  CAR_MODELS.forEach(m => {
-    const btn = document.createElement("button");
-    btn.className = "tab-btn";
-    btn.dataset.id = m.id;
-    btn.textContent = m.shortName;
-    btn.addEventListener("click", () => {
-      state.modelId = m.id;
-      state.variantIdx = 0;
-      render();
-    });
-    tabBar.appendChild(btn);
+function init(){
+  /* tabs */
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click",function(){state.modelId=btn.getAttribute("data-id");state.variantIdx=0;render()});
   });
+  /* ncd */
+  document.querySelectorAll(".ncd-btn").forEach(function(btn){
+    btn.addEventListener("click",function(){state.ncdPct=Number(btn.getAttribute("data-ncd"));render()});
+  });
+  /* inputs */
+  document.getElementById("select-variant").addEventListener("change",function(e){state.variantIdx=Number(e.target.value);render()});
+  document.getElementById("select-otr").addEventListener("change",function(e){state.otrMode=e.target.value;render()});
+  document.getElementById("input-rebate").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.rebate=isNaN(v)||v<0?0:v;render()});
+  document.getElementById("select-deposit").addEventListener("change",function(e){state.depositSel=e.target.value;render()});
+  document.getElementById("input-custom-deposit").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.customDeposit=isNaN(v)||v<0?0:v;render()});
+  document.getElementById("select-years").addEventListener("change",function(e){state.loanYears=Number(e.target.value);render()});
+  document.getElementById("input-interest").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.interestPct=isNaN(v)||v<0?0:v;render()});
+  render();
+}
 
-  /* Build NCD buttons */
-  const ncdBtns = document.getElementById("ncd-btns");
-  NCD_OPTIONS.forEach(ncd => {
-    const btn = document.createElement("button");
-    btn.className = "ncd-btn";
-    btn.dataset.ncd = ncd;
-    btn.textContent = ncd + "%";
-    btn.addEventListener("click", () => { state.ncdPct = ncd; render(); });
-    ncdBtns.appendChild(btn);
-  });
-
-  /* Wire inputs */
-  document.getElementById("select-variant").addEventListener("change", e => {
-    state.variantIdx = Number(e.target.value); render();
-  });
-  document.getElementById("select-otr").addEventListener("change", e => {
-    state.otrMode = e.target.value; render();
-  });
-  document.getElementById("input-rebate").addEventListener("input", e => {
-    const v = parseFloat(e.target.value);
-    state.rebate = isNaN(v) || v < 0 ? 0 : v; render();
-  });
-  document.getElementById("select-deposit").addEventListener("change", e => {
-    state.depositSel = e.target.value; render();
-  });
-  document.getElementById("input-c
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init)}else{init()}
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
