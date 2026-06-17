@@ -140,29 +140,30 @@ body{
 #custom-row{overflow:hidden;max-height:0;opacity:0;transition:max-height .22s ease,opacity .22s ease}
 #custom-row.visible{max-height:43px;opacity:1}
 
-/* ── OUTPUT ROWS  56×0.8=45px ── */
+/* ── OUTPUT ROWS — match reference scale ── */
 .result-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;height:45px;
+  padding:0 18px;height:44px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);
 }
-/* Result Labels: 26×0.8=21px weight 900 */
 .result-label{
-  display:flex;align-items:center;gap:8px;
-  font-weight:900;font-size:21px;
-  text-transform:uppercase;letter-spacing:.03em;color:rgba(0,0,0,.8);
+  display:flex;align-items:center;gap:7px;
+  font-weight:900;font-size:14px;
+  text-transform:uppercase;letter-spacing:.04em;color:rgba(0,0,0,.8);
 }
-.result-label svg{width:17px;height:17px;color:rgba(0,0,0,.5);flex-shrink:0}
-/* Result Values: 42×0.8=34px weight 900 */
+.result-label svg{width:15px;height:15px;color:rgba(0,0,0,.5);flex-shrink:0}
 .result-value{
-  font-weight:900;font-size:34px;
+  font-weight:900;font-size:18px;
   font-variant-numeric:tabular-nums;color:#000;white-space:nowrap;
 }
+/* REBATE row — italic style */
+.result-row.rebate-row .result-label{font-style:italic;color:rgba(0,0,0,.7)}
+.result-row.rebate-row .result-value{font-style:italic}
 
-/* ── MONTHLY BOX  120×0.8=96px ── */
+/* ── MONTHLY BOX — match reference scale ── */
 #monthly-box{
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 22px;height:96px;
+  padding:0 20px;height:86px;
   background:#E53935;position:relative;overflow:hidden;
 }
 #monthly-box::before{
@@ -177,22 +178,19 @@ body{
   pointer-events:none;
 }
 .monthly-left{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
-/* MONTHLY: 50×0.8=40px weight 900 */
 .monthly-title{
-  font-weight:900;font-size:40px;
+  font-weight:900;font-size:36px;
   text-transform:uppercase;letter-spacing:.06em;line-height:1;
   color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.22);
 }
-/* BULAN: 24×0.8=19px weight 800 */
 .monthly-bulan{
-  font-weight:800;font-size:19px;
+  font-weight:800;font-size:15px;
   text-transform:uppercase;letter-spacing:.1em;
   color:rgba(255,255,255,.75);margin-top:4px;line-height:1;
 }
 .monthly-right{position:relative;z-index:1;text-align:right}
-/* Monthly Value: 96×0.8=77px weight 900 */
 #monthly-value{
-  font-weight:900;font-size:77px;
+  font-weight:900;font-size:62px;
   letter-spacing:-.02em;line-height:1;
   text-shadow:0 4px 14px rgba(0,0,0,.28);
   font-variant-numeric:tabular-nums;color:#fff;display:inline-block;
@@ -209,13 +207,13 @@ body{
 @media(max-width:480px){
   .row-label span{font-size:11px}
   .field-select,.field-input{font-size:11px}
-  .result-label{font-size:14px}
-  .result-value{font-size:22px}
-  .monthly-title{font-size:28px}
-  .monthly-bulan{font-size:13px}
-  #monthly-value{font-size:52px}
-  #monthly-box{height:76px;padding:0 14px}
-  .result-row{height:40px}
+  .result-label{font-size:11px}
+  .result-value{font-size:14px}
+  .monthly-title{font-size:26px}
+  .monthly-bulan{font-size:11px}
+  #monthly-value{font-size:44px}
+  #monthly-box{height:70px;padding:0 14px}
+  .result-row{height:38px}
   .row{height:38px}
 }
 </style>
@@ -381,29 +379,46 @@ body{
 
 </div><!-- /input-rows -->
 
-<!-- OUTPUT ROWS -->
+<!-- OUTPUT ROWS — ikut reference layout -->
 <div id="output-rows">
-  <div class="result-row" style="background:#CFE8A9">
-    <div class="result-label">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
-      SELLING PRICE
-    </div>
-    <div class="result-value" id="out-selling">—</div>
-  </div>
+
+  <!-- INSURANCE (EST.) -->
   <div class="result-row" style="background:#B8E0F0">
     <div class="result-label">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      INSURANCE EST.
+      INSURANCE (EST.)
     </div>
     <div class="result-value" id="out-insurance">—</div>
   </div>
-  <div class="result-row" style="background:#FFD200">
+
+  <!-- TOTAL PRICE (REAL OTR) = selling + insurance, before rebate -->
+  <div class="result-row" style="background:#FDDCB5">
     <div class="result-label">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-      OTR PRICE
+      TOTAL PRICE (REAL OTR)
     </div>
-    <div class="result-value" id="out-otr">—</div>
+    <div class="result-value" id="out-real-otr">—</div>
   </div>
+
+  <!-- REBATE -->
+  <div class="result-row rebate-row" style="background:#CFE8A9">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      REBATE
+    </div>
+    <div class="result-value" id="out-rebate">—</div>
+  </div>
+
+  <!-- TOTAL PRICE = after rebate -->
+  <div class="result-row" style="background:#FFD200">
+    <div class="result-label">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+      TOTAL PRICE
+    </div>
+    <div class="result-value" id="out-total">—</div>
+  </div>
+
+  <!-- DOWNPAYMENT -->
   <div class="result-row" style="background:#F0B8D0">
     <div class="result-label">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
@@ -411,6 +426,8 @@ body{
     </div>
     <div class="result-value" id="out-dp">—</div>
   </div>
+
+  <!-- LOAN AMOUNT -->
   <div class="result-row" style="background:#A8D8F0">
     <div class="result-label">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
@@ -418,6 +435,7 @@ body{
     </div>
     <div class="result-value" id="out-loan">—</div>
   </div>
+
 </div>
 
 <!-- MONTHLY BOX -->
@@ -467,18 +485,22 @@ function getModel(){return CAR_MODELS.find(function(m){return m.id===state.model
 
 function calc(){
   var m=getModel(), v=m.variants[state.variantIdx];
-  // SELLING PRICE = OTR - INSURANCE (dynamic, never hardcoded)
+  // SELLING PRICE = OTR - INSURANCE (dynamic)
   var baseIns=v.ins;
   var selling=v.otr - baseIns;
+  // INSURANCE with NCD applied
   var insurance=state.otrMode==="dengan" ? Math.round(baseIns*(1-state.ncdPct/100)) : 0;
-  var otr=selling+insurance-state.rebate;
+  // REAL OTR = selling + insurance (before rebate)
+  var realOtr=selling+insurance;
+  // TOTAL PRICE = real OTR after rebate
+  var totalPrice=realOtr-state.rebate;
   var dp=0;
   if(state.depositSel==="custom") dp=state.customDeposit;
   else if(state.depositSel==="0") dp=0;
-  else { var n=Number(state.depositSel); dp=n>=100?n:Math.round(otr*n/100); }
-  var loan=Math.max(0,otr-dp);
+  else { var n=Number(state.depositSel); dp=n>=100?n:Math.round(totalPrice*n/100); }
+  var loan=Math.max(0,totalPrice-dp);
   var monthly=loan>0&&state.loanYears>0 ? (loan+loan*(state.interestPct/100)*state.loanYears)/(state.loanYears*12) : 0;
-  return {selling:selling,insurance:insurance,otr:otr,dp:dp,loan:loan,monthly:monthly};
+  return {selling:selling,insurance:insurance,realOtr:realOtr,rebate:state.rebate,totalPrice:totalPrice,dp:dp,loan:loan,monthly:monthly};
 }
 
 function fmt2(n){return Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -519,9 +541,10 @@ function render(){
   /* ncd */
   document.querySelectorAll(".ncd-btn").forEach(function(b){b.classList.toggle("active",Number(b.getAttribute("data-ncd"))===state.ncdPct)});
   /* outputs */
-  document.getElementById("out-selling").textContent=fmtI(r.selling);
   document.getElementById("out-insurance").textContent=fmtI(r.insurance);
-  document.getElementById("out-otr").textContent=fmtI(r.otr);
+  document.getElementById("out-real-otr").textContent=fmtI(r.realOtr);
+  document.getElementById("out-rebate").textContent=fmtI(r.rebate);
+  document.getElementById("out-total").textContent=fmtI(r.totalPrice);
   document.getElementById("out-dp").textContent=fmtI(r.dp);
   document.getElementById("out-loan").textContent=fmtI(r.loan);
   /* monthly */
@@ -556,4 +579,4 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
