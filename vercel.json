@@ -1,5 +1,6 @@
 {
   "buildCommand": null,
+  "installCommand": null,
   "outputDirectory": "public",
   "framework": null,
   "routes": [
