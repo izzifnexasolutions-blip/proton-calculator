@@ -4,6 +4,7 @@
   "outputDirectory": "public",
   "framework": null,
   "routes": [
+    { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/", "dest": "/calculator.html" }
   ]
 }

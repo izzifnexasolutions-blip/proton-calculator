@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -548,67 +549,86 @@ function fmtI(n){return Math.round(n).toLocaleString("en-US")}
 
 var currentSrc="", prevMonthly=null;
 
-/* ── IndexedDB for custom media ── */
-var _db=null;
-function _openDB(){
-  return new Promise(function(res,rej){
-    if(_db){res(_db);return;}
-    var r=indexedDB.open('ProtonMediaDB',1);
-    r.onupgradeneeded=function(e){e.target.result.createObjectStore('media',{keyPath:'id'})};
-    r.onsuccess=function(e){_db=e.target.result;res(_db)};
-    r.onerror=function(){res(null)};
-  });
-}
-function _dbGet(id){
-  return _openDB().then(function(db){
-    if(!db)return null;
-    return new Promise(function(res){
-      var r=db.transaction('media').objectStore('media').get(id);
-      r.onsuccess=function(e){res(e.target.result||null)};
-      r.onerror=function(){res(null)};
-    });
-  });
-}
-function _dbPut(id,file){
-  return _openDB().then(function(db){
-    if(!db)return;
-    return new Promise(function(res,rej){
-      var tx=db.transaction('media','readwrite');
-      tx.objectStore('media').put({id:id,blob:file,type:file.type,name:file.name});
-      tx.oncomplete=res;tx.onerror=rej;
-    });
-  });
-}
-function _dbDel(id){
-  return _openDB().then(function(db){
-    if(!db)return;
-    return new Promise(function(res,rej){
-      var tx=db.transaction('media','readwrite');
-      tx.objectStore('media').delete(id);
-      tx.oncomplete=res;tx.onerror=rej;
-    });
-  });
+/* ── Supabase media storage ── */
+var _sb=null;          // supabase client
+var _sbReady=false;
+var _mediaCache={};    // model_key -> {media_url, media_type, file_name} or null
+
+var MODEL_NAME_MAP={
+  saga:'PROTON SAGA',persona:'PROTON PERSONA',s70:'PROTON S70',
+  x50:'PROTON X50',x70:'PROTON X70',x90:'PROTON X90',
+  emas5:'PROTON e.MAS 5',emas7ev:'PROTON e.MAS 7 EV',emas7phev:'PROTON e.MAS 7 PHEV'
+};
+
+function _initSupabase(){
+  return fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+    if(!cfg.url||!cfg.key){_sbReady=false;return;}
+    _sb=window.supabase.createClient(cfg.url,cfg.key);
+    _sbReady=true;
+    return _loadAllMedia();
+  }).catch(function(){_sbReady=false;});
 }
 
+function _loadAllMedia(){
+  if(!_sbReady)return Promise.resolve();
+  return _sb.from('model_media').select('model_key,media_url,media_type,file_name')
+    .then(function(r){
+      if(r.data){r.data.forEach(function(row){_mediaCache[row.model_key]=row;});}
+    });
+}
+
+function _dbGet(modelKey){
+  return Promise.resolve(_mediaCache[modelKey]||null);
+}
+
+function _dbPut(modelKey,file){
+  if(!_sbReady)return Promise.reject(new Error('Supabase not ready'));
+  var ext=file.name.split('.').pop();
+  var path=modelKey+'/'+Date.now()+'.'+ext;
+  return _sb.storage.from('car-media').upload(path,file,{upsert:true,contentType:file.type})
+    .then(function(r){
+      if(r.error)throw r.error;
+      var pubUrl=_sb.storage.from('car-media').getPublicUrl(path).data.publicUrl;
+      var modelName=MODEL_NAME_MAP[modelKey]||modelKey;
+      return _sb.from('model_media').upsert({
+        model_key:modelKey,model_name:modelName,
+        media_type:file.type,media_url:pubUrl,file_name:file.name
+      },{onConflict:'model_key'});
+    }).then(function(r){
+      if(r.error)throw r.error;
+      _mediaCache[modelKey]={model_key:modelKey,media_url:_mediaCache[modelKey]?_mediaCache[modelKey].media_url:'',media_type:file.type,file_name:file.name};
+      /* update URL from DB */
+      return _sb.from('model_media').select('media_url').eq('model_key',modelKey).single()
+        .then(function(r2){if(r2.data)_mediaCache[modelKey]=Object.assign(_mediaCache[modelKey],{media_url:r2.data.media_url});});
+    });
+}
+
+function _dbDel(modelKey){
+  if(!_sbReady)return Promise.resolve();
+  return _sb.from('model_media').delete().eq('model_key',modelKey)
+    .then(function(){delete _mediaCache[modelKey];});
+}
+
+/* ── swapMedia reads from _mediaCache (populated from Supabase) ── */
+
 function swapMedia(m){
-  _dbGet(m.id).then(function(rec){
-    var src, isVideo;
-    if(rec && rec.blob){
-      src=URL.createObjectURL(rec.blob);
-      isVideo=rec.type&&rec.type.startsWith('video/');
-    } else {
-      src=m.video||m.image;
-      isVideo=!!m.video;
-    }
-    var old=document.getElementById("model-media");
-    if(isVideo){
-      if(old.tagName==="VIDEO"){old.src=src;old.load();old.play().catch(function(){})}
-      else{var v=document.createElement("video");v.id="model-media";v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;v.className=old.className;v.src=src;old.parentNode.replaceChild(v,old)}
-    } else {
-      if(old.tagName==="IMG"){old.src=src;old.alt=m.name}
-      else{var i=document.createElement("img");i.id="model-media";i.className=old.className;i.src=src;i.alt=m.name;old.parentNode.replaceChild(i,old)}
-    }
-  });
+  var rec=_mediaCache[m.id]||null;
+  var src, isVideo;
+  if(rec && rec.media_url){
+    src=rec.media_url;
+    isVideo=rec.media_type&&rec.media_type.startsWith('video/');
+  } else {
+    src=m.video||m.image;
+    isVideo=!!m.video;
+  }
+  var old=document.getElementById("model-media");
+  if(isVideo){
+    if(old.tagName==="VIDEO"){old.src=src;old.load();old.play().catch(function(){})}
+    else{var v=document.createElement("video");v.id="model-media";v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;v.className=old.className;v.src=src;old.parentNode.replaceChild(v,old)}
+  } else {
+    if(old.tagName==="IMG"){old.src=src;old.alt=m.name}
+    else{var i=document.createElement("img");i.id="model-media";i.className=old.className;i.src=src;i.alt=m.name;old.parentNode.replaceChild(i,old)}
+  }
 }
 
 function render(){
@@ -646,7 +666,7 @@ function render(){
 /* ── Settings panel ── */
 function spBuildCard(m,rec){
   var card=document.createElement('div');card.className='sp-card';card.id='sp-card-'+m.id;
-  var isCustom=!!rec;
+  var isCustom=!!(rec&&rec.media_url);
   var pending=null,objURL=null;
   /* title */
   var title=document.createElement('div');title.className='sp-title';
@@ -660,8 +680,8 @@ function spBuildCard(m,rec){
     if(type&&type.startsWith('video/')){var v=document.createElement('video');v.src=src;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;pw.appendChild(v);}
     else{var i=document.createElement('img');i.src=src;pw.appendChild(i);}
   }
-  var initSrc=rec?URL.createObjectURL(rec.blob):m.image;
-  var initType=rec?rec.type:'image/jpeg';
+  var initSrc=rec?rec.media_url:m.image;
+  var initType=rec?rec.media_type:'image/jpeg';
   setPreview(initSrc,initType);
   card.appendChild(pw);
   /* file input */
@@ -672,7 +692,7 @@ function spBuildCard(m,rec){
   var bS=document.createElement('button');bS.className='sp-btn sp-save';bS.textContent='💾 Save';bS.disabled=true;
   var bR=document.createElement('button');bR.className='sp-btn sp-remove';bR.textContent='✕';bR.disabled=!isCustom;
   btns.appendChild(bC);btns.appendChild(bS);btns.appendChild(bR);card.appendChild(btns);
-  var fname=document.createElement('div');fname.className='sp-file';if(rec)fname.textContent=rec.name||'';card.appendChild(fname);
+  var fname=document.createElement('div');fname.className='sp-file';if(rec)fname.textContent=rec.file_name||'';card.appendChild(fname);
   var status=document.createElement('div');status.className='sp-status';card.appendChild(status);
   bC.onclick=function(){fi.click()};
   fi.onchange=function(){
@@ -682,25 +702,31 @@ function spBuildCard(m,rec){
     fname.textContent=f.name;bS.disabled=false;status.textContent='';status.className='sp-status';
   };
   bS.onclick=function(){
-    if(!pending)return;bS.disabled=true;bS.textContent='⏳';
+    if(!pending)return;
+    if(!_sbReady){status.textContent='✗ Supabase not ready';status.className='sp-status err';return;}
+    bS.disabled=true;bS.textContent='⏳ Uploading…';
     _dbPut(m.id,pending).then(function(){
-      status.textContent='✓ Saved!';status.className='sp-status ok';
+      var rec2=_mediaCache[m.id];
+      if(rec2)setPreview(rec2.media_url,rec2.media_type);
+      status.textContent='✓ Saved! Permanent.';status.className='sp-status ok';
       title.innerHTML=m.name+' <span class="sp-badge sp-badge-custom">CUSTOM</span>';
-      bR.disabled=false;pending=null;bS.textContent='💾 Save';
-      /* refresh header if this model is active */
+      bR.disabled=false;pending=null;bS.disabled=false;bS.textContent='💾 Save';
+      if(objURL){URL.revokeObjectURL(objURL);objURL=null;}
       if(state.modelId===m.id)render();
-    }).catch(function(){status.textContent='✗ Error';status.className='sp-status err';bS.disabled=false;bS.textContent='💾 Save'});
+    }).catch(function(e){
+      console.error(e);
+      status.textContent='✗ Upload error. Check console.';status.className='sp-status err';
+      bS.disabled=false;bS.textContent='💾 Save';
+    });
   };
   bR.onclick=function(){
     if(!confirm('Remove custom media for '+m.name+'?'))return;
     _dbDel(m.id).then(function(){
       pending=null;if(objURL){URL.revokeObjectURL(objURL);objURL=null;}
-      var nc=document.createElement('div');nc.className='sp-card';nc.id='sp-card-'+m.id;
-      card.parentNode.replaceChild(nc,card);
-      /* rebuild card with null record */
-      _dbGet(m.id).then(function(r2){
-        var rebuilt=spBuildCard(m,r2);card.parentNode?card.parentNode.replaceChild(rebuilt,card):nc.replaceWith(rebuilt);
-      });
+      var rebuilt=spBuildCard(m,null);
+      card.parentNode.replaceChild(rebuilt,card);
+      rebuilt.querySelector('.sp-status').textContent='✓ Removed. Using default.';
+      rebuilt.querySelector('.sp-status').className='sp-status ok';
       if(state.modelId===m.id)render();
     });
   };
@@ -711,10 +737,17 @@ function spBuild(){
   var grid=document.getElementById('sp-grid');
   if(grid._built)return;
   grid._built=true;
-  Promise.all(CAR_MODELS.map(function(m){return _dbGet(m.id)})).then(function(recs){
-    grid.innerHTML='';
-    CAR_MODELS.forEach(function(m,i){grid.appendChild(spBuildCard(m,recs[i]))});
+  grid.innerHTML='';
+  CAR_MODELS.forEach(function(m){
+    var rec=_mediaCache[m.id]||null;
+    grid.appendChild(spBuildCard(m,rec));
   });
+}
+
+function spRebuild(){
+  var grid=document.getElementById('sp-grid');
+  grid._built=false;
+  if(settingsOpen)spBuild();
 }
 
 var settingsOpen=false;
@@ -754,7 +787,15 @@ function init(){
   render();
 }
 
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init)}else{init()}
+function start(){
+  _initSupabase().then(function(){
+    init();
+  }).catch(function(){
+    init();
+  });
+}
+
+if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",start)}else{start()}
 </script>
 </body>
 </html>
