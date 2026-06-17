@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Fariz Proton Cacu Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    background: #000;
+    color: #fff;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 900px;
+    background: #0a0a0a;
+    box-shadow: 0 30px 60px -12px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.04);
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  #model-header {
+    position: relative;
+    width: 100%;
+    height: 128px;
+    overflow: hidden;
+  }
+
+  #model-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity .45s ease;
+  }
+
+  .media-fade-out { opacity: 0 !important; }
+  .media-fade-in  { opacity: 1 !important; }
+
+  #header-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,.8) 0%, rgba(0,0,0,.2) 50%, transparent 100%);
+    pointer-events: none;
+  }
+
+  #model-title {
+    position: absolute;
+    bottom: 10px;
+    left: 13px;
+    font-weight: 900;
+    font-size: clamp(26px, 4.8vw, 42px);
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 0 4px 12px rgba(0,0,0,.5);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+
+  /* ── CALC BAR ── */
+  #calc-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 13px;
+    height: 37px;
+    background: linear-gradient(90deg, #C62828, #E53935);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.1), 0 2px 6px rgba(0,0,0,.15);
+  }
+
+  #calc-bar svg { width: 16px; height: 16px; color: #fff; flex-shrink: 0; }
+
+  #calc-bar span {
+    font-weight: 900;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(255,255,255,.3), 0 2px 0 rgba(255,255,255,.2), 0 4px 8px rgba(0,0,0,.3);
+  }
+
+  /* ── ROWS ── */
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 11px;
+    height: 35px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.08);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .row-yellow { background: linear-gradient(90deg, #FDE047, #FACC15); }
+  .row-amber  { background: linear-gradient(90deg, #FCD34D, #FBBF24); }
+
+  .row-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .row-label svg { width: 14px; height: 14px; color: rgba(0,0,0,.7); flex-shrink: 0; }
+
+  .row-label span {
+    font-weight: 900;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: rgba(0,0,0,.85);
+  }
+
+  .row-control { width: 50%; min-width: 0; }
+
+  /* ── SELECT / INPUT ── */
+  .field-select, .field-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid rgba(0,0,0,.1);
+    padding: 3px 22px 3px 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    background: rgba(0,0,0,.18);
+    color: #000;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .field-input { padding: 3px 8px; cursor: text; }
+
+  .select-wrap { position: relative; }
+
+  .select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid rgba(0,0,0,.5);
+    pointer-events: none;
+  }
+
+  /* ── NCD BUTTONS ── */
+  #ncd-row { height: auto; min-height: 43px; padding-top: 6px; padding-bottom: 6px; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+  .ncd-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+
+  .ncd-btn {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 9px;
+    padding: 3px 6px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    background: #fff;
+    color: #000;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    transition: all .2s ease;
+  }
+
+  .ncd-btn.active {
+    background: #E53935;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(229,57,53,.35);
+    transform: scale(1.05);
+  }
+
+  /* ── CUSTOM DEPOSIT ROW ── */
+  #custom-row {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .2s ease, opacity .2s ease;
+    opacity: 0;
+  }
+
+  #custom-row.visible { max-height: 35px; opacity: 1; }
+
+  /* ── OUTPUT ROWS ── */
+  .result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 11px;
+    height: 37px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.08);
+  }
+
+  .result-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 900;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: rgba(0,0,0,.8);
+  }
+
+  .result-label svg { width: 14px; height: 14px; color: rgba(0,0,0,.5); flex-shrink: 0; }
+
+  .result-value {
+    font-weight: 900;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    color: #000;
+  }
+
+  /* ── MONTHLY BOX ── */
+  #monthly-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    height: 72px;
+    background: #E53935;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #monthly-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.1) 0%, transparent 45%);
+    pointer-events: none;
+  }
+
+  .monthly-left { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; }
+
+  .monthly-title {
+    font-weight: 900;
+    font-size: clamp(19px, 3.2vw, 29px);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    text-shadow: 0 3px 8px rgba(0,0,0,.25);
+    line-height: 1;
+    color: #fff;
+  }
+
+  .monthly-bulan {
+    font-weight: 800;
+    font-size: clamp(10px, 1.6vw, 14px);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,.75);
+    margin-top: 4px;
+    line-height: 1;
+  }
+
+  .monthly-right { position: relative; z-index: 1; text-align: right; }
+
+  #monthly-value {
+    font-weight: 900;
+    font-size: clamp(32px, 5.6vw, 51px);
+    letter-spacing: -.02em;
+    text-shadow: 0 4px 12px rgba(0,0,0,.3);
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+    display: inline-block;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
+  }
+
+  #monthly-value.pop {
+    animation: pop .35s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(.88); opacity: .5; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+
+  /* ── TAB BAR ── */
+  #tab-bar {
+    display: flex;
+    overflow-x: auto;
+    align-items: center;
+    padding: 0 8px;
+    gap: 4px;
+    height: 37px;
+    background: #0a0a0a;
+    scrollbar-width: none;
+  }
+  #tab-bar::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    flex-shrink: 0;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 9px;
+    letter-spacing: .04em;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: #111;
+    color: #777;
+    transition: all .2s ease;
+  }
+
+  .tab-btn.active {
+    background: #E53935;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(229,57,53,.3);
+    transform: scale(1.04);
+  }
+
+  /* ── FOOTER ── */
+  #footer {
+    text-align: center;
+    padding: 16px 0 20px;
+    background: #0a0a0a;
+  }
+
+  #footer p:first-child {
+    font-weight: 700;
+    font-size: 12px;
+    color: #555;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  #footer p:last-child {
+    font-weight: 700;
+    font-size: 10px;
+    color: #444;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="model-header">
+    <img id="model-media" src="" alt="" />
+    <div id="header-overlay"></div>
+    <div id="model-title"></div>
+  </div>
+
+  <!-- CALC BAR -->
+  <div id="calc-bar">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="14"/><line x1="16" x2="16" y1="18" y2="18"/><line x1="8" x2="12" y1="14" y2="14"/><line x1="8" x2="12" y1="18" y2="18"/><line x1="12" x2="12" y1="14" y2="14"/></svg>
+    <span id="calc-bar-title"></span>
+  </div>
+
+  <!-- INPUT ROWS -->
+  <div id="input-rows">
+
+    <!-- VARIAN -->
+    <div class="row row-yellow">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        <span>VARIAN</span>
+      </div>
+      <div class="row-control select-wrap">
+        <select id="select-variant" class="field-select"></select>
+      </div>
+    </div>
+
+    <!-- OTR MODE -->
+    <div class="row row-amber">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>OTR MODE</span>
+      </div>
+      <div class="row-control select-wrap">
+        <select id="select-otr" class="field-select">
+          <option value="dengan">Dengan Insurans</option>
+          <option value="tanpa">Tanpa Insurans</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- REBATE -->
+    <div class="row row-yellow">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        <span>REBATE</span>
+      </div>
+      <div class="row-control">
+        <input id="input-rebate" type="number" class="field-input" placeholder="0" min="0" />
+      </div>
+    </div>
+
+    <!-- JENIS DEPOSIT -->
+    <div class="row row-amber">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+        <span>JENIS DEPOSIT</span>
+      </div>
+      <div class="row-control select-wrap">
+        <select id="select-deposit" class="field-select">
+          <option value="0">Full Loan</option>
+          <option value="10" selected>10%</option>
+          <option value="20">20%</option>
+          <option value="30">30%</option>
+          <option value="40">40%</option>
+          <option value="50">50%</option>
+          <option value="60">60%</option>
+          <option value="70">70%</option>
+          <option value="10000">10000</option>
+          <option value="15000">15000</option>
+          <option value="20000">20000</option>
+          <option value="25000">25000</option>
+          <option value="30000">30000</option>
+          <option value="custom">Custom Deposit</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CUSTOM DEPOSIT (hidden by default) -->
+    <div id="custom-row">
+      <div class="row row-amber" style="height:35px">
+        <div class="row-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          <span>CUSTOM (RM)</span>
+        </div>
+        <div class="row-control">
+          <input id="input-custom-deposit" type="number" class="field-input" placeholder="0" min="0" />
+        </div>
+      </div>
+    </div>
+
+    <!-- TAHUN LOAN -->
+    <div class="row row-yellow">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+        <span>TAHUN LOAN</span>
+      </div>
+      <div class="row-control select-wrap">
+        <select id="select-years" class="field-select">
+          <option value="1">1 tahun</option>
+          <option value="2">2 tahun</option>
+          <option value="3">3 tahun</option>
+          <option value="4">4 tahun</option>
+          <option value="5">5 tahun</option>
+          <option value="6">6 tahun</option>
+          <option value="7">7 tahun</option>
+          <option value="8">8 tahun</option>
+          <option value="9" selected>9 tahun</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- INTEREST % -->
+    <div class="row row-amber">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+        <span>INTEREST %</span>
+      </div>
+      <div class="row-control">
+        <input id="input-interest" type="number" class="field-input" value="2.28" min="0" step="0.01" />
+      </div>
+    </div>
+
+    <!-- NCD % -->
+    <div class="row row-yellow" id="ncd-row" style="height:auto; min-height:54px; padding-top:8px; padding-bottom:8px;">
+      <div class="row-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>NCD %</span>
+      </div>
+      <div class="ncd-btns" id="ncd-btns"></div>
+    </div>
+
+  </div><!-- /input-rows -->
+
+  <!-- OUTPUT ROWS -->
+  <div id="output-rows">
+
+    <div class="result-row" style="background:#CFE8A9">
+      <div class="result-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+        SELLING PRICE
+      </div>
+      <div class="result-value" id="out-selling"></div>
+    </div>
+
+    <div class="result-row" style="background:#B8E0F0">
+      <div class="result-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        INSURANCE EST.
+      </div>
+      <div class="result-value" id="out-insurance"></div>
+    </div>
+
+    <div class="result-row" style="background:#FFD200">
+      <div class="result-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        OTR PRICE
+      </div>
+      <div class="result-value" id="out-otr"></div>
+    </div>
+
+    <div class="result-row" style="background:#F0B8D0">
+      <div class="result-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+        DOWNPAYMENT
+      </div>
+      <div class="result-value" id="out-dp"></div>
+    </div>
+
+    <div class="result-row" style="background:#A8D8F0">
+      <div class="result-label">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+        LOAN AMOUNT
+      </div>
+      <div class="result-value" id="out-loan"></div>
+    </div>
+
+  </div>
+
+  <!-- MONTHLY BOX -->
+  <div id="monthly-box">
+    <div class="monthly-left">
+      <div class="monthly-title">MONTHLY</div>
+      <div class="monthly-bulan" id="monthly-bulan">108 BULAN</div>
+    </div>
+    <div class="monthly-right">
+      <span id="monthly-value">0.00</span>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tab-bar"></div>
+
+  <!-- FOOTER -->
+  <div id="footer">
+    <p>Fariz Proton Cacu Calculator</p>
+    <p>* Anggaran sahaja. Harga tertakluk kepada terma dan syarat.</p>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ── DATA ── */
+const CAR_MODELS = [
+  {
+    id: "saga", name: "SAGA", shortName: "SAGA",
+    image: "images/saga.jpg", video: "cars/saga.mp4",
+    variants: [
+      { name: "Standard 1.5 i-GT 4AT",   otr: 40400, insurance: 1410 },
+      { name: "Executive 1.5 i-GT 4AT",  otr: 46570, insurance: 1580 },
+      { name: "Premium 1.5 i-GT CVT",    otr: 51710, insurance: 1720 },
+    ],
+  },
+  {
+    id: "persona", name: "PERSONA", shortName: "PERSONA",
+    image: "images/persona.jpg",
+    variants: [
+      { name: "Standard 1.6 CVT",  otr: 49560, insurance: 1760 },
+      { name: "Executive 1.6 CVT", otr: 55220, insurance: 1920 },
+      { name: "Premium 1.6 CVT",   otr: 60360, insurance: 2060 },
+    ],
+  },
+  {
+    id: "s70", name: "S70", shortName: "S70",
+    image: "images/s70.jpg",
+    variants: [
+      { name: "Executive 1.5T i-GT DCT", otr: 76480,  insurance: 2680 },
+      { name: "Premium 1.5T i-GT DCT",   otr: 82660,  insurance: 2860 },
+      { name: "Flagship 1.5T i-GT DCT",  otr: 92950,  insurance: 3150 },
+      { name: "Flagship X 1.5T i-GT DCT",otr: 98100,  insurance: 3300 },
+    ],
+  },
+  {
+    id: "x50", name: "X50", shortName: "X50",
+    image: "images/x50.jpg", video: "cars/x50.mp4",
+    variants: [
+      { name: "Standard 1.5T i-GT DCT",  otr: 86000,  insurance: 2500 },
+      { name: "Executive 1.5T i-GT DCT", otr: 92700,  insurance: 2900 },
+      { name: "Premium 1.5T i-GT DCT",   otr: 105070, insurance: 3270 },
+      { name: "Flagship 1.5T i-GT DCT",  otr: 116900, insurance: 3600 },
+    ],
+  },
+  {
+    id: "x70", name: "X70", shortName: "X70",
+    image: "images/x70.jpg",
+    variants: [
+      { name: "Standard 1.5T i-GT DCT",  otr: 102500, insurance: 2600 },
+      { name: "Executive 1.5T i-GT DCT", otr: 110320, insurance: 3520 },
+      { name: "Premium 1.5T i-GT DCT",   otr: 123680, insurance: 3880 },
+      { name: "Premium X 1.5T i-GT DCT", otr: 127000, insurance: 3100 },
+    ],
+  },
+  {
+    id: "x90", name: "X90", shortName: "X90",
+    image: "images/x90.jpg", video: "cars/x90.mp4",
+    variants: [
+      { name: "Executive 1.5T i-GT Hybrid DCT", otr: 109650, insurance: 2850 },
+      { name: "Premium 1.5T i-GT Hybrid DCT",   otr: 119870, insurance: 3070 },
+      { name: "Flagship 1.5T i-GT Hybrid DCT",  otr: 126010, insurance: 3600 },
+    ],
+  },
+  {
+    id: "emas5", name: "e.MAS 5", shortName: "E5",
+    image: "images/e5.jpg",
+    variants: [
+      { name: "Prime EV",   otr: 62800, insurance: 2800 },
+      { name: "Premium EV", otr: 75800, insurance: 3000 },
+    ],
+  },
+  {
+    id: "emas7", name: "e.MAS 7 EV", shortName: "E7 EV",
+    image: "images/e7.jpg",
+    variants: [
+      { name: "Prime EV",       otr: 103800, insurance: 3379 },
+      { name: "Premium EV",     otr: 119800, insurance: 3689 },
+      { name: "Premium Plus EV",otr: 125800, insurance: 3900 },
+    ],
+  },
+  {
+    id: "emas7phev", name: "e.MAS 7 PHEV", shortName: "E7 PHEV",
+    image: "images/e7phev.jpg",
+    variants: [
+      { name: "PHEV Prime",       otr: 113631, insurance: 3811 },
+      { name: "PHEV Premium",     otr: 128015, insurance: 4195 },
+      { name: "PHEV Premium Plus",otr: 134179, insurance: 4359 },
+    ],
+  },
+];
+
+const NCD_OPTIONS = [0, 25, 30, 38.33, 45, 55];
+
+/* ── STATE ── */
+const state = {
+  modelId: "saga",
+  variantIdx: 0,
+  otrMode: "dengan",       // "dengan" | "tanpa"
+  rebate: 0,
+  depositSel: "10",
+  customDeposit: 0,
+  loanYears: 9,
+  interestPct: 2.28,
+  ncdPct: 0,
+};
+
+/* ── CALCULATION ── */
+function calculate() {
+  const model   = CAR_MODELS.find(m => m.id === state.modelId);
+  const variant = model.variants[state.variantIdx];
+
+  const sellingPrice = variant.otr;
+
+  let insuranceEstimate = 0;
+  if (state.otrMode === "dengan") {
+    insuranceEstimate = Math.round(variant.insurance * (1 - state.ncdPct / 100));
+  }
+
+  const otrPrice = sellingPrice + insuranceEstimate - state.rebate;
+
+  let downpayment = 0;
+  const dep = state.depositSel;
+  if (dep === "custom") {
+    downpayment = state.customDeposit;
+  } else if (dep === "0") {
+    downpayment = 0;
+  } else {
+    const num = Number(dep);
+    downpayment = num >= 100
+      ? num
+      : Math.round(otrPrice * (num / 100));
+  }
+
+  const loanAmount = Math.max(0, otrPrice - downpayment);
+
+  let monthly = 0;
+  if (loanAmount > 0 && state.loanYears > 0) {
+    const totalInterest = loanAmount * (state.interestPct / 100) * state.loanYears;
+    monthly = (loanAmount + totalInterest) / (state.loanYears * 12);
+  }
+
+  return { sellingPrice, insuranceEstimate, otrPrice, downpayment, loanAmount, monthly };
+}
+
+/* ── FORMAT ── */
+function fmt(n) {
+  return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtInt(n) {
+  return Math.round(n).toLocaleString("en-US");
+}
+
+/* ── RENDER ── */
+let prevMonthly = null;
+
+function render() {
+  const model   = CAR_MODELS.find(m => m.id === state.modelId);
+  const result  = calculate();
+
+  /* Header */
+  const mediaEl = document.getElementById("model-media");
+  const titleEl = document.getElementById("model-title");
+  const src = model.video || model.image;
+
+  if (mediaEl.dataset.src !== src) {
+    mediaEl.dataset.src = src;
+    if (model.video) {
+      // Replace img with video (or vice-versa)
+      const isVideo = mediaEl.tagName === "VIDEO";
+      if (!isVideo) {
+        const vid = document.createElement("video");
+        vid.id = "model-media";
+        vid.autoplay = true;
+        vid.muted = true;
+        vid.loop = true;
+        vid.playsInline = true;
+        vid.dataset.src = src;
+        vid.className = mediaEl.className;
+        vid.style.cssText = mediaEl.style.cssText;
+        vid.src = src;
+        mediaEl.replaceWith(vid);
+      } else {
+        mediaEl.src = src;
+        mediaEl.load();
+        mediaEl.play().catch(() => {});
+      }
+    } else {
+      const isImg = mediaEl.tagName === "IMG";
+      if (!isImg) {
+        const img = document.createElement("img");
+        img.id = "model-media";
+        img.dataset.src = src;
+        img.className = mediaEl.className;
+        img.style.cssText = mediaEl.style.cssText;
+        img.src = src;
+        img.alt = model.name;
+        mediaEl.replaceWith(img);
+      } else {
+        mediaEl.src = src;
+        mediaEl.alt = model.name;
+      }
+    }
+  }
+
+  titleEl.textContent = model.name;
+  document.getElementById("calc-bar-title").textContent = model.name + " Calculator";
+
+  /* Variant select */
+  const varSel = document.getElementById("select-variant");
+  if (varSel.dataset.model !== state.modelId) {
+    varSel.dataset.model = state.modelId;
+    varSel.innerHTML = model.variants
+      .map((v, i) => `<option value="${i}">${v.name}</option>`)
+      .join("");
+  }
+  varSel.value = state.variantIdx;
+
+  /* OTR mode */
+  document.getElementById("select-otr").value = state.otrMode;
+
+  /* Custom deposit visibility */
+  const customRow = document.getElementById("custom-row");
+  if (state.depositSel === "custom") {
+    customRow.classList.add("visible");
+  } else {
+    customRow.classList.remove("visible");
+  }
+
+  /* NCD buttons */
+  document.querySelectorAll(".ncd-btn").forEach(btn => {
+    btn.classList.toggle("active", Number(btn.dataset.ncd) === state.ncdPct);
+  });
+
+  /* Outputs */
+  document.getElementById("out-selling").textContent  = fmtInt(result.sellingPrice);
+  document.getElementById("out-insurance").textContent= fmtInt(result.insuranceEstimate);
+  document.getElementById("out-otr").textContent      = fmtInt(result.otrPrice);
+  document.getElementById("out-dp").textContent       = fmtInt(result.downpayment);
+  document.getElementById("out-loan").textContent     = fmtInt(result.loanAmount);
+
+  /* Monthly */
+  const monthlyEl = document.getElementById("monthly-value");
+  if (prevMonthly !== null && Math.abs(prevMonthly - result.monthly) > 0.01) {
+    monthlyEl.classList.remove("pop");
+    void monthlyEl.offsetWidth; // reflow
+    monthlyEl.classList.add("pop");
+  }
+  prevMonthly = result.monthly;
+  monthlyEl.textContent = fmt(result.monthly);
+  document.getElementById("monthly-bulan").textContent = (state.loanYears * 12) + " BULAN";
+
+  /* Tabs */
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.id === state.modelId);
+  });
+}
+
+/* ── INIT ── */
+function init() {
+  /* Build tab bar */
+  const tabBar = document.getElementById("tab-bar");
+  CAR_MODELS.forEach(m => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn";
+    btn.dataset.id = m.id;
+    btn.textContent = m.shortName;
+    btn.addEventListener("click", () => {
+      state.modelId = m.id;
+      state.variantIdx = 0;
+      render();
+    });
+    tabBar.appendChild(btn);
+  });
+
+  /* Build NCD buttons */
+  const ncdBtns = document.getElementById("ncd-btns");
+  NCD_OPTIONS.forEach(ncd => {
+    const btn = document.createElement("button");
+    btn.className = "ncd-btn";
+    btn.dataset.ncd = ncd;
+    btn.textContent = ncd + "%";
+    btn.addEventListener("click", () => {
+      state.ncdPct = ncd;
+      render();
+    });
+    ncdBtns.appendChild(btn);
+  });
+
+  /* Variant select */
+  document.getElementById("select-variant").addEventListener("change", e => {
+    state.variantIdx = Number(e.target.value);
+    render();
+  });
+
+  /* OTR mode */
+  document.getElementById("select-otr").addEventListener("change", e => {
+    state.otrMode = e.target.value;
+    render();
+  });
+
+  /* Rebate */
+  document.getElementById("input-rebate").addEventListener("input", e => {
+    const v = parseFloat(e.target.value);
+    state.rebate = isNaN(v) || v < 0 ? 0 : v;
+    render();
+  });
+
+  /* Deposit select */
+  document.getElementById("select-deposit").addEventListener("change", e => {
+    state.depositSel = e.target.value;
+    render();
+  });
+
+  /* Custom deposit */
+  document.getElementById("input-custom-deposit").addEventListener("input", e => {
+    const v = parseFloat(e.target.value);
+    state.customDeposit = isNaN(v) || v < 0 ? 0 : v;
+    render();
+  });
+
+  /* Loan years */
+  document.getElementById("select-years").addEventListener("change", e => {
+    state.loanYears = Number(e.target.value);
+    render();
+  });
+
+  /* Interest % */
+  document.getElementById("input-interest").addEventListener("input", e => {
+    const v = parseFloat(e.target.value);
+    state.interestPct = isNaN(v) || v < 0 ? 0 : v;
+    render();
+  });
+
+  render();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
