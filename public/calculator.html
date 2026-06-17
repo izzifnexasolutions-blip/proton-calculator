@@ -207,6 +207,30 @@ body{
 #footer p:first-child{font-weight:700;font-size:11px;color:#555;letter-spacing:.06em;text-transform:uppercase}
 #footer p:last-child{font-weight:700;font-size:9px;color:#444;margin-top:3px}
 
+/* ── SETTINGS PANEL ── */
+#settings-panel{display:none;padding:10px 10px 16px;background:#0a0a0a}
+#settings-panel.active{display:block}
+.sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sp-card{background:#141414;border:1px solid #222;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.sp-title{font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#aaa;display:flex;align-items:center;gap:5px}
+.sp-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:10px}
+.sp-badge-custom{background:#1d3a6e;color:#60a5fa;border:1px solid #1d4ed850}
+.sp-badge-default{background:#1f1f1f;color:#444;border:1px solid #2a2a2a}
+.sp-preview{width:100%;aspect-ratio:16/9;background:#0f0f0f;border-radius:6px;overflow:hidden;border:1px solid #1f1f1f}
+.sp-preview img,.sp-preview video{width:100%;height:100%;object-fit:cover;display:block}
+.sp-preview .sp-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:9px}
+.sp-btns{display:flex;gap:4px}
+.sp-btn{padding:5px 6px;border:none;border-radius:6px;font-size:9px;font-weight:800;cursor:pointer;flex:1;font-family:'Montserrat',sans-serif}
+.sp-btn:disabled{opacity:.3;cursor:not-allowed}
+.sp-choose{background:#1f1f1f;color:#ccc}
+.sp-save{background:#2563eb;color:#fff}
+.sp-remove{background:#1f1f1f;color:#ef4444;flex:0 0 auto;padding:5px 7px}
+.sp-file{font-size:9px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:11px}
+.sp-status{font-size:9px;min-height:11px;font-weight:700}
+.sp-status.ok{color:#22c55e}.sp-status.err{color:#ef4444}
+.sp-note{font-size:9px;color:#444;padding:6px 8px;background:#111;border-radius:6px;border:1px solid #1a1a1a;margin-bottom:8px;line-height:1.5}
+.sp-note strong{color:#666}
+
 /* ── RESPONSIVE ── */
 @media(max-width:480px){
   .row-label span{font-size:11px}
@@ -249,6 +273,7 @@ body{
   <button class="tab-btn" data-id="emas5">E.MAS 5</button>
   <button class="tab-btn" data-id="emas7ev">E7 EV</button>
   <button class="tab-btn" data-id="emas7phev">E7 PHEV</button>
+  <button class="tab-btn" data-id="__settings__" id="settings-tab-btn">⚙</button>
 </div>
 
 <!-- INPUT ROWS -->
@@ -433,6 +458,12 @@ body{
   </div>
 </div>
 
+<!-- SETTINGS PANEL -->
+<div id="settings-panel">
+  <div class="sp-note"><strong>Choose File → Save.</strong> Supported: jpg · png · webp · mp4. Stored in browser.</div>
+  <div class="sp-grid" id="sp-grid"></div>
+</div>
+
 <!-- FOOTER -->
 <div id="footer">
   <p>Fariz Proton Cacu Calculator</p>
@@ -517,18 +548,67 @@ function fmtI(n){return Math.round(n).toLocaleString("en-US")}
 
 var currentSrc="", prevMonthly=null;
 
+/* ── IndexedDB for custom media ── */
+var _db=null;
+function _openDB(){
+  return new Promise(function(res,rej){
+    if(_db){res(_db);return;}
+    var r=indexedDB.open('ProtonMediaDB',1);
+    r.onupgradeneeded=function(e){e.target.result.createObjectStore('media',{keyPath:'id'})};
+    r.onsuccess=function(e){_db=e.target.result;res(_db)};
+    r.onerror=function(){res(null)};
+  });
+}
+function _dbGet(id){
+  return _openDB().then(function(db){
+    if(!db)return null;
+    return new Promise(function(res){
+      var r=db.transaction('media').objectStore('media').get(id);
+      r.onsuccess=function(e){res(e.target.result||null)};
+      r.onerror=function(){res(null)};
+    });
+  });
+}
+function _dbPut(id,file){
+  return _openDB().then(function(db){
+    if(!db)return;
+    return new Promise(function(res,rej){
+      var tx=db.transaction('media','readwrite');
+      tx.objectStore('media').put({id:id,blob:file,type:file.type,name:file.name});
+      tx.oncomplete=res;tx.onerror=rej;
+    });
+  });
+}
+function _dbDel(id){
+  return _openDB().then(function(db){
+    if(!db)return;
+    return new Promise(function(res,rej){
+      var tx=db.transaction('media','readwrite');
+      tx.objectStore('media').delete(id);
+      tx.oncomplete=res;tx.onerror=rej;
+    });
+  });
+}
+
 function swapMedia(m){
-  var src=m.video||m.image;
-  if(src===currentSrc) return;
-  currentSrc=src;
-  var old=document.getElementById("model-media");
-  if(m.video){
-    if(old.tagName==="VIDEO"){old.src=src;old.load();old.play().catch(function(){})}
-    else{var v=document.createElement("video");v.id="model-media";v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;v.className=old.className;v.src=src;old.parentNode.replaceChild(v,old)}
-  } else {
-    if(old.tagName==="IMG"){old.src=src;old.alt=m.name}
-    else{var i=document.createElement("img");i.id="model-media";i.className=old.className;i.src=src;i.alt=m.name;old.parentNode.replaceChild(i,old)}
-  }
+  _dbGet(m.id).then(function(rec){
+    var src, isVideo;
+    if(rec && rec.blob){
+      src=URL.createObjectURL(rec.blob);
+      isVideo=rec.type&&rec.type.startsWith('video/');
+    } else {
+      src=m.video||m.image;
+      isVideo=!!m.video;
+    }
+    var old=document.getElementById("model-media");
+    if(isVideo){
+      if(old.tagName==="VIDEO"){old.src=src;old.load();old.play().catch(function(){})}
+      else{var v=document.createElement("video");v.id="model-media";v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;v.className=old.className;v.src=src;old.parentNode.replaceChild(v,old)}
+    } else {
+      if(old.tagName==="IMG"){old.src=src;old.alt=m.name}
+      else{var i=document.createElement("img");i.id="model-media";i.className=old.className;i.src=src;i.alt=m.name;old.parentNode.replaceChild(i,old)}
+    }
+  });
 }
 
 function render(){
@@ -563,10 +643,101 @@ function render(){
   document.getElementById("monthly-bulan").textContent=(state.loanYears*12)+" BULAN";
 }
 
+/* ── Settings panel ── */
+function spBuildCard(m,rec){
+  var card=document.createElement('div');card.className='sp-card';card.id='sp-card-'+m.id;
+  var isCustom=!!rec;
+  var pending=null,objURL=null;
+  /* title */
+  var title=document.createElement('div');title.className='sp-title';
+  title.innerHTML=m.name+' <span class="sp-badge '+(isCustom?'sp-badge-custom':'sp-badge-default')+'">'+(isCustom?'CUSTOM':'DEFAULT')+'</span>';
+  card.appendChild(title);
+  /* preview */
+  var pw=document.createElement('div');pw.className='sp-preview';pw.id='sp-pw-'+m.id;
+  function setPreview(src,type){
+    pw.innerHTML='';
+    if(!src){pw.innerHTML='<div class="sp-empty">NO MEDIA</div>';return;}
+    if(type&&type.startsWith('video/')){var v=document.createElement('video');v.src=src;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;pw.appendChild(v);}
+    else{var i=document.createElement('img');i.src=src;pw.appendChild(i);}
+  }
+  var initSrc=rec?URL.createObjectURL(rec.blob):m.image;
+  var initType=rec?rec.type:'image/jpeg';
+  setPreview(initSrc,initType);
+  card.appendChild(pw);
+  /* file input */
+  var fi=document.createElement('input');fi.type='file';fi.accept='image/jpeg,image/png,image/webp,video/mp4';fi.style.display='none';card.appendChild(fi);
+  /* buttons */
+  var btns=document.createElement('div');btns.className='sp-btns';
+  var bC=document.createElement('button');bC.className='sp-btn sp-choose';bC.textContent='📂 Choose';
+  var bS=document.createElement('button');bS.className='sp-btn sp-save';bS.textContent='💾 Save';bS.disabled=true;
+  var bR=document.createElement('button');bR.className='sp-btn sp-remove';bR.textContent='✕';bR.disabled=!isCustom;
+  btns.appendChild(bC);btns.appendChild(bS);btns.appendChild(bR);card.appendChild(btns);
+  var fname=document.createElement('div');fname.className='sp-file';if(rec)fname.textContent=rec.name||'';card.appendChild(fname);
+  var status=document.createElement('div');status.className='sp-status';card.appendChild(status);
+  bC.onclick=function(){fi.click()};
+  fi.onchange=function(){
+    var f=this.files[0];if(!f)return;pending=f;
+    if(objURL)URL.revokeObjectURL(objURL);objURL=URL.createObjectURL(f);
+    setPreview(objURL,f.type);
+    fname.textContent=f.name;bS.disabled=false;status.textContent='';status.className='sp-status';
+  };
+  bS.onclick=function(){
+    if(!pending)return;bS.disabled=true;bS.textContent='⏳';
+    _dbPut(m.id,pending).then(function(){
+      status.textContent='✓ Saved!';status.className='sp-status ok';
+      title.innerHTML=m.name+' <span class="sp-badge sp-badge-custom">CUSTOM</span>';
+      bR.disabled=false;pending=null;bS.textContent='💾 Save';
+      /* refresh header if this model is active */
+      if(state.modelId===m.id)render();
+    }).catch(function(){status.textContent='✗ Error';status.className='sp-status err';bS.disabled=false;bS.textContent='💾 Save'});
+  };
+  bR.onclick=function(){
+    if(!confirm('Remove custom media for '+m.name+'?'))return;
+    _dbDel(m.id).then(function(){
+      pending=null;if(objURL){URL.revokeObjectURL(objURL);objURL=null;}
+      var nc=document.createElement('div');nc.className='sp-card';nc.id='sp-card-'+m.id;
+      card.parentNode.replaceChild(nc,card);
+      /* rebuild card with null record */
+      _dbGet(m.id).then(function(r2){
+        var rebuilt=spBuildCard(m,r2);card.parentNode?card.parentNode.replaceChild(rebuilt,card):nc.replaceWith(rebuilt);
+      });
+      if(state.modelId===m.id)render();
+    });
+  };
+  return card;
+}
+
+function spBuild(){
+  var grid=document.getElementById('sp-grid');
+  if(grid._built)return;
+  grid._built=true;
+  Promise.all(CAR_MODELS.map(function(m){return _dbGet(m.id)})).then(function(recs){
+    grid.innerHTML='';
+    CAR_MODELS.forEach(function(m,i){grid.appendChild(spBuildCard(m,recs[i]))});
+  });
+}
+
+var settingsOpen=false;
+function showSettings(on){
+  settingsOpen=on;
+  document.getElementById('settings-panel').classList.toggle('active',on);
+  document.getElementById('input-rows').style.display=on?'none':'';
+  document.getElementById('output-rows').style.display=on?'none':'';
+  document.getElementById('monthly-box').style.display=on?'none':'';
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', on ? b.id==='settings-tab-btn' : b.getAttribute('data-id')===state.modelId);
+  });
+  if(on)spBuild();
+}
+
 function init(){
   /* tabs */
   document.querySelectorAll(".tab-btn").forEach(function(btn){
-    btn.addEventListener("click",function(){state.modelId=btn.getAttribute("data-id");state.variantIdx=0;render()});
+    btn.addEventListener("click",function(){
+      if(btn.id==='settings-tab-btn'){showSettings(true);return;}
+      if(settingsOpen)showSettings(false);
+      state.modelId=btn.getAttribute("data-id");state.variantIdx=0;render();
+    });
   });
   /* ncd */
   document.querySelectorAll(".ncd-btn").forEach(function(btn){
