@@ -62,9 +62,7 @@ body{
   display:none;align-items:center;justify-content:center;padding:0;
   -webkit-tap-highlight-color:transparent;opacity:.85}
 #ss-pause:hover{opacity:1;background:rgba(0,0,0,.8)}
-#ss-debug{position:absolute;top:6px;left:8px;z-index:20;
-  background:rgba(0,0,0,.72);color:#0f0;font-family:monospace;font-size:9px;
-  line-height:1.5;padding:5px 8px;border-radius:4px;pointer-events:none;white-space:pre;}
+#ss-debug{display:none!important}
 #ss-counter{position:absolute;bottom:8px;right:10px;z-index:14;
   font-size:9px;font-weight:800;color:rgba(255,255,255,.78);
   font-family:'Montserrat',sans-serif;letter-spacing:.04em;
@@ -873,34 +871,8 @@ function _ssScheduleNext(){
 function _ssStop(){if(_ss.timer){clearTimeout(_ss.timer);_ss.timer=null;}}
 
 /* ── DEBUG HELPER — remove when done ── */
-function _ssDebug(extra){
-  var d=document.getElementById('ss-debug');if(!d)return;
-  d.style.display='block';
-  var slide=_ss.slides[_ss.idx]||{};
-  var t=slide.type||'none';
-  var isVid=t==='VIDEO_URL'||t==='video_url';
-  var isDirect=_ssIsDirect(slide);
-  var timerOn=(_ss.timer!==null);
-  var con=document.getElementById('slide-container');
-  var vEl=con?con.querySelector('video'):null;
-  var dur=vEl?vEl.duration:'-';
-  var cur=vEl?(+vEl.currentTime.toFixed(2)):'-';
-  d.textContent=[
-    'idx: '+_ss.idx+' / '+((_ss.slides.length||1)-1),
-    'type: '+t,
-    'isVideo: '+isVid+' | isDirect: '+isDirect,
-    'loop: '+_ss.loop+' | autoplay: '+_ss.autoplay,
-    'timer active: '+timerOn,
-    'duration: '+dur+'s  currentTime: '+cur+'s',
-    'event: '+(extra||'-')
-  ].join('\n');
-}
-var _ssDbgInterval=null;
-function _ssDebugStart(){
-  if(_ssDbgInterval)clearInterval(_ssDbgInterval);
-  _ssDbgInterval=setInterval(function(){_ssDebug();},200);
-}
-function _ssDebugStop(){if(_ssDbgInterval){clearInterval(_ssDbgInterval);_ssDbgInterval=null;}}
+function _ssDebug(){/* debug removed */}
+var _ssDbgInterval=null;function _ssDebugStart(){}function _ssDebugStop(){}
 
 function _ssShow(idx){
   var con=document.getElementById('slide-container');if(!con||!_ss.slides.length)return;
