@@ -953,63 +953,94 @@ function _smSetStatus(msg,cls){
 }
 
 function _smSave(){
-  if(!_sbReady){_smSetStatus('Supabase not connected','err');return;}
+  /* ── diagnostic: verify client ── */
+  if(!_sbReady||!_sb){
+    _smSetStatus('Supabase not connected. Check credentials.','err');
+    console.error('Supabase save error: client not initialised (_sbReady='+_sbReady+')');
+    return;
+  }
   var btn=document.getElementById('sm-save-btn');
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
-  _smSetStatus('');
+  _smSetStatus('Connecting...');
   var mid=_sm.modelId,vi=String(_sm.variantIdx);
-  /* delete existing records for this variant */
+
+  /* Step 1 — delete existing rows for this variant (non-fatal if none exist) */
   _sb.from('variant_media').delete().eq('model_key',mid).eq('variant_key',vi)
-  .then(function(){
-    /* upload pending files sequentially, then insert all */
+  .then(function(delRes){
+    if(delRes.error){
+      console.warn('Supabase delete warning (continuing):', delRes.error.message||delRes.error);
+    }
+
+    /* Step 2 — upload new files then insert all rows */
     var finalItems=[];
     function processItem(i){
       if(i>=_sm.items.length){
         if(!finalItems.length){
-          /* nothing to insert — just update cache and UI */
           delete _vmCache[_vmKey(mid,_sm.variantIdx)];
           _smLoadVariant();
           if(mid===state.modelId&&_sm.variantIdx===state.variantIdx){_ss.builtFor=null;_ssLoad();}
           _smSetStatus('Gallery cleared.','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
-          return;
+          return Promise.resolve();
         }
-        return _sb.from('variant_media').insert(finalItems).then(function(r){
-          if(r.error)throw r.error;
-          /* update local cache */
+        console.log('[Showroom] inserting',finalItems.length,'rows into variant_media...',finalItems);
+        _smSetStatus('Saving to database...');
+        return _sb.from('variant_media').insert(finalItems)
+        .then(function(r){
+          if(r.error){
+            console.error('Supabase insert error:', r.error);
+            throw new Error('DB insert: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
+          }
           var k=_vmKey(mid,_sm.variantIdx);
           _vmCache[k]={autoplay:_sm.autoplay,loop:_sm.loop,
             slides:finalItems.map(function(fi){return{url:fi.media_url,type:fi.media_type,name:fi.file_name};})};
-          /* revoke object URLs */
           _sm.items.forEach(function(it){if(it.pending&&it.localUrl)URL.revokeObjectURL(it.localUrl);});
           _smLoadVariant();
           if(mid===state.modelId&&_sm.variantIdx===state.variantIdx){_ss.builtFor=null;_ssLoad();}
-          _smSetStatus('Saved! '+finalItems.length+' slides.','ok');
+          _smSetStatus('Saved! '+finalItems.length+' slide(s).','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
         });
       }
       var item=_sm.items[i];
       if(item.pending&&item.file){
-        var ext=item.name.split('.').pop();
-        var path=mid+'/'+vi+'/'+Date.now()+'_'+i+'.'+ext;
+        /* sanitise filename, build storage path */
+        var safeName=item.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+        var path=mid+'/'+vi+'/'+Date.now()+'-'+safeName;
+        _smSetStatus('Uploading '+(i+1)+' / '+_sm.items.length+'...');
+        console.log('[Showroom] uploading to variant-media/'+path);
         return _sb.storage.from('variant-media').upload(path,item.file,{upsert:true,contentType:item.type})
         .then(function(up){
-          if(up.error)throw up.error;
+          if(up.error){
+            console.error('Supabase storage error:', up.error);
+            throw new Error('Storage upload: '+(up.error.message||up.error.error||JSON.stringify(up.error)));
+          }
           var url=_sb.storage.from('variant-media').getPublicUrl(path).data.publicUrl;
-          finalItems.push({model_key:mid,variant_key:vi,media_url:url,media_type:item.type,
-            file_name:item.name,media_order:i,autoplay:_sm.autoplay,loop:_sm.loop,tags:[]});
+          console.log('[Showroom] uploaded OK ->', url);
+          finalItems.push({
+            model_key:mid, variant_key:vi,
+            media_url:url, media_type:item.type,
+            file_name:item.name, media_order:i,
+            autoplay:_sm.autoplay, loop:_sm.loop,
+            slide_duration:4000
+          });
           return processItem(i+1);
         });
       }else{
-        finalItems.push({model_key:mid,variant_key:vi,media_url:item.url,media_type:item.type,
-          file_name:item.name,media_order:i,autoplay:_sm.autoplay,loop:_sm.loop,tags:[]});
+        finalItems.push({
+          model_key:mid, variant_key:vi,
+          media_url:item.url, media_type:item.type,
+          file_name:item.name, media_order:i,
+          autoplay:_sm.autoplay, loop:_sm.loop,
+          slide_duration:4000
+        });
         return processItem(i+1);
       }
     }
     return processItem(0);
   }).catch(function(e){
-    console.error(e);
-    _smSetStatus('Error saving. Check console.','err');
+    var msg=(e&&e.message)?e.message:String(e);
+    console.error('Supabase save error:',e);
+    _smSetStatus('Error: '+msg,'err');
     if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
   });
 }
