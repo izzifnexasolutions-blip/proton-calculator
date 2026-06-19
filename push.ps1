@@ -9,7 +9,7 @@ git add public/calculator.html
 git add public/media-settings.html
 git add vercel.json
 
-git commit -m "Add variant media showroom: per-variant slideshows, settings manager, Supabase integration"
+git commit -m "Upgrade Media Showroom Manager: 10-slot system, VIDEO_URL support, swipe/keyboard, cover-as-slide1"
 git push origin main --force
 
 Write-Host ""

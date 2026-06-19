@@ -81,6 +81,16 @@ CREATE POLICY IF NOT EXISTS "variant_media_anon_delete"
   USING (bucket_id = 'variant-media');
 
 -- ============================================================
--- IF variant_media table already exists but is MISSING slide_duration:
--- ALTER TABLE public.variant_media ADD COLUMN IF NOT EXISTS slide_duration integer NOT NULL DEFAULT 4000;
+-- MIGRATION: run these if table already exists (safe to run on fresh table too)
+-- ============================================================
+
+-- Add slide_duration (if missing)
+ALTER TABLE public.variant_media ADD COLUMN IF NOT EXISTS slide_duration integer NOT NULL DEFAULT 4000;
+
+-- Add title & description (required for 10-slot showroom manager)
+ALTER TABLE public.variant_media ADD COLUMN IF NOT EXISTS title text NOT NULL DEFAULT '';
+ALTER TABLE public.variant_media ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
+
+-- Allow media_order = -1 (used for COVER_REF sentinel row)
+-- No change needed — media_order is already integer, negative values are fine.
 -- ============================================================
