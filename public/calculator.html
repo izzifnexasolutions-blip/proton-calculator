@@ -56,6 +56,9 @@ body{
   -webkit-tap-highlight-color:transparent}
 .ss-arrow:hover{background:rgba(0,0,0,.82)}
 #ss-prev{left:8px}#ss-next{right:8px}
+#ss-debug{position:absolute;top:6px;left:8px;z-index:20;
+  background:rgba(0,0,0,.72);color:#0f0;font-family:monospace;font-size:9px;
+  line-height:1.5;padding:5px 8px;border-radius:4px;pointer-events:none;white-space:pre;}
 #ss-counter{position:absolute;bottom:8px;right:10px;z-index:14;
   font-size:9px;font-weight:800;color:rgba(255,255,255,.78);
   font-family:'Montserrat',sans-serif;letter-spacing:.04em;
@@ -351,6 +354,7 @@ body{
   <button class="ss-arrow" id="ss-prev" aria-label="Previous">&#8249;</button>
   <button class="ss-arrow" id="ss-next" aria-label="Next">&#8250;</button>
   <div id="ss-counter"></div>
+  <div id="ss-debug" style="display:none"></div>
   <div id="header-overlay"></div>
   <div id="model-title">PROTON SAGA</div>
 </div>
@@ -809,22 +813,64 @@ function _ssElFor(slide){
 
 /* auto-advance: respects loop setting */
 function _ssAdvance(){
+  _ssDebug('advance→next');
   _ssStop();
   var next=_ss.idx+1;
-  if(next>=_ss.slides.length){if(!_ss.loop)return;next=0;}
+  if(next>=_ss.slides.length){if(!_ss.loop){_ssDebug('stopped-at-end');return;}next=0;}
   _ssShow(next);
   _ssScheduleNext();
 }
 
-/* per-slide timing: image/iframe uses timer; direct video waits for onended */
+/* per-slide timing:
+   IMAGE          → setTimeout(slide_duration) → auto-advance
+   DIRECT MP4     → no timer; video.onended triggers _ssAdvance
+   IFRAME(YT/Vi)  → no timer, no auto-advance; manual arrow only */
 function _ssScheduleNext(){
   _ssStop();
-  if(!_ss.autoplay||_ss.slides.length<2)return;
-  if(_ssIsDirect(_ss.slides[_ss.idx]))return; /* video: onended wired in _ssShow */
+  if(!_ss.autoplay||_ss.slides.length<2){_ssDebug('schedule: no-autoplay');return;}
+  var slide=_ss.slides[_ss.idx];
+  var t=(slide?slide.type||'':'');
+  if(t==='VIDEO_URL'||t==='video_url'){
+    /* ALL video URLs — never set a timer regardless of host */
+    _ssDebug(_ssIsDirect(slide)?'schedule: waiting-onended':'schedule: iframe-manual-only');
+    return;
+  }
+  /* IMAGE: timed auto-advance */
+  _ssDebug('schedule: timer-set('+_ss.duration+'ms)');
   _ss.timer=setTimeout(_ssAdvance,_ss.duration);
 }
 
 function _ssStop(){if(_ss.timer){clearTimeout(_ss.timer);_ss.timer=null;}}
+
+/* ── DEBUG HELPER — remove when done ── */
+function _ssDebug(extra){
+  var d=document.getElementById('ss-debug');if(!d)return;
+  d.style.display='block';
+  var slide=_ss.slides[_ss.idx]||{};
+  var t=slide.type||'none';
+  var isVid=t==='VIDEO_URL'||t==='video_url';
+  var isDirect=_ssIsDirect(slide);
+  var timerOn=(_ss.timer!==null);
+  var con=document.getElementById('slide-container');
+  var vEl=con?con.querySelector('video'):null;
+  var dur=vEl?vEl.duration:'-';
+  var cur=vEl?(+vEl.currentTime.toFixed(2)):'-';
+  d.textContent=[
+    'idx: '+_ss.idx+' / '+((_ss.slides.length||1)-1),
+    'type: '+t,
+    'isVideo: '+isVid+' | isDirect: '+isDirect,
+    'loop: '+_ss.loop+' | autoplay: '+_ss.autoplay,
+    'timer active: '+timerOn,
+    'duration: '+dur+'s  currentTime: '+cur+'s',
+    'event: '+(extra||'-')
+  ].join('\n');
+}
+var _ssDbgInterval=null;
+function _ssDebugStart(){
+  if(_ssDbgInterval)clearInterval(_ssDbgInterval);
+  _ssDbgInterval=setInterval(function(){_ssDebug();},200);
+}
+function _ssDebugStop(){if(_ssDbgInterval){clearInterval(_ssDbgInterval);_ssDbgInterval=null;}}
 
 function _ssShow(idx){
   var con=document.getElementById('slide-container');if(!con||!_ss.slides.length)return;
@@ -838,8 +884,13 @@ function _ssShow(idx){
   var vv=nel.querySelector('video');
   if(vv){
     vv.play().catch(function(){});   /* silent autoplay; stays muted if blocked */
-    vv.onended=function(){_ssAdvance();};
+    vv.onended=function(){_ssDebug('ended');_ssAdvance();};
+    vv.addEventListener('loadedmetadata',function(){_ssDebug('loadedmetadata');});
+    vv.addEventListener('play',function(){_ssDebug('play');});
+    vv.addEventListener('pause',function(){_ssDebug('pause');});
   }
+  _ssDebug('show');
+  _ssDebugStart();
   var ct=document.getElementById('ss-counter');
   if(ct)ct.textContent=(_ss.idx+1)+' / '+_ss.slides.length;
 }
