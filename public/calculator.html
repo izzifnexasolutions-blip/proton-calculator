@@ -33,39 +33,24 @@ body{
   aspect-ratio:16/9;
   overflow:hidden;background:#111;
 }
-/* ── SLIDESHOW CORE ── */
-#slide-container{position:absolute;inset:0;overflow:hidden}
-.slide-item{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;will-change:opacity;pointer-events:none}
-.slide-item.active{opacity:1;pointer-events:auto}
-.slide-item img,.slide-item video{width:100%;height:100%;object-fit:cover;display:block}
-/* Arrows */
-.slide-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:12;
-  width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;
-  background:rgba(0,0,0,.52);color:#fff;font-size:18px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-  padding:0;transition:background .15s;-webkit-tap-highlight-color:transparent}
-.slide-arrow:hover{background:rgba(0,0,0,.82)}
-.slide-arrow:disabled{opacity:.25;cursor:default}
-#slide-prev{left:8px}#slide-next{right:8px}
-/* Indicators */
-#slide-indicators{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
-  z-index:12;display:flex;gap:5px;align-items:center;max-width:78%;
-  flex-wrap:nowrap;overflow:hidden}
-.slide-dot{width:7px;height:7px;border-radius:50%;border:none;cursor:pointer;
-  flex-shrink:0;background:rgba(255,255,255,.4);padding:0;
-  transition:all .22s ease;-webkit-tap-highlight-color:transparent}
-.slide-dot.active{width:18px;border-radius:4px;background:#E53935}
-/* Counter */
-#slide-counter{position:absolute;bottom:8px;right:10px;z-index:12;
-  font-size:9px;font-weight:800;color:rgba(255,255,255,.75);
-  font-family:'Montserrat',sans-serif;letter-spacing:.04em;
-  background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px;pointer-events:none}
-/* Autoplay btn */
-#slide-autoplay-btn{position:absolute;bottom:6px;left:10px;z-index:12;
-  font-size:9px;font-weight:800;color:rgba(255,255,255,.75);
-  font-family:'Montserrat',sans-serif;letter-spacing:.04em;
-  background:rgba(0,0,0,.45);padding:2px 7px;border-radius:4px;
-  border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* ── COVER IMAGE ── */
+#model-cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* ── VIDEO URL ADD ROW (admin only) ── */
+.sm-url-row{display:flex;gap:5px;margin-bottom:6px}
+.sm-url-input{flex:1;min-width:0;font-size:9px;font-family:'Montserrat',sans-serif;font-weight:700;
+  background:#0d0d0d;color:#ccc;border:1px solid #222;border-radius:5px;
+  padding:4px 6px;outline:none;-webkit-tap-highlight-color:transparent}
+.sm-url-input::placeholder{color:#2a2a2a}
+.sm-url-add-btn{font-size:9px;font-weight:800;font-family:'Montserrat',sans-serif;
+  background:#1d4ed8;color:#fff;border:none;border-radius:5px;
+  padding:4px 9px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.sm-limit-note{font-size:8px;font-weight:700;color:#3a3a3a;font-family:'Montserrat',sans-serif;
+  text-align:right;margin-bottom:5px;min-height:10px}
+.sm-media-videourl{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;padding:4px;gap:2px;background:#0a0f1a}
+.sm-media-videourl-icon{font-size:16px;line-height:1}
+.sm-media-videourl-text{font-size:7px;font-weight:700;color:#4a7aff;font-family:'Montserrat',sans-serif;
+  text-align:center;word-break:break-all;overflow:hidden;max-height:26px;line-height:1.2}
 #header-overlay{
   position:absolute;inset:0;
   background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 55%,transparent 100%);
@@ -335,16 +320,7 @@ body{
 
 <!-- HEADER -->
 <div id="model-header">
-  <!-- SLIDESHOW CONTAINER -->
-  <div id="slide-container"></div>
-  <!-- ARROW NAVIGATION -->
-  <button class="slide-arrow" id="slide-prev" aria-label="Previous">&#8249;</button>
-  <button class="slide-arrow" id="slide-next" aria-label="Next">&#8250;</button>
-  <!-- PILL INDICATORS -->
-  <div id="slide-indicators"></div>
-  <!-- COUNTER + AUTOPLAY -->
-  <div id="slide-counter">1 / 1</div>
-  <button id="slide-autoplay-btn" title="Toggle autoplay" aria-label="Toggle autoplay">&#9654;</button>
+  <img id="model-cover-img" src="" alt="">
   <div id="header-overlay"></div>
   <div id="model-title">PROTON SAGA</div>
 </div>
@@ -562,9 +538,14 @@ body{
     <div class="sm-model-tabs" id="sm-model-tabs"></div>
     <div class="sm-variant-tabs" id="sm-variant-tabs"></div>
     <div class="sm-upload-zone" id="sm-upload-zone">
-      <input type="file" id="sm-file-input" multiple accept="image/jpeg,image/png,image/webp,video/mp4" style="display:none">
-      <div class="sm-upload-text">&#128193; TAP TO ADD MEDIA<br><span style="font-size:8px;opacity:.6">jpg &#183; png &#183; webp &#183; mp4 &#183; multiple OK</span></div>
+      <input type="file" id="sm-file-input" multiple accept="image/jpeg,image/png,image/webp" style="display:none">
+      <div class="sm-upload-text">&#128247; TAP TO ADD IMAGES<br><span style="font-size:8px;opacity:.6">jpg &#183; png &#183; webp &#183; max 10 slides</span></div>
     </div>
+    <div class="sm-url-row">
+      <input type="text" id="sm-url-input" class="sm-url-input" placeholder="Paste video URL (YouTube / Vimeo / mp4)...">
+      <button class="sm-url-add-btn" id="sm-url-add-btn">&#43; VIDEO</button>
+    </div>
+    <div class="sm-limit-note" id="sm-limit-note">0 / 10 slides</div>
     <div class="sm-media-grid" id="sm-media-grid"></div>
     <div class="sm-settings-row">
       <div class="sm-toggle-wrap" onclick="_smToggleAutoplay()">
@@ -754,109 +735,12 @@ function _loadAllVariantMedia(){
 }
 
 /* ── SLIDESHOW ENGINE ── */
-var _ss={slides:[],idx:0,autoplay:true,loop:true,timer:null,trans:false,builtFor:null};
-
-function _ssData(){
-  var k=_getCurrentVmKey();
-  var e=_vmCache[k];
-  if(e&&e.slides&&e.slides.length){return{slides:e.slides,autoplay:e.autoplay,loop:e.loop};}
-  /* fallback to model default */
+/* ── _updateCoverImg — refreshes static header image ── */
+function _updateCoverImg(){
   var m=getModel();
-  if(m.video)return{slides:[{url:m.video,type:'video/mp4',name:m.name}],autoplay:true,loop:true};
-  return{slides:[{url:m.image,type:'image/jpeg',name:m.name}],autoplay:true,loop:true};
+  var ci=document.getElementById('model-cover-img');
+  if(ci&&m.image)ci.src=m.image;
 }
-
-function _ssUpdateUI(){
-  var t=_ss.slides.length,i=_ss.idx;
-  var ct=document.getElementById('slide-counter');
-  if(ct)ct.textContent=(i+1)+' / '+t;
-  var ab=document.getElementById('slide-autoplay-btn');
-  if(ab)ab.innerHTML=_ss.autoplay?'&#9646;&#9646;':'&#9654;';
-  var pv=document.getElementById('slide-prev');
-  var nx=document.getElementById('slide-next');
-  if(pv)pv.disabled=!_ss.loop&&i===0;
-  if(nx)nx.disabled=!_ss.loop&&i===t-1;
-  /* indicators — max 9 pills */
-  var ind=document.getElementById('slide-indicators');
-  if(!ind)return;
-  ind.innerHTML='';
-  var show=Math.min(t,9);
-  var start=Math.max(0,Math.min(i-4,t-show));
-  for(var j=start;j<start+show;j++){
-    var d=document.createElement('button');
-    d.className='slide-dot'+(j===i?' active':'');
-    d.setAttribute('data-si',j);
-    d.setAttribute('aria-label','Slide '+(j+1));
-    ind.appendChild(d);
-  }
-}
-
-function _ssElFor(slide){
-  var wrap=document.createElement('div');
-  wrap.className='slide-item';
-  var isV=slide.type&&slide.type.startsWith('video/');
-  if(isV){
-    var v=document.createElement('video');
-    v.src=slide.url;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;
-    wrap.appendChild(v);
-  }else{
-    var img=document.createElement('img');
-    img.src=slide.url;img.alt=slide.name||'';
-    wrap.appendChild(img);
-  }
-  return wrap;
-}
-
-function _ssShowSlide(newIdx,animate){
-  if(_ss.trans)return;
-  var con=document.getElementById('slide-container');
-  if(!con||!_ss.slides.length)return;
-  newIdx=((newIdx%_ss.slides.length)+_ss.slides.length)%_ss.slides.length;
-  var oldEl=con.querySelector('.slide-item.active');
-  var newEl=_ssElFor(_ss.slides[newIdx]);
-  con.appendChild(newEl);
-  _ss.idx=newIdx;
-  _ssUpdateUI();
-  if(!animate||!oldEl){
-    if(oldEl){oldEl.classList.remove('active');oldEl.remove();}
-    newEl.classList.add('active');
-    var vv=newEl.querySelector('video');if(vv)vv.play().catch(function(){});
-    return;
-  }
-  _ss.trans=true;
-  newEl.classList.add('active');
-  var vv2=newEl.querySelector('video');if(vv2)vv2.play().catch(function(){});
-  setTimeout(function(){if(oldEl&&oldEl.parentNode)oldEl.remove();_ss.trans=false;},380);
-}
-
-function _ssNext(){
-  var t=_ss.slides.length,n=_ss.idx+1;
-  if(n>=t){if(_ss.loop)n=0;else{_ssStopAuto();return;}}
-  _ssShowSlide(n,true);
-}
-function _ssPrev(){
-  var t=_ss.slides.length,p=_ss.idx-1;
-  if(p<0){if(_ss.loop)p=t-1;else return;}
-  _ssShowSlide(p,true);
-}
-function _ssGo(idx){_ssStopAuto();_ssShowSlide(idx,true);if(_ss.autoplay)_ssStartAuto();}
-function _ssStartAuto(){_ssStopAuto();if(!_ss.autoplay||_ss.slides.length<=1)return;_ss.timer=setInterval(_ssNext,4000);}
-function _ssStopAuto(){if(_ss.timer){clearInterval(_ss.timer);_ss.timer=null;}}
-
-function _ssLoad(){
-  var k=_getCurrentVmKey();
-  if(_ss.builtFor===k)return;
-  _ssStopAuto();
-  var data=_ssData();
-  _ss.slides=data.slides;_ss.autoplay=data.autoplay;_ss.loop=data.loop;
-  _ss.idx=0;_ss.builtFor=k;_ss.trans=false;
-  var con=document.getElementById('slide-container');
-  if(con)con.innerHTML='';
-  _ssShowSlide(0,false);
-  if(_ss.autoplay)_ssStartAuto();
-}
-
-function swapMedia(m){/* replaced by _ssLoad() */}
 
 /* ── SHOWROOM MANAGER JS ── */
 var _sm={modelId:'saga',variantIdx:0,items:[],autoplay:true,loop:true,dragIdx:-1,built:false};
@@ -905,19 +789,26 @@ function _smLoadVariant(){
   _sm.items=cached?cached.slides.map(function(s,i){return{url:s.url,type:s.type,name:s.name,order:i,pending:false};}):[];
   _sm.autoplay=cached?cached.autoplay:true;
   _sm.loop=cached?cached.loop:true;
-  _smRenderGrid();_smUpdateToggles();_smSetStatus('');
+  _smRenderGrid();_smUpdateToggles();_smUpdateLimit();_smSetStatus('');
 }
 
 function _smRenderGrid(){
   var grid=document.getElementById('sm-media-grid');if(!grid)return;
   grid.innerHTML='';
+  _smUpdateLimit();
   if(!_sm.items.length){
-    var empty=document.createElement('div');empty.className='sm-grid-empty';empty.textContent='No slides — add media below';
+    var empty=document.createElement('div');empty.className='sm-grid-empty';empty.textContent='No slides — add images or video URLs below';
     grid.appendChild(empty);return;
   }
   _sm.items.forEach(function(item,i){
     var cell=document.createElement('div');cell.className='sm-media-item';cell.draggable=true;
-    if(item.type&&item.type.startsWith('video/')){
+    if(item.type==='VIDEO_URL'){
+      var vd=document.createElement('div');vd.className='sm-media-videourl';
+      var vi2=document.createElement('div');vi2.className='sm-media-videourl-icon';vi2.textContent='\u25B6';vd.appendChild(vi2);
+      var vt=document.createElement('div');vt.className='sm-media-videourl-text';
+      var dispUrl=item.url;try{dispUrl=new URL(item.url).hostname.replace('www.','');}catch(e){}
+      vt.textContent=dispUrl;vd.appendChild(vt);cell.appendChild(vd);
+    }else if(item.type&&item.type.startsWith('video/')){
       var v=document.createElement('video');v.src=item.url;v.muted=true;v.style.pointerEvents='none';cell.appendChild(v);
     }else{
       var img=document.createElement('img');img.src=item.url;img.alt=item.name||'';cell.appendChild(img);
@@ -967,6 +858,10 @@ function _smUpdateToggles(){
 function _smToggleAutoplay(){_sm.autoplay=!_sm.autoplay;_smUpdateToggles();}
 function _smToggleLoop(){_sm.loop=!_sm.loop;_smUpdateToggles();}
 
+function _smUpdateLimit(){
+  var el=document.getElementById('sm-limit-note');
+  if(el)el.textContent=_sm.items.length+' / 10 slides';
+}
 function _smSetStatus(msg,cls){
   var el=document.getElementById('sm-status');if(!el)return;
   el.textContent=msg;el.className='sm-status'+(cls?' '+cls:'');
@@ -1006,7 +901,6 @@ function _smSave(){
         if(!finalItems.length){
           delete _vmCache[_vmKey(mid,_sm.variantIdx)];
           _smLoadVariant();
-          if(mid===state.modelId&&_sm.variantIdx===state.variantIdx){_ss.builtFor=null;_ssLoad();}
           _smSetStatus('Gallery cleared.','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
           return Promise.resolve();
@@ -1024,7 +918,6 @@ function _smSave(){
             slides:finalItems.map(function(fi){return{url:fi.media_url,type:fi.media_type,name:fi.file_name};})};
           _sm.items.forEach(function(it){if(it.pending&&it.localUrl)URL.revokeObjectURL(it.localUrl);});
           _smLoadVariant();
-          if(mid===state.modelId&&_sm.variantIdx===state.variantIdx){_ss.builtFor=null;_ssLoad();}
           _smSetStatus('Saved! '+finalItems.length+' slide(s).','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
         });
@@ -1079,36 +972,55 @@ function _smFmtSize(bytes){
 }
 
 function _smInitEvents(){
+  var MAX_IMAGE=20*1024*1024; // 20 MB per image
   var zone=document.getElementById('sm-upload-zone');
   var fi=document.getElementById('sm-file-input');
   if(zone&&fi){
-    zone.onclick=function(){fi.click();};
+    zone.onclick=function(){
+      if(_sm.items.length>=10){_smSetStatus('Maximum 10 slides reached.','err');return;}
+      fi.click();
+    };
     fi.onchange=function(){
-      var MAX_VIDEO=200*1024*1024; // 200 MB
-      var MAX_IMAGE=10*1024*1024;  // 10 MB
+      var remaining=10-_sm.items.length;
+      if(remaining<=0){_smSetStatus('Maximum 10 slides reached.','err');fi.value='';return;}
+      var files=Array.from(fi.files).slice(0,remaining);
       var rejected=[];
-      Array.from(fi.files).forEach(function(f){
-        var isVideo=f.type.startsWith('video/');
-        var limit=isVideo?MAX_VIDEO:MAX_IMAGE;
+      files.forEach(function(f){
         var lu=URL.createObjectURL(f);
-        if(f.size>limit){
-          rejected.push(f.name+' ('+_smFmtSize(f.size)+') — max '+(isVideo?'200 MB':'10 MB'));
-          /* still show in grid with error state so user can see which file failed */
+        if(f.size>MAX_IMAGE){
+          rejected.push(f.name+' ('+_smFmtSize(f.size)+') — max 20 MB');
           _sm.items.push({url:lu,type:f.type,name:f.name,size:f.size,
             order:_sm.items.length,pending:true,file:f,localUrl:lu,oversize:true});
-        } else {
+        }else{
           _sm.items.push({url:lu,type:f.type,name:f.name,size:f.size,
             order:_sm.items.length,pending:true,file:f,localUrl:lu,oversize:false});
         }
       });
-      _smRenderGrid();
-      if(rejected.length){
+      if(Array.from(fi.files).length>remaining)
+        _smSetStatus('Only '+remaining+' slot(s) left — rest ignored.','err');
+      else if(rejected.length)
         _smSetStatus('Too large: '+rejected.join(' | '),'err');
-      } else {
-        _smSetStatus('');
-      }
+      else _smSetStatus('');
+      _smRenderGrid();
       fi.value='';
     };
+  }
+  /* Video URL add */
+  var urlInput=document.getElementById('sm-url-input');
+  var urlBtn=document.getElementById('sm-url-add-btn');
+  if(urlBtn&&urlInput){
+    function addVideoUrl(){
+      var url=urlInput.value.trim();
+      if(!url){_smSetStatus('Paste a video URL first.','err');return;}
+      if(_sm.items.length>=10){_smSetStatus('Maximum 10 slides reached.','err');return;}
+      try{new URL(url);}catch(e){_smSetStatus('Invalid URL.','err');return;}
+      _sm.items.push({url:url,type:'VIDEO_URL',name:url,size:0,order:_sm.items.length,pending:false,file:null,localUrl:null,oversize:false});
+      _smRenderGrid();
+      _smSetStatus('');
+      urlInput.value='';
+    }
+    urlBtn.onclick=addVideoUrl;
+    urlInput.addEventListener('keydown',function(e){if(e.key==='Enter')addVideoUrl();});
   }
   var sb=document.getElementById('sm-save-btn');
   if(sb)sb.onclick=_smSave;
@@ -1116,7 +1028,7 @@ function _smInitEvents(){
 
 function render(){
   var m=getModel(), r=calc();
-  _ssLoad();
+  _updateCoverImg();
   document.getElementById("model-title").textContent=m.name;
   document.getElementById("calc-bar-title").textContent=m.name+" CALCULATOR";
   /* variant select */
@@ -1269,15 +1181,6 @@ function init(){
   document.getElementById("input-custom-deposit").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.customDeposit=isNaN(v)||v<0?0:v;render()});
   document.getElementById("select-years").addEventListener("change",function(e){state.loanYears=Number(e.target.value);render()});
   document.getElementById("input-interest").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.interestPct=isNaN(v)||v<0?0:v;render()});
-  /* slideshow controls */
-  var spv=document.getElementById('slide-prev');
-  var snx=document.getElementById('slide-next');
-  var sab=document.getElementById('slide-autoplay-btn');
-  var sind=document.getElementById('slide-indicators');
-  if(spv)spv.addEventListener('click',function(){_ssStopAuto();_ssPrev();if(_ss.autoplay)_ssStartAuto();});
-  if(snx)snx.addEventListener('click',function(){_ssStopAuto();_ssNext();if(_ss.autoplay)_ssStartAuto();});
-  if(sab)sab.addEventListener('click',function(){_ss.autoplay=!_ss.autoplay;_ssUpdateUI();if(_ss.autoplay)_ssStartAuto();else _ssStopAuto();});
-  if(sind)sind.addEventListener('click',function(e){var btn=e.target.closest('[data-si]');if(btn)_ssGo(parseInt(btn.getAttribute('data-si')));});
   render();
 }
 
