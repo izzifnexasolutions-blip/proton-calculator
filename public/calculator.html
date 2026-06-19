@@ -33,8 +33,27 @@ body{
   aspect-ratio:16/9;
   overflow:hidden;background:#111;
 }
-/* ── COVER IMAGE ── */
+/* ── COVER IMAGE (fallback) ── */
 #model-cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* ── SLIDESHOW (inside existing header, no size change) ── */
+#slide-container{position:absolute;inset:0;overflow:hidden;display:none}
+.slide-item{position:absolute;inset:0;opacity:0;transition:opacity .32s ease;pointer-events:none}
+.slide-item.ss-active{opacity:1;pointer-events:auto}
+.slide-item img{width:100%;height:100%;object-fit:cover;display:block}
+.slide-item video{width:100%;height:100%;object-fit:cover;display:block}
+.slide-item iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
+.ss-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:14;
+  width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(0,0,0,.50);color:#fff;font-size:17px;line-height:1;
+  display:none;align-items:center;justify-content:center;padding:0;
+  -webkit-tap-highlight-color:transparent}
+.ss-arrow:hover{background:rgba(0,0,0,.82)}
+#ss-prev{left:8px}#ss-next{right:8px}
+#ss-counter{position:absolute;bottom:8px;right:10px;z-index:14;
+  font-size:9px;font-weight:800;color:rgba(255,255,255,.78);
+  font-family:'Montserrat',sans-serif;letter-spacing:.04em;
+  background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px;
+  pointer-events:none;display:none}
 /* ── VIDEO URL ADD ROW (admin only) ── */
 .sm-url-row{display:flex;gap:5px;margin-bottom:6px}
 .sm-url-input{flex:1;min-width:0;font-size:9px;font-family:'Montserrat',sans-serif;font-weight:700;
@@ -321,6 +340,10 @@ body{
 <!-- HEADER -->
 <div id="model-header">
   <img id="model-cover-img" src="" alt="">
+  <div id="slide-container"></div>
+  <button class="ss-arrow" id="ss-prev" aria-label="Previous">&#8249;</button>
+  <button class="ss-arrow" id="ss-next" aria-label="Next">&#8250;</button>
+  <div id="ss-counter"></div>
   <div id="header-overlay"></div>
   <div id="model-title">PROTON SAGA</div>
 </div>
@@ -735,14 +758,95 @@ function _loadAllVariantMedia(){
 }
 
 /* ── SLIDESHOW ENGINE ── */
-/* ── _updateCoverImg — refreshes static header image ── */
-function _updateCoverImg(){
-  var m=getModel();
-  var ci=document.getElementById('model-cover-img');
-  if(!ci)return;
-  /* check Supabase cache first; fall back to hardcoded local image */
-  var cached=_mediaCache[m.id];
-  ci.src=(cached&&cached.media_url)?cached.media_url:m.image;
+/* ════════════════════════════════════════════════════════
+   HEADER MEDIA ENGINE
+   Uses existing #model-header box — no size/layout changes.
+   Priority: variant_media slides → model cover image (fallback)
+   ════════════════════════════════════════════════════════ */
+var _ss={slides:[],idx:0,autoplay:true,loop:true,timer:null,builtFor:null};
+
+function _ssYtId(u){var m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);return m?m[1]:null;}
+function _ssViId(u){var m=u.match(/vimeo\.com\/(\d+)/);return m?m[1]:null;}
+
+function _ssElFor(slide){
+  var wrap=document.createElement('div');wrap.className='slide-item';
+  var t=slide.type||'';
+  if(t==='VIDEO_URL'||t==='video_url'){
+    var url=slide.url||'';
+    var yt=_ssYtId(url),vi=_ssViId(url);
+    if(yt){
+      var f=document.createElement('iframe');
+      f.src='https://www.youtube.com/embed/'+yt+'?autoplay=1&mute=1&loop=1&playlist='+yt+'&controls=0&playsinline=1&rel=0';
+      f.allow='autoplay;fullscreen';wrap.appendChild(f);
+    }else if(vi){
+      var f2=document.createElement('iframe');
+      f2.src='https://player.vimeo.com/video/'+vi+'?autoplay=1&muted=1&loop=1&title=0&byline=0&portrait=0';
+      f2.allow='autoplay;fullscreen';wrap.appendChild(f2);
+    }else{
+      var v=document.createElement('video');
+      v.src=url;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;wrap.appendChild(v);
+    }
+  }else{
+    var img=document.createElement('img');img.src=slide.url;img.alt=slide.name||'';wrap.appendChild(img);
+  }
+  return wrap;
+}
+
+function _ssShow(idx){
+  var con=document.getElementById('slide-container');if(!con||!_ss.slides.length)return;
+  idx=((idx%_ss.slides.length)+_ss.slides.length)%_ss.slides.length;
+  var old=con.querySelector('.ss-active');
+  var nel=_ssElFor(_ss.slides[idx]);
+  con.appendChild(nel);
+  _ss.idx=idx;
+  if(old){old.classList.remove('ss-active');setTimeout(function(){if(old.parentNode)old.remove();},360);}
+  nel.classList.add('ss-active');
+  var vv=nel.querySelector('video');if(vv)vv.play().catch(function(){});
+  /* counter */
+  var ct=document.getElementById('ss-counter');
+  if(ct)ct.textContent=(_ss.idx+1)+' / '+_ss.slides.length;
+}
+function _ssNext(){_ssStop();_ssShow(_ss.idx+1);if(_ss.autoplay&&_ss.slides.length>1)_ssStart();}
+function _ssPrev(){_ssStop();_ssShow(_ss.idx-1);if(_ss.autoplay&&_ss.slides.length>1)_ssStart();}
+function _ssStart(){_ssStop();if(!_ss.autoplay||_ss.slides.length<2)return;_ss.timer=setInterval(_ssNext,4000);}
+function _ssStop(){if(_ss.timer){clearInterval(_ss.timer);_ss.timer=null;}}
+
+function _ssLoad(){
+  var k=_getCurrentVmKey();
+  if(_ss.builtFor===k)return; // already loaded for this variant
+  _ss.builtFor=k;
+  _ssStop();
+
+  var data=_vmCache[k];
+  var con=document.getElementById('slide-container');
+  var coverImg=document.getElementById('model-cover-img');
+  var prev=document.getElementById('ss-prev');
+  var next=document.getElementById('ss-next');
+  var ct=document.getElementById('ss-counter');
+
+  if(data&&data.slides&&data.slides.length){
+    /* show slideshow */
+    if(con)con.innerHTML='';
+    _ss.slides=data.slides;_ss.autoplay=data.autoplay!==false;_ss.loop=data.loop!==false;_ss.idx=0;
+    if(con){con.style.display='block';}
+    if(coverImg)coverImg.style.display='none';
+    var multi=_ss.slides.length>1;
+    if(prev){prev.style.display=multi?'flex':'none';}
+    if(next){next.style.display=multi?'flex':'none';}
+    if(ct){ct.style.display=multi?'block':'none';}
+    _ssShow(0);
+    if(_ss.autoplay&&multi)_ssStart();
+  }else{
+    /* fallback: model cover image */
+    _ssStop();
+    if(con){con.innerHTML='';con.style.display='none';}
+    if(prev)prev.style.display='none';
+    if(next)next.style.display='none';
+    if(ct)ct.style.display='none';
+    var m=getModel();
+    var cached=_mediaCache[m.id];
+    if(coverImg){coverImg.src=(cached&&cached.media_url)?cached.media_url:m.image;coverImg.style.display='block';}
+  }
 }
 
 /* ── SHOWROOM MANAGER JS ── */
@@ -904,6 +1008,7 @@ function _smSave(){
         if(!finalItems.length){
           delete _vmCache[_vmKey(mid,_sm.variantIdx)];
           _smLoadVariant();
+          if(mid===state.modelId&&Number(vi)===state.variantIdx){_ss.builtFor=null;_ssLoad();}
           _smSetStatus('Gallery cleared.','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
           return Promise.resolve();
@@ -921,6 +1026,7 @@ function _smSave(){
             slides:finalItems.map(function(fi){return{url:fi.media_url,type:fi.media_type,name:fi.file_name};})};
           _sm.items.forEach(function(it){if(it.pending&&it.localUrl)URL.revokeObjectURL(it.localUrl);});
           _smLoadVariant();
+          if(mid===state.modelId&&Number(vi)===state.variantIdx){_ss.builtFor=null;_ssLoad();}
           _smSetStatus('Saved! '+finalItems.length+' slide(s).','ok');
           if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
         });
@@ -1031,7 +1137,7 @@ function _smInitEvents(){
 
 function render(){
   var m=getModel(), r=calc();
-  _updateCoverImg();
+  _ssLoad();
   document.getElementById("model-title").textContent=m.name;
   document.getElementById("calc-bar-title").textContent=m.name+" CALCULATOR";
   /* variant select */
@@ -1184,6 +1290,8 @@ function init(){
   document.getElementById("input-custom-deposit").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.customDeposit=isNaN(v)||v<0?0:v;render()});
   document.getElementById("select-years").addEventListener("change",function(e){state.loanYears=Number(e.target.value);render()});
   document.getElementById("input-interest").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.interestPct=isNaN(v)||v<0?0:v;render()});
+  document.getElementById('ss-prev').addEventListener('click',_ssPrev);
+  document.getElementById('ss-next').addEventListener('click',_ssNext);
   render();
 }
 

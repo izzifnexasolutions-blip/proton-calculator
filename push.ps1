@@ -9,7 +9,7 @@ git add public/calculator.html
 git add public/media-settings.html
 git add vercel.json
 
-git commit -m "Upgrade Media Showroom Manager: 10-slot system, VIDEO_URL support, swipe/keyboard, cover-as-slide1"
+git commit -m "Enable frontend media display: slideshow in header from variant_media, image/YouTube/Vimeo/MP4 support"
 git push origin main --force
 
 Write-Host ""
