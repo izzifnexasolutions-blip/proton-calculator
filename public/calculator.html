@@ -306,6 +306,12 @@ body{
   padding:0;z-index:2}
 .sm-media-order{position:absolute;bottom:2px;left:3px;font-size:8px;font-weight:800;
   color:#fff;background:rgba(0,0,0,.65);padding:1px 4px;border-radius:3px;pointer-events:none}
+.sm-media-size{position:absolute;bottom:2px;right:3px;font-size:8px;font-weight:800;
+  color:rgba(255,255,255,.8);background:rgba(0,0,0,.55);padding:1px 4px;border-radius:3px;pointer-events:none}
+.sm-media-over{border-color:#ef4444!important;border-style:solid!important}
+.sm-media-over-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.72);font-size:8px;font-weight:800;color:#ef4444;text-align:center;
+  padding:4px;line-height:1.4;pointer-events:none}
 .sm-grid-empty{grid-column:1/-1;font-size:9px;color:#333;font-weight:700;text-align:center;padding:8px 0}
 .sm-settings-row{display:flex;gap:12px;margin-bottom:8px;align-items:center}
 .sm-toggle-wrap{display:flex;align-items:center;gap:5px;cursor:pointer}
@@ -917,6 +923,20 @@ function _smRenderGrid(){
       var img=document.createElement('img');img.src=item.url;img.alt=item.name||'';cell.appendChild(img);
     }
     var ord=document.createElement('div');ord.className='sm-media-order';ord.textContent=i+1;cell.appendChild(ord);
+    /* file size badge */
+    if(item.size){
+      var sz=document.createElement('div');sz.className='sm-media-size';
+      sz.textContent=_smFmtSize(item.size);
+      cell.appendChild(sz);
+    }
+    /* oversize overlay */
+    if(item.oversize){
+      cell.classList.add('sm-media-over');
+      var ov=document.createElement('div');ov.className='sm-media-over-badge';
+      var isVid=item.type&&item.type.startsWith('video/');
+      ov.textContent='TOO LARGE\nMax '+(isVid?'200 MB':'10 MB');
+      cell.appendChild(ov);
+    }
     var del=document.createElement('button');del.className='sm-media-del';del.textContent='x';del.title='Delete';
     (function(idx){del.onclick=function(e){e.stopPropagation();
       _sm.items.splice(idx,1);_smRenderGrid();};})(i);
@@ -963,6 +983,14 @@ function _smSave(){
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   _smSetStatus('Connecting...');
   var mid=_sm.modelId,vi=String(_sm.variantIdx);
+
+  /* Block save if any oversize items remain */
+  var oversized=_sm.items.filter(function(it){return it.oversize;});
+  if(oversized.length){
+    _smSetStatus('Remove '+oversized.length+' oversized file(s) before saving.','err');
+    if(btn){btn.disabled=false;btn.textContent='💾 SAVE GALLERY';}
+    return;
+  }
 
   /* Step 1 — delete existing rows for this variant (non-fatal if none exist) */
   _sb.from('variant_media').delete().eq('model_key',mid).eq('variant_key',vi)
@@ -1045,17 +1073,41 @@ function _smSave(){
   });
 }
 
+function _smFmtSize(bytes){
+  if(bytes>=1024*1024)return (bytes/(1024*1024)).toFixed(1)+' MB';
+  return (bytes/1024).toFixed(0)+' KB';
+}
+
 function _smInitEvents(){
   var zone=document.getElementById('sm-upload-zone');
   var fi=document.getElementById('sm-file-input');
   if(zone&&fi){
     zone.onclick=function(){fi.click();};
     fi.onchange=function(){
+      var MAX_VIDEO=200*1024*1024; // 200 MB
+      var MAX_IMAGE=10*1024*1024;  // 10 MB
+      var rejected=[];
       Array.from(fi.files).forEach(function(f){
+        var isVideo=f.type.startsWith('video/');
+        var limit=isVideo?MAX_VIDEO:MAX_IMAGE;
         var lu=URL.createObjectURL(f);
-        _sm.items.push({url:lu,type:f.type,name:f.name,order:_sm.items.length,pending:true,file:f,localUrl:lu});
+        if(f.size>limit){
+          rejected.push(f.name+' ('+_smFmtSize(f.size)+') — max '+(isVideo?'200 MB':'10 MB'));
+          /* still show in grid with error state so user can see which file failed */
+          _sm.items.push({url:lu,type:f.type,name:f.name,size:f.size,
+            order:_sm.items.length,pending:true,file:f,localUrl:lu,oversize:true});
+        } else {
+          _sm.items.push({url:lu,type:f.type,name:f.name,size:f.size,
+            order:_sm.items.length,pending:true,file:f,localUrl:lu,oversize:false});
+        }
       });
-      _smRenderGrid();fi.value='';
+      _smRenderGrid();
+      if(rejected.length){
+        _smSetStatus('Too large: '+rejected.join(' | '),'err');
+      } else {
+        _smSetStatus('');
+      }
+      fi.value='';
     };
   }
   var sb=document.getElementById('sm-save-btn');
