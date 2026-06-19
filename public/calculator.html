@@ -56,6 +56,12 @@ body{
   -webkit-tap-highlight-color:transparent}
 .ss-arrow:hover{background:rgba(0,0,0,.82)}
 #ss-prev{left:8px}#ss-next{right:8px}
+#ss-pause{position:absolute;top:7px;right:8px;z-index:15;
+  width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(0,0,0,.52);color:#fff;font-size:11px;line-height:1;
+  display:none;align-items:center;justify-content:center;padding:0;
+  -webkit-tap-highlight-color:transparent;opacity:.85}
+#ss-pause:hover{opacity:1;background:rgba(0,0,0,.8)}
 #ss-debug{position:absolute;top:6px;left:8px;z-index:20;
   background:rgba(0,0,0,.72);color:#0f0;font-family:monospace;font-size:9px;
   line-height:1.5;padding:5px 8px;border-radius:4px;pointer-events:none;white-space:pre;}
@@ -355,6 +361,7 @@ body{
   <button class="ss-arrow" id="ss-next" aria-label="Next">&#8250;</button>
   <div id="ss-counter"></div>
   <div id="ss-debug" style="display:none"></div>
+  <button id="ss-pause" aria-label="Pause slideshow">⏸</button>
   <div id="header-overlay"></div>
   <div id="model-title">PROTON SAGA</div>
 </div>
@@ -774,7 +781,7 @@ function _loadAllVariantMedia(){
    Uses existing #model-header box — no size/layout changes.
    Priority: variant_media slides → model cover image (fallback)
    ════════════════════════════════════════════════════════ */
-var _ss={slides:[],idx:0,autoplay:true,loop:true,timer:null,builtFor:null,duration:4000};
+var _ss={slides:[],idx:0,autoplay:true,loop:true,timer:null,builtFor:null,duration:4000,paused:false};
 
 function _ssYtId(u){var m=u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([-\w]{11})/);return m?m[1]:null;}
 function _ssViId(u){var m=u.match(/vimeo\.com\/(\d+)/);return m?m[1]:null;}
@@ -813,6 +820,7 @@ function _ssElFor(slide){
 
 /* auto-advance: respects loop setting */
 function _ssAdvance(){
+  if(_ss.paused){_ssDebug('advance: blocked-paused');return;}
   _ssDebug('advance→next');
   _ssStop();
   var next=_ss.idx+1;
@@ -821,12 +829,34 @@ function _ssAdvance(){
   _ssScheduleNext();
 }
 
+/* ── PAUSE / RESUME ── */
+function _ssPauseToggle(){
+  var btn=document.getElementById('ss-pause');
+  _ss.paused=!_ss.paused;
+  if(_ss.paused){
+    _ssStop();
+    /* also pause any playing video */
+    var con=document.getElementById('slide-container');
+    var vv=con?con.querySelector('video'):null;
+    if(vv&&!vv.paused)vv.pause();
+    if(btn){btn.textContent='▶';btn.title='Resume slideshow';}
+  }else{
+    /* resume: re-play video if present, restart image timer */
+    var con2=document.getElementById('slide-container');
+    var vv2=con2?con2.querySelector('video'):null;
+    if(vv2&&vv2.paused)vv2.play().catch(function(){});
+    if(btn){btn.textContent='⏸';btn.title='Pause slideshow';}
+    _ssScheduleNext();
+  }
+}
+
 /* per-slide timing:
    IMAGE          → setTimeout(slide_duration) → auto-advance
    DIRECT MP4     → no timer; video.onended triggers _ssAdvance
    IFRAME(YT/Vi)  → no timer, no auto-advance; manual arrow only */
 function _ssScheduleNext(){
   _ssStop();
+  if(_ss.paused){_ssDebug('schedule: paused');return;}
   if(!_ss.autoplay||_ss.slides.length<2){_ssDebug('schedule: no-autoplay');return;}
   var slide=_ss.slides[_ss.idx];
   var t=(slide?slide.type||'':'');
@@ -925,6 +955,9 @@ function _ssLoad(){
     if(prev){prev.style.display=multi?'flex':'none';}
     if(next){next.style.display=multi?'flex':'none';}
     if(ct){ct.style.display=multi?'block':'none';}
+    var pb=document.getElementById('ss-pause');
+    if(pb){pb.style.display='flex';pb.textContent='⏸';pb.title='Pause slideshow';}
+    _ss.paused=false;
     _ssShow(0);
     _ssScheduleNext();
   }else{
@@ -934,6 +967,8 @@ function _ssLoad(){
     if(prev)prev.style.display='none';
     if(next)next.style.display='none';
     if(ct)ct.style.display='none';
+    var pb2=document.getElementById('ss-pause');if(pb2)pb2.style.display='none';
+    _ss.paused=false;
     var m=getModel();
     var cached=_mediaCache[m.id];
     if(coverImg){coverImg.src=(cached&&cached.media_url)?cached.media_url:m.image;coverImg.style.display='block';}
@@ -1383,6 +1418,7 @@ function init(){
   document.getElementById("input-interest").addEventListener("input",function(e){var v=parseFloat(e.target.value);state.interestPct=isNaN(v)||v<0?0:v;render()});
   document.getElementById('ss-prev').addEventListener('click',_ssPrev);
   document.getElementById('ss-next').addEventListener('click',_ssNext);
+  document.getElementById('ss-pause').addEventListener('click',_ssPauseToggle);
   render();
 }
 
