@@ -739,7 +739,10 @@ function _loadAllVariantMedia(){
 function _updateCoverImg(){
   var m=getModel();
   var ci=document.getElementById('model-cover-img');
-  if(ci&&m.image)ci.src=m.image;
+  if(!ci)return;
+  /* check Supabase cache first; fall back to hardcoded local image */
+  var cached=_mediaCache[m.id];
+  ci.src=(cached&&cached.media_url)?cached.media_url:m.image;
 }
 
 /* ── SHOWROOM MANAGER JS ── */
