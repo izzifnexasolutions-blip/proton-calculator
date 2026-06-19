@@ -1085,7 +1085,7 @@ function _smInitEvents(){
     zone.onclick=function(){fi.click();};
     fi.onchange=function(){
       var MAX_VIDEO=200*1024*1024; // 200 MB
-      var MAX_IMAGE=10*1024*1024;  // 10 MB
+      var MAX_IMAGE=20*1024*1024;  // 20 MB
       var rejected=[];
       Array.from(fi.files).forEach(function(f){
         var isVideo=f.type.startsWith('video/');
