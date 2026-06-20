@@ -849,22 +849,26 @@ function _ssPauseToggle(){
 }
 
 /* per-slide timing:
-   IMAGE          → setTimeout(slide_duration) → auto-advance
-   DIRECT MP4     → no timer; video.onended triggers _ssAdvance
-   IFRAME(YT/Vi)  → no timer, no auto-advance; manual arrow only */
+   IMAGE       → setTimeout(slide_duration)
+   DIRECT MP4  → onended primary + loadedmetadata backup timer
+   IFRAME      → slide_duration fallback timer (can't detect end cross-origin) */
 function _ssScheduleNext(){
   _ssStop();
-  if(_ss.paused){_ssDebug('schedule: paused');return;}
-  if(!_ss.autoplay||_ss.slides.length<2){_ssDebug('schedule: no-autoplay');return;}
+  if(_ss.paused)return;
+  if(!_ss.autoplay||_ss.slides.length<2)return;
   var slide=_ss.slides[_ss.idx];
   var t=(slide?slide.type||'':'');
   if(t==='VIDEO_URL'||t==='video_url'){
-    /* ALL video URLs — never set a timer regardless of host */
-    _ssDebug(_ssIsDirect(slide)?'schedule: waiting-onended':'schedule: iframe-manual-only');
-    return;
+    if(_ssIsDirect(slide)){
+      /* Direct MP4: onended is primary; backup timer set in _ssShow via loadedmetadata */
+      return;
+    }else{
+      /* Iframe (YouTube/Vimeo): slide_duration fallback — can't detect cross-origin end */
+      _ss.timer=setTimeout(_ssAdvance,_ss.duration);
+      return;
+    }
   }
-  /* IMAGE: timed auto-advance */
-  _ssDebug('schedule: timer-set('+_ss.duration+'ms)');
+  /* IMAGE */
   _ss.timer=setTimeout(_ssAdvance,_ss.duration);
 }
 
@@ -885,14 +889,20 @@ function _ssShow(idx){
   nel.classList.add('ss-active');
   var vv=nel.querySelector('video');
   if(vv){
-    vv.play().catch(function(){});   /* silent autoplay; stays muted if blocked */
-    vv.onended=function(){_ssDebug('ended');_ssAdvance();};
-    vv.addEventListener('loadedmetadata',function(){_ssDebug('loadedmetadata');});
-    vv.addEventListener('play',function(){_ssDebug('play');});
-    vv.addEventListener('pause',function(){_ssDebug('pause');});
+    vv.play().catch(function(){});
+    /* primary: ended event */
+    vv.onended=function(){_ssAdvance();};
+    /* backup: once we know the duration, set a safety timer
+       in case onended doesn't fire (autoplay policy, codec issue, etc.) */
+    vv.addEventListener('loadedmetadata',function(){
+      if(_ss.paused||!_ss.autoplay||_ss.slides.length<2)return;
+      _ssStop(); /* clear any prior timer */
+      var ms=(vv.duration&&isFinite(vv.duration))
+             ?Math.round(vv.duration*1000)+800  /* full duration + 0.8s grace */
+             :_ss.duration;                      /* fallback if duration unknown */
+      _ss.timer=setTimeout(_ssAdvance,ms);
+    });
   }
-  _ssDebug('show');
-  _ssDebugStart();
   var ct=document.getElementById('ss-counter');
   if(ct)ct.textContent=(_ss.idx+1)+' / '+_ss.slides.length;
 }
