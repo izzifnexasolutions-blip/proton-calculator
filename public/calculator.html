@@ -798,11 +798,11 @@ function _ssElFor(slide){
     var yt=_ssYtId(url),vi=_ssViId(url);
     if(yt){
       var f=document.createElement('iframe');
-      f.src='https://www.youtube.com/embed/'+yt+'?autoplay=1&mute=1&loop=0&controls=0&playsinline=1&rel=0&modestbranding=1';
+      f.src='https://www.youtube.com/embed/'+yt+'?autoplay=1&mute=1&loop=0&controls=0&playsinline=1&rel=0&modestbranding=1&enablejsapi=1';
       f.allow='autoplay;fullscreen';f.style.pointerEvents='none';wrap.appendChild(f);
     }else if(vi){
       var f2=document.createElement('iframe');
-      f2.src='https://player.vimeo.com/video/'+vi+'?autoplay=1&muted=1&loop=0&title=0&byline=0&portrait=0&controls=0&background=1';
+      f2.src='https://player.vimeo.com/video/'+vi+'?autoplay=1&muted=1&loop=0&title=0&byline=0&portrait=0&controls=0&dnt=1';
       f2.allow='autoplay;fullscreen';f2.style.pointerEvents='none';wrap.appendChild(f2);
     }else{
       var v=document.createElement('video');
@@ -814,6 +814,28 @@ function _ssElFor(slide){
     var img=document.createElement('img');img.src=slide.url;img.alt=slide.name||'';wrap.appendChild(img);
   }
   return wrap;
+}
+
+/* ── SDK loaders (lazy, called only when a video slide appears) ── */
+function _ssVimeoSdk(cb){
+  if(window.Vimeo&&window.Vimeo.Player){cb();return;}
+  if(window._ssViLoading){
+    var w=setInterval(function(){if(window.Vimeo&&window.Vimeo.Player){clearInterval(w);cb();}},80);return;
+  }
+  window._ssViLoading=true;
+  var s=document.createElement('script');s.src='https://player.vimeo.com/api/player.js';
+  s.onload=function(){cb();};document.head.appendChild(s);
+}
+function _ssYtSdk(cb){
+  if(window.YT&&window.YT.Player){cb();return;}
+  if(window._ssYtLoading){
+    var w=setInterval(function(){if(window.YT&&window.YT.Player){clearInterval(w);cb();}},80);return;
+  }
+  window._ssYtLoading=true;
+  var prev=window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady=function(){if(prev)prev();cb();};
+  var s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';
+  document.head.appendChild(s);
 }
 
 /* auto-advance: respects loop setting */
@@ -849,26 +871,22 @@ function _ssPauseToggle(){
 }
 
 /* per-slide timing:
-   IMAGE       → setTimeout(slide_duration)
-   DIRECT MP4  → onended primary + loadedmetadata backup timer
-   IFRAME      → slide_duration fallback timer (can't detect end cross-origin) */
+   IMAGE      → setTimeout(slide_duration) → _ssAdvance
+   VIDEO_URL  → NO timer ever. Advance only via:
+                  direct MP4   : video.onended
+                  Vimeo iframe : Vimeo Player API "ended" event
+                  YouTube      : YT IFrame API PlayerState.ENDED */
 function _ssScheduleNext(){
-  _ssStop();
+  _ssStop(); /* always clear first */
   if(_ss.paused)return;
   if(!_ss.autoplay||_ss.slides.length<2)return;
   var slide=_ss.slides[_ss.idx];
   var t=(slide?slide.type||'':'');
   if(t==='VIDEO_URL'||t==='video_url'){
-    if(_ssIsDirect(slide)){
-      /* Direct MP4: onended is primary; backup timer set in _ssShow via loadedmetadata */
-      return;
-    }else{
-      /* Iframe (YouTube/Vimeo): slide_duration fallback — can't detect cross-origin end */
-      _ss.timer=setTimeout(_ssAdvance,_ss.duration);
-      return;
-    }
+    /* VIDEO: zero timers — ended events handle advance */
+    return;
   }
-  /* IMAGE */
+  /* IMAGE only */
   _ss.timer=setTimeout(_ssAdvance,_ss.duration);
 }
 
@@ -887,21 +905,36 @@ function _ssShow(idx){
   _ss.idx=idx;
   if(old){old.classList.remove('ss-active');setTimeout(function(){if(old.parentNode)old.remove();},360);}
   nel.classList.add('ss-active');
+  /* ── wire ended events — NO timers for video ── */
   var vv=nel.querySelector('video');
+  var ifrEl=nel.querySelector('iframe');
   if(vv){
+    /* Direct MP4: ended event only */
     vv.play().catch(function(){});
-    /* primary: ended event */
     vv.onended=function(){_ssAdvance();};
-    /* backup: once we know the duration, set a safety timer
-       in case onended doesn't fire (autoplay policy, codec issue, etc.) */
-    vv.addEventListener('loadedmetadata',function(){
-      if(_ss.paused||!_ss.autoplay||_ss.slides.length<2)return;
-      _ssStop(); /* clear any prior timer */
-      var ms=(vv.duration&&isFinite(vv.duration))
-             ?Math.round(vv.duration*1000)+800  /* full duration + 0.8s grace */
-             :_ss.duration;                      /* fallback if duration unknown */
-      _ss.timer=setTimeout(_ssAdvance,ms);
-    });
+  }else if(ifrEl){
+    var ifrSrc=ifrEl.src||'';
+    var isVimeo=ifrSrc.indexOf('vimeo.com')>-1;
+    var isYouTube=ifrSrc.indexOf('youtube.com')>-1;
+    if(isVimeo){
+      /* Vimeo Player SDK — lazy load, then bind ended */
+      _ssVimeoSdk(function(){
+        try{
+          var vp=new Vimeo.Player(ifrEl);
+          vp.on('ended',function(){if(!_ss.paused)_ssAdvance();});
+        }catch(e){console.warn('[SS] Vimeo API error',e);}
+      });
+    }else if(isYouTube){
+      /* YouTube IFrame API — lazy load, then bind ENDED */
+      _ssYtSdk(function(){
+        var uid='ss-yt-'+Date.now();ifrEl.id=uid;
+        try{
+          new YT.Player(uid,{events:{onStateChange:function(e){
+            if(e.data===YT.PlayerState.ENDED&&!_ss.paused)_ssAdvance();
+          }}});
+        }catch(e){console.warn('[SS] YT API error',e);}
+      });
+    }
   }
   var ct=document.getElementById('ss-counter');
   if(ct)ct.textContent=(_ss.idx+1)+' / '+_ss.slides.length;
