@@ -67,6 +67,8 @@ const CAR_MODELS: CarModel[] = [
     shortName: "S70",
     image: "/images/s70.jpg",
     variants: [
+      { name: "1.5 Lite", otr: 59800, insurance: 1959.80 },
+      { name: "1.5 Prime", otr: 62800, insurance: 2042.50 },
       { name: "Premium 1.5T i-GT DCT", otr: 82660, insurance: 2860 },
       { name: "Flagship 1.5T i-GT DCT", otr: 92950, insurance: 3150 },
       { name: "Flagship X 1.5T i-GT DCT", otr: 98100, insurance: 3300 },
