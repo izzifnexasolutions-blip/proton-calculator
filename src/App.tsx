@@ -116,7 +116,7 @@ const CAR_MODELS: CarModel[] = [
     shortName: "E5",
     image: "/images/e5.jpg",
     variants: [
-      { name: "Prime EV", otr: 62800, insurance: 2800 },
+      { name: "Prime EV", otr: 59800, insurance: 2800 },
       { name: "Premium EV", otr: 75800, insurance: 3000 },
     ],
   },
