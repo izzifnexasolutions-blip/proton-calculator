@@ -4,6 +4,12 @@
   "outputDirectory": "public",
   "framework": null,
   "routes": [
-    { "src": "/", "dest": "/calculator.html" }
+    {
+      "src": "/",
+      "headers": {
+        "Cache-Control": "no-store, max-age=0, must-revalidate"
+      },
+      "dest": "/calculator.html"
+    }
   ]
 }
