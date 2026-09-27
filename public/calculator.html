@@ -346,6 +346,244 @@ body{
 .sm-save-btn:disabled{opacity:.45;cursor:not-allowed}
 .sm-status{font-size:9px;font-weight:700;min-height:12px;text-align:center;font-family:'Montserrat',sans-serif}
 .sm-status.ok{color:#22c55e}.sm-status.err{color:#ef4444}
+
+/* ── UI FACELIFT V1 — visual only; dimensions/data/functions unchanged ── */
+html{background:#050505}
+body{
+  background:
+    radial-gradient(circle at 50% -10%,rgba(180,18,34,.16),transparent 32%),
+    linear-gradient(180deg,#050505 0%,#000 100%);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+#app{
+  background:#080808;
+  box-shadow:
+    0 30px 60px -12px rgba(0,0,0,.88),
+    0 0 0 1px rgba(255,255,255,.07),
+    0 0 34px rgba(196,20,38,.08);
+}
+
+/* Hero / showroom */
+#model-header{
+  background:#0d0d0e;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.05);
+}
+#model-header::after{
+  content:'';
+  position:absolute;left:0;right:0;bottom:0;height:2px;z-index:13;
+  background:linear-gradient(90deg,transparent 0%,rgba(229,57,53,.72) 35%,#fff 50%,rgba(229,57,53,.72) 65%,transparent 100%);
+  opacity:.72;pointer-events:none;
+}
+#header-overlay{
+  background:
+    linear-gradient(to top,rgba(0,0,0,.92) 0%,rgba(0,0,0,.28) 48%,rgba(0,0,0,.03) 78%,transparent 100%),
+    linear-gradient(90deg,rgba(0,0,0,.22),transparent 46%);
+}
+#model-title{
+  text-shadow:0 2px 3px rgba(0,0,0,.55),0 8px 26px rgba(0,0,0,.6);
+  letter-spacing:-.015em;
+}
+
+/* Brand bar */
+#calc-bar{
+  background:linear-gradient(90deg,#8e0d1b 0%,#c41527 52%,#e21d32 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    inset 0 -1px 0 rgba(0,0,0,.35),
+    0 5px 16px rgba(163,18,35,.14);
+}
+#calc-bar svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+#calc-bar span{text-shadow:0 1px 2px rgba(0,0,0,.24)}
+
+/* Model tabs */
+#tab-bar{
+  background:linear-gradient(180deg,#131315 0%,#0c0c0e 100%);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.tab-btn{
+  border:1px solid rgba(255,255,255,.055);
+  background:linear-gradient(180deg,#1c1c1f 0%,#141416 100%);
+  color:#8d8d92;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.tab-btn:hover{
+  color:#d6d6d8;
+  border-color:rgba(255,255,255,.11);
+}
+.tab-btn.active{
+  background:linear-gradient(180deg,#ed3144 0%,#c51327 58%,#9d0d1d 100%);
+  color:#fff;
+  border-color:rgba(255,255,255,.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 3px 10px rgba(221,24,45,.35);
+}
+
+/* Input zone — same geometry, cleaner automotive finish */
+.row{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.34),
+    inset 0 -1px 0 rgba(72,47,0,.10);
+}
+.row-yellow{
+  background:linear-gradient(90deg,#f7df78 0%,#f5cf42 48%,#efbf22 100%);
+}
+.row-amber{
+  background:linear-gradient(90deg,#f5cf63 0%,#efbb32 52%,#e9a923 100%);
+}
+.row:hover{
+  filter:brightness(1.025);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.44),
+    inset 0 -1px 0 rgba(72,47,0,.12),
+    0 2px 8px rgba(0,0,0,.10);
+}
+.row-label svg{
+  color:rgba(42,28,0,.70);
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.20));
+}
+.row-label span{
+  color:#1e1708;
+  text-shadow:0 1px 0 rgba(255,255,255,.25);
+}
+.field-select,.field-input{
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.32));
+  border-color:rgba(40,28,5,.20);
+  color:#111;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 1px 2px rgba(55,34,0,.10);
+}
+.field-select:hover,.field-input:hover{
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.40));
+  border-color:rgba(40,28,5,.27);
+}
+.field-select:focus,.field-input:focus{
+  border-color:rgba(169,14,31,.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.62),
+    0 0 0 2px rgba(183,17,34,.18),
+    0 2px 7px rgba(88,50,0,.12);
+}
+
+/* NCD segmented control */
+.ncd-btn{
+  border:1px solid rgba(35,24,4,.14);
+  background:linear-gradient(180deg,#fff 0%,#f3f3f3 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 1px 3px rgba(43,26,0,.13);
+}
+.ncd-btn:hover{
+  border-color:rgba(156,13,29,.30);
+  box-shadow:0 2px 5px rgba(43,26,0,.16);
+}
+.ncd-btn.active{
+  background:linear-gradient(180deg,#ed3043 0%,#b80f21 100%);
+  border-color:rgba(122,6,19,.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    0 2px 8px rgba(184,15,33,.32);
+}
+
+/* Result cards — preserve every existing result colour */
+.result-row{
+  position:relative;
+  isolation:isolate;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.44),
+    inset 0 -1px 0 rgba(0,0,0,.10);
+}
+.result-row::after{
+  content:'';
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.14) 0%,transparent 45%),
+    linear-gradient(90deg,rgba(255,255,255,.07),transparent 32%,rgba(0,0,0,.035));
+}
+.result-row>*{position:relative;z-index:1}
+.result-label{
+  color:rgba(17,17,17,.77);
+  text-shadow:0 1px 0 rgba(255,255,255,.30);
+}
+.result-label svg{color:rgba(20,20,20,.54)}
+.result-value{
+  color:#0b0b0c;
+  letter-spacing:-.02em;
+  text-shadow:0 1px 0 rgba(255,255,255,.32);
+}
+
+/* Monthly hero */
+#monthly-box{
+  background:linear-gradient(110deg,#8f0d1a 0%,#bd1426 44%,#e52338 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 0 -1px 0 rgba(0,0,0,.35),
+    0 -3px 14px rgba(139,12,27,.16);
+}
+#monthly-box::before{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.15) 0%,transparent 42%),
+    linear-gradient(90deg,transparent 0%,rgba(255,255,255,.045) 50%,transparent 100%);
+}
+#monthly-box::after{
+  bottom:-24px;right:-24px;
+  background:
+    radial-gradient(circle,rgba(255,255,255,.10) 0%,transparent 67%);
+}
+.monthly-title{
+  text-shadow:0 2px 3px rgba(0,0,0,.32),0 7px 18px rgba(0,0,0,.20);
+}
+.monthly-bulan{color:rgba(255,255,255,.80)}
+#monthly-value{
+  text-shadow:0 2px 3px rgba(0,0,0,.34),0 8px 22px rgba(0,0,0,.22);
+}
+
+/* Settings / showroom manager */
+#settings-panel{
+  background:linear-gradient(180deg,#0b0b0d,#070708);
+}
+.sp-card{
+  background:linear-gradient(180deg,#17171a,#111113);
+  border-color:rgba(255,255,255,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 4px 10px rgba(0,0,0,.16);
+}
+.sp-note{
+  background:#101012;
+  border-color:rgba(255,255,255,.065);
+}
+.sm-section{border-top-color:rgba(255,255,255,.075)}
+.sm-mtab,.sm-vtab{
+  background:linear-gradient(180deg,#18181b,#111113);
+  border-color:rgba(255,255,255,.075);
+}
+.sm-mtab.active{
+  background:linear-gradient(180deg,#e92d40,#b90f22);
+  border-color:#d31b30;
+  box-shadow:0 2px 7px rgba(211,27,48,.26);
+}
+.sm-vtab.active{
+  background:linear-gradient(180deg,#3476ee,#2059bf);
+  box-shadow:0 2px 7px rgba(32,89,191,.24);
+}
+.sm-upload-zone{
+  background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.005));
+  border-color:#303034;
+}
+.sm-upload-zone:hover{border-color:#55555b;background:rgba(255,255,255,.02)}
+.sm-save-btn{
+  background:linear-gradient(180deg,#3277ee,#1e56bb);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 3px 9px rgba(30,86,187,.18);
+}
+
+/* Footer */
+#footer{
+  background:linear-gradient(180deg,#09090a,#050506);
+  border-top:1px solid rgba(255,255,255,.035);
+}
+#footer p:first-child{color:#68686d}
+#footer p:last-child{color:#48484d}
+
 </style>
 </head>
 <body>
