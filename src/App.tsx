@@ -51,17 +51,6 @@ const CAR_MODELS: CarModel[] = [
     ],
   },
   {
-    id: "persona",
-    name: "PERSONA",
-    shortName: "PERSONA",
-    image: "/images/persona.jpg",
-    variants: [
-      { name: "Standard 1.6 CVT", otr: 49560, insurance: 1760 },
-      { name: "Executive 1.6 CVT", otr: 55220, insurance: 1920 },
-      { name: "Premium 1.6 CVT", otr: 60360, insurance: 2060 },
-    ],
-  },
-  {
     id: "s70",
     name: "S70",
     shortName: "S70",
