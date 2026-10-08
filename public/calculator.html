@@ -619,6 +619,23 @@ body{
 .spec-divider{height:2px;margin:12px 0 14px;background:linear-gradient(90deg,#e51d35,rgba(229,29,53,.12),transparent)}
 .spec-empty{border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:#68686f;text-align:center;font-size:10px;font-weight:700;line-height:1.6;padding:24px 12px}
 #spec-content{display:none}
+.spec-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:10px}
+.spec-stat{background:linear-gradient(180deg,#202024,#151518);border:1px solid rgba(255,255,255,.075);border-radius:10px;padding:9px 10px}
+.spec-stat-k{font-size:8px;font-weight:900;letter-spacing:.08em;color:#77777e;text-transform:uppercase;margin-bottom:3px}
+.spec-stat-v{font-size:13px;font-weight:900;color:#fff;line-height:1.25}
+.spec-stat-v strong{color:#ff3048}
+.spec-acc{border:1px solid rgba(255,255,255,.075);border-radius:10px;overflow:hidden;margin-bottom:7px;background:#121214}
+.spec-acc-btn{width:100%;border:0;background:linear-gradient(180deg,#1b1b1e,#141416);color:#fff;padding:10px 11px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font:900 10px 'Montserrat',sans-serif;letter-spacing:.035em;text-align:left}
+.spec-acc-btn span:last-child{font-size:15px;color:#e51d35;transition:transform .18s ease}
+.spec-acc.open .spec-acc-btn span:last-child{transform:rotate(45deg)}
+.spec-acc-body{display:none;padding:4px 10px 8px;background:#101012}
+.spec-acc.open .spec-acc-body{display:block}
+.spec-item{display:grid;grid-template-columns:44% 56%;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.055);font-size:9px;line-height:1.45}
+.spec-item:last-child{border-bottom:0}
+.spec-item-k{color:#727278;font-weight:800}
+.spec-item-v{color:#ededf0;font-weight:800;text-align:right}
+.spec-item-v em{color:#aaa;font-style:normal;font-weight:700}
+
 
 </style>
 </head>
@@ -1570,12 +1587,146 @@ function _smInitEvents(){
 
 var specOpen=false;
 
+var VARIANT_SPECS={
+  'emas5_0':{
+    displayName:'Prime',
+    summary:[
+      ['KUASA','79 PS (58 kW)'],
+      ['TORK','130 Nm'],
+      ['JARAK WLTP','225 km'],
+      ['PACUAN','RWD']
+    ],
+    sections:[
+      {
+        title:'1. POWERTRAIN & PERFORMANCE',
+        items:[
+          ['Jenis Enjin','Single Permanent Magnet Synchronous Motor'],
+          ['Sistem Pacuan','Rear-Wheel Drive (RWD)'],
+          ['Kuasa Maksimum','79 PS (58 kW)'],
+          ['Tork Maksimum','130 Nm'],
+          ['Pecutan 0–50 km/h','~4.4 saat'],
+          ['Kelajuan Maksimum','135 km/h']
+        ]
+      },
+      {
+        title:'2. BATERI & PENGECASAN',
+        items:[
+          ['Jenis Bateri','CATL Lithium Iron Phosphate (LFP)'],
+          ['Kapasiti Bateri','30.12 kWh'],
+          ['Jarak Pemanduan (WLTP)','225 km'],
+          ['Pengecasan AC','6.6 kW (Type 2)'],
+          ['Pengecasan Pantas DC','Hingga 71 kW (CCS2) — 30% ke 80% dalam 21 minit'],
+          ['V2L (Vehicle-to-Load)','3.3 kW']
+        ]
+      },
+      {
+        title:'3. DIMENSI & KAPASITI',
+        items:[
+          ['Panjang × Lebar × Tinggi','4,135 × 1,805 × 1,580 mm'],
+          ['Wheelbase','2,650 mm'],
+          ['Ground Clearance','160 mm'],
+          ['Radius Putaran','4.95 m'],
+          ['Boot Belakang','375 L — hingga 1,320 L bila kerusi diturunkan'],
+          ['Frunk','70 L dengan rod pneumatik'],
+          ['Penyimpanan Dalaman','32 kompartmen termasuk ruang 28 L bawah tempat duduk']
+        ]
+      },
+      {
+        title:'4. CHASIS, SUSPENSI & RODA',
+        items:[
+          ['Suspensi Depan','MacPherson Strut'],
+          ['Suspensi Belakang','Multi-Link'],
+          ['Brek Depan / Belakang','Ventilated Disc / Solid Disc'],
+          ['Sistem Stereng','Electric Power Steering (EPS)'],
+          ['Roda & Tayar','Steel Wheels 15-inci dengan penutup rim (205/65 R15)']
+        ]
+      },
+      {
+        title:'5. EKSTERIOR',
+        items:[
+          ['Lampu Utama','Halogen'],
+          ['DRL','LED'],
+          ['Pemegang Pintu','Semi-concealed'],
+          ['Cermin Sisi','Pelarasan elektrik dengan lampu isyarat']
+        ]
+      },
+      {
+        title:'6. INTERIOR & TEKNOLOGI',
+        items:[
+          ['Skrin Infotainment','14.6” FHD Touchscreen'],
+          ['Sistem Operasi','ATLAS OS — kawalan suara BM & English'],
+          ['Cluster Meter','8.8” Digital Display'],
+          ['Konektiviti','Apple CarPlay & Android Auto'],
+          ['Sistem Audio','4 pembesar suara'],
+          ['Bahan Tempat Duduk','Leatherette (kulit sintetik)'],
+          ['Penghawa Dingin','Manual + Rear AC Vents'],
+          ['Sistem Mula','Keyless Entry & Push Start (tekan pedal brek)']
+        ]
+      },
+      {
+        title:'7. KESELAMATAN & BANTUAN PEMANDU',
+        items:[
+          ['Airbags','6 — pemandu, penumpang, sisi depan & tirai'],
+          ['Brek & Kestabilan','ABS, EBD, BA, VSC, GTCS'],
+          ['Bantuan Bukit','HAC & DAC'],
+          ['Brek Parkir','Electronic Parking Brake (EPB) + Auto Hold'],
+          ['TPMS','Tyre Pressure Monitoring System'],
+          ['Kamera & Sensor','Kamera undur + sensor parkir belakang'],
+          ['ISOFIX','2 tempat duduk belakang']
+        ]
+      }
+    ]
+  }
+};
+
+function _specKey(){return state.modelId+'_'+state.variantIdx;}
+
+function _esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function _renderSpecContent(spec){
+  var wrap=document.getElementById('spec-content');
+  var html='<div class="spec-summary">';
+  spec.summary.forEach(function(x){
+    html+='<div class="spec-stat"><div class="spec-stat-k">'+_esc(x[0])+'</div><div class="spec-stat-v">'+_esc(x[1])+'</div></div>';
+  });
+  html+='</div>';
+  spec.sections.forEach(function(sec,idx){
+    html+='<div class="spec-acc'+(idx===0?' open':'')+'">';
+    html+='<button class="spec-acc-btn" type="button"><span>'+_esc(sec.title)+'</span><span>+</span></button>';
+    html+='<div class="spec-acc-body">';
+    sec.items.forEach(function(it){
+      html+='<div class="spec-item"><div class="spec-item-k">'+_esc(it[0])+'</div><div class="spec-item-v">'+_esc(it[1])+'</div></div>';
+    });
+    html+='</div></div>';
+  });
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('.spec-acc-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){btn.parentElement.classList.toggle('open');});
+  });
+}
+
 function _updateSpecPanel(){
   var m=getModel();
   var v=m&&m.variants?m.variants[state.variantIdx]:null;
   if(!m||!v)return;
+  var spec=VARIANT_SPECS[_specKey()]||null;
   document.getElementById('spec-model-name').textContent=m.name;
-  document.getElementById('spec-variant-name').textContent=v.name;
+  document.getElementById('spec-variant-name').textContent=spec&&spec.displayName?spec.displayName:v.name;
+  var empty=document.getElementById('spec-empty');
+  var wrap=document.getElementById('spec-content');
+  if(spec){
+    empty.style.display='none';
+    wrap.style.display='block';
+    _renderSpecContent(spec);
+  }else{
+    empty.style.display='';
+    wrap.style.display='none';
+    wrap.innerHTML='';
+  }
 }
 
 function openVariantSpec(){
