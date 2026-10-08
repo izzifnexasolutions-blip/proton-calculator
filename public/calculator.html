@@ -584,6 +584,42 @@ body{
 #footer p:first-child{color:#68686d}
 #footer p:last-child{color:#48484d}
 
+
+/* ── VARIANT SPEC PROFILE V1 ── */
+.variant-control{display:flex;align-items:center;gap:5px}
+.variant-select-wrap{flex:1;min-width:0}
+.variant-spec-btn{
+  width:28px;height:28px;flex:0 0 28px;border-radius:50%;
+  border:1px solid rgba(45,28,4,.22);
+  background:linear-gradient(180deg,#fff,#ececec);
+  color:#9d0d1d;font:900 16px/1 'Montserrat',sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 3px rgba(55,34,0,.14);
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+}
+.variant-spec-btn:hover{background:#fff;box-shadow:0 2px 7px rgba(121,11,25,.22)}
+.variant-spec-btn:active{transform:scale(.92)}
+.spec-return-btn{font-size:14px!important;padding-left:8px!important;padding-right:8px!important}
+
+#spec-panel{
+  display:none;background:linear-gradient(180deg,#0e0e11 0%,#070708 100%);
+  color:#fff;min-height:430px;padding:12px;
+}
+#spec-panel.active{display:block}
+.spec-card{
+  border:1px solid rgba(255,255,255,.08);border-radius:14px;
+  background:radial-gradient(circle at 100% 0%,rgba(215,17,40,.18),transparent 32%),linear-gradient(180deg,#17171a,#0f0f11);
+  padding:16px 14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 28px rgba(0,0,0,.24);
+}
+.spec-kicker{color:#e51d35;font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.spec-model{font-size:14px;font-weight:800;color:#a9a9af;text-transform:uppercase;letter-spacing:.04em}
+.spec-variant{margin-top:2px;font-size:24px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:-.02em;line-height:1.08}
+.spec-divider{height:2px;margin:12px 0 14px;background:linear-gradient(90deg,#e51d35,rgba(229,29,53,.12),transparent)}
+.spec-empty{border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:#68686f;text-align:center;font-size:10px;font-weight:700;line-height:1.6;padding:24px 12px}
+#spec-content{display:none}
+
 </style>
 </head>
 <body>
@@ -611,7 +647,6 @@ body{
 <!-- TAB BAR — car selection, above inputs -->
 <div id="tab-bar">
   <button class="tab-btn active" data-id="saga">SAGA</button>
-  <button class="tab-btn" data-id="persona">PERSONA</button>
   <button class="tab-btn" data-id="s70">S70</button>
   <button class="tab-btn" data-id="x50">X50</button>
   <button class="tab-btn" data-id="x70">X70</button>
@@ -619,6 +654,7 @@ body{
   <button class="tab-btn" data-id="emas5">E.MAS 5</button>
   <button class="tab-btn" data-id="emas7ev">E7 EV</button>
   <button class="tab-btn" data-id="emas7phev">E7 PHEV</button>
+  <button class="tab-btn spec-return-btn" data-id="__specback__" id="spec-back-btn" style="display:none" aria-label="Back to calculator">▦</button>
   <button class="tab-btn" data-id="__settings__" id="settings-tab-btn">⚙</button>
 </div>
 
@@ -631,12 +667,15 @@ body{
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2-3h8l2 3h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
       <span>VARIAN</span>
     </div>
-    <div class="row-control select-wrap">
-      <select id="select-variant" class="field-select">
-        <option value="0">1.5 Standard</option>
-        <option value="1">1.5 Executive</option>
-        <option value="2">1.5 Premium</option>
-      </select>
+    <div class="row-control variant-control">
+      <div class="select-wrap variant-select-wrap">
+        <select id="select-variant" class="field-select">
+          <option value="0">1.5 Standard</option>
+          <option value="1">1.5 Executive</option>
+          <option value="2">1.5 Premium</option>
+        </select>
+      </div>
+      <button id="variant-spec-btn" class="variant-spec-btn" type="button" aria-label="Buka spesifikasi variant" title="Spesifikasi">ⓘ</button>
     </div>
   </div>
 
@@ -754,6 +793,18 @@ body{
 
 </div><!-- /input-rows -->
 
+<!-- VARIANT SPEC PANEL -->
+<div id="spec-panel">
+  <div class="spec-card">
+    <div class="spec-kicker">VARIANT SPECIFICATION</div>
+    <div class="spec-model" id="spec-model-name">PROTON SAGA</div>
+    <div class="spec-variant" id="spec-variant-name">1.5 STANDARD</div>
+    <div class="spec-divider"></div>
+    <div class="spec-empty" id="spec-empty">Spesifikasi untuk variant ini belum dimasukkan.</div>
+    <div id="spec-content"></div>
+  </div>
+</div>
+
 <!-- OUTPUT ROWS -->
 <div id="output-rows">
   <div class="result-row" style="background:#CFE8A9">
@@ -860,11 +911,6 @@ var CAR_MODELS = [
      {name:"Standard 1.5 i-GT 4AT",  otr:40400,  ins:1410},
      {name:"Executive 1.5 i-GT 4AT", otr:46570,  ins:1580},
      {name:"Premium 1.5 i-GT CVT",   otr:51710,  ins:1720}]},
-  {id:"persona",name:"PROTON PERSONA",       image:"images/persona.jpg",
-   variants:[
-     {name:"Standard 1.6 CVT",  otr:49560,  ins:1760},
-     {name:"Executive 1.6 CVT", otr:55220,  ins:1920},
-     {name:"Premium 1.6 CVT",   otr:60360,  ins:2060}]},
   {id:"s70",    name:"PROTON S70",           image:"images/s70.jpg",
    variants:[
      {name:"1.5 Lite",                  otr:61759.80, ins:1959.80},
@@ -938,7 +984,7 @@ var _sbReady=false;
 var _mediaCache={};    // model_key -> {media_url, media_type, file_name} or null
 
 var MODEL_NAME_MAP={
-  saga:'PROTON SAGA',persona:'PROTON PERSONA',s70:'PROTON S70',
+  saga:'PROTON SAGA',s70:'PROTON S70',
   x50:'PROTON X50',x70:'PROTON X70',x90:'PROTON X90',
   emas5:'PROTON e.MAS 5',emas7ev:'PROTON e.MAS 7 EV',emas7phev:'PROTON e.MAS 7 PHEV'
 };
@@ -1521,6 +1567,42 @@ function _smInitEvents(){
   if(sb)sb.onclick=_smSave;
 }
 
+
+var specOpen=false;
+
+function _updateSpecPanel(){
+  var m=getModel();
+  var v=m&&m.variants?m.variants[state.variantIdx]:null;
+  if(!m||!v)return;
+  document.getElementById('spec-model-name').textContent=m.name;
+  document.getElementById('spec-variant-name').textContent=v.name;
+}
+
+function openVariantSpec(){
+  if(settingsOpen)showSettings(false);
+  specOpen=true;
+  _updateSpecPanel();
+  document.getElementById('spec-panel').classList.add('active');
+  document.getElementById('input-rows').style.display='none';
+  document.getElementById('output-rows').style.display='none';
+  document.getElementById('monthly-box').style.display='none';
+  document.getElementById('settings-panel').classList.remove('active');
+  document.getElementById('spec-back-btn').style.display='';
+  var m=getModel(),v=m.variants[state.variantIdx];
+  document.getElementById('calc-bar-title').textContent=m.name+' · '+v.name+' SPEC';
+}
+
+function closeVariantSpec(){
+  specOpen=false;
+  document.getElementById('spec-panel').classList.remove('active');
+  document.getElementById('input-rows').style.display='';
+  document.getElementById('output-rows').style.display='';
+  document.getElementById('monthly-box').style.display='';
+  document.getElementById('spec-back-btn').style.display='none';
+  var m=getModel();
+  if(m)document.getElementById('calc-bar-title').textContent=m.name+' CALCULATOR';
+}
+
 function render(){
   var m=getModel(), r=calc();
   _ssLoad();
@@ -1533,6 +1615,12 @@ function render(){
     sel.innerHTML=m.variants.map(function(v,i){return'<option value="'+i+'">'+v.name+'</option>'}).join("");
   }
   sel.value=state.variantIdx;
+  var specBtn=document.getElementById('variant-spec-btn');
+  if(specBtn){
+    specBtn.setAttribute('aria-label','Buka spesifikasi '+m.variants[state.variantIdx].name);
+    specBtn.title=m.variants[state.variantIdx].name+' · Spesifikasi';
+  }
+  if(specOpen)_updateSpecPanel();
   /* rebate — load per model+variant */
   document.getElementById("input-rebate").value=_getRebate()||'';
   /* custom row */
@@ -1644,6 +1732,7 @@ function spRebuild(){
 
 var settingsOpen=false;
 function showSettings(on){
+  if(on&&specOpen)closeVariantSpec();
   settingsOpen=on;
   document.getElementById('settings-panel').classList.toggle('active',on);
   document.getElementById('input-rows').style.display=on?'none':'';
@@ -1660,10 +1749,14 @@ function init(){
   document.querySelectorAll(".tab-btn").forEach(function(btn){
     btn.addEventListener("click",function(){
       if(btn.id==='settings-tab-btn'){showSettings(true);return;}
+      if(btn.id==='spec-back-btn'){closeVariantSpec();render();return;}
       if(settingsOpen)showSettings(false);
+      if(specOpen)closeVariantSpec();
       state.modelId=btn.getAttribute("data-id");state.variantIdx=0;render();
     });
   });
+  var specBtn=document.getElementById('variant-spec-btn');
+  if(specBtn)specBtn.addEventListener('click',openVariantSpec);
   /* ncd */
   document.querySelectorAll(".ncd-btn").forEach(function(btn){
     btn.addEventListener("click",function(){state.ncdPct=Number(btn.getAttribute("data-ncd"));render()});
