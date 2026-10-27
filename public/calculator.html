@@ -2814,6 +2814,14 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       months: (st.loanYears || 0) * 12, years: st.loanYears || 0,
       monthly: r.monthly, otr: r.otr, selling: r.selling, insurance: r.insurance,
       dp: r.dp, loan: r.loan, rate: rate, ncd: st.ncdPct,
+      otrModeLabel: st.otrMode === 'tanpa' ? 'Tanpa Insurans' : 'Dengan Insurans',
+      depositLabel: (function () {
+        var el = document.getElementById('select-deposit');
+        if (st.depositSel === 'custom') return 'Custom (' + rm0(st.customDeposit || 0) + ')';
+        if (el && el.selectedOptions && el.selectedOptions[0]) return el.selectedOptions[0].textContent.trim();
+        var n = Number(st.depositSel || 0);
+        return n === 0 ? 'Full Loan' : (n < 100 ? n + '%' : rm0(n));
+      })(),
       rebate: (typeof window._getRebate === 'function') ? window._getRebate() : 0,
       m5: monthlyAt(5), m7: monthlyAt(7), m9: monthlyAt(9),
       carUrl: carImageUrl(m),
@@ -2858,299 +2866,127 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     return lines;
   }
 
-  function renderPoster(canvas, d, sizeKey) {
-    var wh = SIZES[sizeKey] || SIZES.feed, W = wh[0], H = wh[1];
-    canvas.width = W; canvas.height = H;
-    var ctx = canvas.getContext('2d');
-    var F = Math.min(W / 1080, H / 1250);
-    var P = Math.round(58 * F);
-    var innerW = W - P * 2;
-    var r = function (n) { return Math.round(n * F); };
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-
-    /* ---------- LAYOUT PASS ---------- */
-    var y = Math.round(H * 0.038);
-    var eyebrowY = y + r(23), underlineY = y + r(32);
-    y += r(56);
-    var titlePx = fitText(ctx, d.model, innerW, '800 __PX__px Montserrat, Arial, sans-serif', r(64));
-    var titleY = y + titlePx; y += titlePx + r(12);
-    var varPx = fitText(ctx, d.variant, innerW, '600 __PX__px Montserrat, Arial, sans-serif', r(29));
-    var varY = y + varPx; y += varPx + r(14);
-
-    var gap1 = Math.round(H * 0.012), gap2 = Math.round(H * 0.012);
-    var gap3 = Math.round(H * 0.014), gap4 = Math.round(H * 0.008);
-    var cardH = Math.round(H * 0.135);
-    var tGap = Math.round(H * 0.007);
-    var tenureH = Math.round(H * 0.130);
-    var ctaH = Math.round(H * 0.026);
-    var barH = Math.round(H * 0.075);
-    var bottomPad = Math.round(H * 0.022);
-    var ROWS = 5, rowMin = r(36);
-
-    var carY = y, carH = Math.round(H * 0.300), carMin = Math.round(H * 0.150);
-    var yTable, tblH;
-    for (var g = 0; g < 60; g++) {
-      yTable = carY + carH + gap1 + cardH + gap2;
-      var tail = gap2 + tenureH + gap3 + ctaH + gap4 + barH + bottomPad;
-      tblH = H - yTable - tail;
-      if (tblH >= ROWS * rowMin || carH <= carMin) break;
-      carH = Math.max(carMin, carH - (ROWS * rowMin - tblH));
+  function renderPoster(canvas,d,sizeKey){
+    var wh=SIZES[sizeKey]||SIZES.feed,W=wh[0],H=wh[1];
+    canvas.width=W;canvas.height=H;
+    var ctx=canvas.getContext('2d'),small=H<=1100,tall=H>=1700;
+    var P=52,I=W-P*2,gap=small?12:(tall?22:14);
+    var top=small?32:(tall?60:44);
+    var headerH=small?128:(tall?175:150),carH=small?190:(tall?525:278);
+    var settingH=small?215:(tall?340:260),resultH=small?190:(tall?285:233);
+    var monthlyH=small?116:(tall?210:145),agentH=small?76:(tall?118:88);
+    var used=top+headerH+carH+settingH+resultH+monthlyH+agentH+24+gap*6;
+    top+=Math.max(0,(H-used)*.36);
+    function rect(x,y,w,h,r,color,stroke){
+      ctx.fillStyle=color;roundRect(ctx,x,y,w,h,r);ctx.fill();
+      if(stroke){ctx.lineWidth=2;ctx.strokeStyle=stroke;roundRect(ctx,x,y,w,h,r);ctx.stroke();}
     }
-    if (tblH < ROWS * rowMin) tblH = ROWS * rowMin;
-    var rowH = tblH / ROWS;
-    var yCard = carY + carH + gap1;
-    var yTen = yTable + tblH + gap2;
-    var yCta = yTen + tenureH + gap3;
-    var yBar = H - bottomPad - barH;
-
-    /* ---------- LATAR ---------- */
-    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
-    var topG = ctx.createLinearGradient(0, 0, 0, carY + carH);
-    topG.addColorStop(0, '#EEF2F7'); topG.addColorStop(1, '#FFFFFF');
-    ctx.fillStyle = topG; ctx.fillRect(0, 0, W, carY + carH);
-
-    /* ---------- TAJUK ---------- */
-    ctx.fillStyle = C.red;
-    ctx.font = '800 ' + r(24) + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('KIRAAN LOAN KENDERAAN', P, eyebrowY);
-    ctx.fillRect(P, underlineY, r(108), r(6));
-    ctx.fillStyle = C.navy;
-    ctx.font = '800 ' + titlePx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(d.model, P, titleY);
-    ctx.fillStyle = C.grey;
-    ctx.font = '600 ' + varPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(d.variant, P, varY);
-
-    /* ---------- GAMBAR KERETA (cover penuh, kereta tak terpotong) ---------- */
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0, carY, W, carH); ctx.clip();
-    if (d.agentBg) {
-      coverDraw(ctx, d.agentBg, 0, carY, W, carH);
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, carY, W, carH);
-    } else if (d.photo) {
-      coverDraw(ctx, d.photo, 0, carY, W, carH);
-    } else {
-      ctx.fillStyle = C.soft; ctx.fillRect(0, carY, W, carH);
-      ctx.fillStyle = C.grey2; ctx.textAlign = 'center';
-      ctx.font = '800 ' + r(40) + 'px Montserrat, Arial, sans-serif';
-      ctx.fillText(d.model, W / 2, carY + carH / 2 + r(12));
-      ctx.textAlign = 'left';
+    function txt(text,x,y,px,color,align,maxW){
+      var s=String(text==null?'':text);
+      var f='900 __PX__px Montserrat, Arial, sans-serif';
+      px=maxW?fitText(ctx,s,maxW,f,px):px;
+      ctx.font='900 '+px+'px Montserrat, Arial, sans-serif';
+      ctx.textBaseline='alphabetic';ctx.textAlign=align||'left';
+      ctx.fillStyle=color;ctx.fillText(s,x,y);ctx.textAlign='left';
     }
-    ctx.restore();
-    var fH = carH * 0.16;
-    var fg = ctx.createLinearGradient(0, carY + carH - fH, 0, carY + carH);
-    fg.addColorStop(0, 'rgba(255,255,255,0)'); fg.addColorStop(1, 'rgba(255,255,255,1)');
-    ctx.fillStyle = fg; ctx.fillRect(0, carY + carH - fH, W, fH);
-    var fT = carH * 0.14;
-    var ftg = ctx.createLinearGradient(0, carY, 0, carY + fT);
-    ftg.addColorStop(0, 'rgba(238,242,247,1)'); ftg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = ftg; ctx.fillRect(0, carY, W, fT);
-
-    /* ---------- KAD ANSURAN + EJEN ---------- */
-    ctx.fillStyle = '#FFFFFF';
-    roundRect(ctx, P, yCard, innerW, cardH, r(22)); ctx.fill();
-    ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(2, r(2));
-    roundRect(ctx, P, yCard, innerW, cardH, r(22)); ctx.stroke();
-
-    var pad = r(24);
-    var avR = r(cardH * 0.33);
-    var leftX = P + pad;
-    var leftW = Math.round(innerW * 0.42);
-
-    ctx.fillStyle = C.grey;
-    ctx.font = '600 ' + r(24) + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('Bulanan Serendah', leftX, yCard + cardH * 0.22);
-
-    var lowest = Math.min(d.m5 || Infinity, d.m7 || Infinity, d.m9 || Infinity);
-    if (!isFinite(lowest) || lowest <= 0) lowest = d.monthly;
-    var amtStr = fmtNum(Math.round(lowest));
-    var amtPx = fitText(ctx, 'RM' + amtStr, leftW - r(60), '800 __PX__px Montserrat, Arial, sans-serif', r(cardH * 0.40));
-    var amtBase = yCard + cardH * 0.22 + amtPx;
-    ctx.fillStyle = C.red;
-    ctx.font = '800 ' + r(amtPx * 0.42) + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('RM', leftX, amtBase);
-    var rmw = ctx.measureText('RM').width;
-    ctx.font = '800 ' + amtPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(amtStr, leftX + rmw + r(5), amtBase);
-    var amtW = rmw + ctx.measureText(amtStr).width;
-    ctx.fillStyle = C.grey;
-    ctx.font = '600 ' + r(22) + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('sebulan', leftX + amtW + r(12), amtBase);
-
-    var tagPx = fitText(ctx, DEFAULTS.tagline, leftW, 'italic 600 __PX__px Montserrat, Arial, sans-serif', r(20));
-    ctx.fillStyle = C.grey;
-    ctx.font = 'italic 600 ' + tagPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(DEFAULTS.tagline, leftX, yCard + cardH - r(18));
-
-    var agentX = P + leftW + r(18);
-    var avCx = agentX + avR, avCy = yCard + cardH / 2;
-    ctx.save();
-    circle(ctx, avCx, avCy, avR); ctx.clip();
-    ctx.fillStyle = C.soft; ctx.fillRect(avCx - avR, avCy - avR, avR * 2, avR * 2);
-    if (d.agentPhoto) coverDraw(ctx, d.agentPhoto, avCx - avR, avCy - avR, avR * 2, avR * 2);
-    ctx.restore();
-    ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(2, r(3));
-    circle(ctx, avCx, avCy, avR); ctx.stroke();
-
-    var atx = avCx + avR + r(16);
-    var atw = (W - P - pad) - atx;
-    var nameY = yCard + cardH * 0.40;
-    var nPx = fitText(ctx, v('name'), atw, '800 __PX__px Montserrat, Arial, sans-serif', r(30));
-    ctx.fillStyle = C.navy;
-    ctx.font = '800 ' + nPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(v('name'), atx, nameY);
-    ctx.fillStyle = C.red;
-    var rolePx = fitText(ctx, v('role'), atw, '700 __PX__px Montserrat, Arial, sans-serif', r(21));
-    ctx.font = '700 ' + rolePx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(v('role'), atx, nameY + r(24));
-    var credFont = '600 ' + r(18) + 'px Montserrat, Arial, sans-serif';
-    var maxLines = Math.max(1, Math.floor((yCard + cardH - r(10) - (nameY + r(44))) / r(21)) + 1);
-    var credLines = wrapText(ctx, v('cred'), atw, credFont).slice(0, maxLines);
-    ctx.fillStyle = C.grey;
-    ctx.font = credFont;
-    credLines.forEach(function (ln, i) { ctx.fillText(ln, atx, nameY + r(44) + i * r(21)); });
-
-    /* ---------- JADUAL HARGA ---------- */
-    var rows = [
-      ['Harga Kereta', rm0(d.otr)],
-      ['Rebate', d.rebate ? '- ' + rm0(d.rebate) : rm0(0)],
-      ['Downpayment', rm0(d.dp)],
-      ['Insuran (anggaran)', rm0(d.insurance)],
-      ['Jumlah Loan (anggaran)', rm0(d.loan)]
+    function section(title,y){
+      rect(P,y,I,41,11,'#182E48');
+      ctx.fillStyle='#E42337';ctx.fillRect(P,y,6,41);
+      txt(title,P+19,y+28,24,'#FFF','left',I-38);
+    }
+    function tile(x,y,w,h,k,v,yellow){
+      rect(x,y,w,h,10,yellow?'#FFE17A':'#F4F7FA','#DDE5EC');
+      var fs=h<54?13:(tall?19:16), vs=h<54?21:(tall?32:26);
+      txt(k,x+17,y+(h<54?14:21),fs,'#4B6076','left',w-34);
+      txt(v,x+17,y+h-(h<54?7:14),vs,'#10243C','left',w-34);
+    }
+    ctx.fillStyle='#F0F3F8';ctx.fillRect(0,0,W,H);
+    var paper=ctx.createLinearGradient(0,0,W,H);
+    paper.addColorStop(0,'#FFF');paper.addColorStop(1,'#E9EEF5');
+    ctx.fillStyle=paper;ctx.fillRect(0,0,W,H);
+    txt('KIRAAN LOAN KENDERAAN',P,top+22,23,'#D0212B');
+    rect(P,top+30,115,5,2,'#E51E34');
+    txt(d.model,P,top+(small?83:92),small?58:65,'#10243C','left',I);
+    txt(d.variant,P,top+(small?119:132),small?27:31,'#566B80','left',I);
+    var y=top+headerH+gap;
+    rect(P,y,I,carH,18,'#DFE6ED','#CFD9E5');
+    ctx.save();roundRect(ctx,P,y,I,carH,18);ctx.clip();
+    if(d.agentBg)coverDraw(ctx,d.agentBg,P,y,I,carH);
+    if(d.photo)coverDraw(ctx,d.photo,P,y,I,carH);
+    else if(!d.agentBg)txt('GAMBAR KERETA',W/2,y+carH/2,30,'#9BA8B8','center');
+    var fade=ctx.createLinearGradient(0,y+carH*.68,0,y+carH);
+    fade.addColorStop(0,'rgba(255,255,255,0)');fade.addColorStop(1,'rgba(255,255,255,.58)');
+    ctx.fillStyle=fade;ctx.fillRect(P,y+carH*.68,I,carH*.32);ctx.restore();
+    y+=carH+gap;
+    /* Values come from the selected calculator variant, input state and calc(). */
+    rect(P,y,I,settingH,15,'#FFF','#DAE2EA');section('TETAPAN KIRAAN',y);
+    var inputs=[
+      ['VARIAN',d.variant],
+      ['OTR MODE',d.otrModeLabel],
+      ['REBATE',rm0(d.rebate)],
+      ['JENIS DEPOSIT',d.depositLabel],
+      ['TAHUN LOAN',d.years+' tahun'],
+      ['INTEREST %',Number(d.rate||0).toLocaleString('en-US',{maximumFractionDigits:2})+'%'],
+      ['NCD %',Number(d.ncd||0).toLocaleString('en-US',{maximumFractionDigits:2})+'%']
     ];
-    ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(1, r(1.4));
-    roundRect(ctx, P, yTable, innerW, tblH, r(16)); ctx.stroke();
-    rows.forEach(function (row, i) {
-      var ry = yTable + i * rowH;
-      if (i % 2 === 1) {
-        ctx.save();
-        roundRect(ctx, P, yTable, innerW, tblH, r(16)); ctx.clip();
-        ctx.fillStyle = C.alt; ctx.fillRect(P, ry, innerW, rowH);
-        ctx.restore();
-      }
-      if (i > 0) {
-        ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(1, r(1.2));
-        ctx.beginPath(); ctx.moveTo(P + r(18), ry); ctx.lineTo(P + innerW - r(18), ry); ctx.stroke();
-      }
-      var baseY = ry + rowH * 0.63;
-      ctx.fillStyle = C.navy2;
-      ctx.font = '600 ' + r(23) + 'px Montserrat, Arial, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(row[0], P + r(24), baseY);
-      ctx.fillStyle = C.navy;
-      ctx.font = '800 ' + r(26) + 'px Montserrat, Arial, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(row[1], W - P - r(24), baseY);
-      ctx.textAlign = 'left';
+    var pad=12,g=9,cw=(I-2*pad-g)/2;
+    var th=(settingH-53-3*g)/4;
+    inputs.forEach(function(v,i){
+      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(th+g),cw,th,v[0],v[1],false);
     });
-
-    /* ---------- BARIS TEMPOH ---------- */
-    var items = [{ yr: 9, m: d.m9 }, { yr: 7, m: d.m7 }, { yr: 5, m: d.m5 }]
-      .filter(function (it) { return it.m > 0; });
-    if (items.length) {
-      var bestIdx = 0;
-      items.forEach(function (it, i) { if (it.m < items[bestIdx].m) bestIdx = i; });
-      var tH = (tenureH - tGap * (items.length - 1)) / items.length;
-      items.forEach(function (it, i) {
-        var ty = yTen + i * (tH + tGap);
-        var isSel = it.yr === d.years;
-        ctx.fillStyle = isSel ? '#FFFDF3' : '#FFFFFF';
-        roundRect(ctx, P, ty, innerW, tH, r(13)); ctx.fill();
-        ctx.strokeStyle = isSel ? C.gold : C.line;
-        ctx.lineWidth = Math.max(2, r(isSel ? 3 : 2));
-        roundRect(ctx, P, ty, innerW, tH, r(13)); ctx.stroke();
-
-        var pillW = r(190), pillH = tH - r(12), pillY = ty + r(6);
-        ctx.fillStyle = C.navy;
-        roundRect(ctx, P + r(8), pillY, pillW, pillH, r(9)); ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '800 ' + r(25) + 'px Montserrat, Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(it.yr + ' Tahun', P + r(8) + pillW / 2, pillY + pillH * 0.68);
-        ctx.textAlign = 'left';
-
-        var mx = P + r(8) + pillW + r(30);
-        var mPx = fitText(ctx, rm0(it.m), innerW - (mx - P) - r(240), '800 __PX__px Montserrat, Arial, sans-serif', r(tH * 0.48));
-        ctx.fillStyle = C.red;
-        ctx.font = '800 ' + mPx + 'px Montserrat, Arial, sans-serif';
-        ctx.fillText(rm0(it.m), mx, ty + tH * 0.66);
-        var mw = ctx.measureText(rm0(it.m)).width;
-        ctx.fillStyle = C.grey;
-        ctx.font = '600 ' + r(22) + 'px Montserrat, Arial, sans-serif';
-        ctx.fillText('/bulan', mx + mw + r(10), ty + tH * 0.66);
-
-        if (i === bestIdx) {
-          var bw = r(212), bh = Math.min(r(36), tH - r(14));
-          var bx = W - P - r(16) - bw, by = ty + (tH - bh) / 2;
-          ctx.fillStyle = '#FFF4D6';
-          roundRect(ctx, bx, by, bw, bh, bh / 2); ctx.fill();
-          ctx.strokeStyle = C.gold; ctx.lineWidth = Math.max(1, r(1.5));
-          roundRect(ctx, bx, by, bw, bh, bh / 2); ctx.stroke();
-          ctx.fillStyle = '#8A6100';
-          ctx.font = '800 ' + r(17) + 'px Montserrat, Arial, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('Bayaran paling rendah', bx + bw / 2, by + bh * 0.68);
-          ctx.textAlign = 'left';
-        }
-      });
-    }
-
-    /* ---------- CTA ---------- */
-    ctx.fillStyle = C.grey;
-    ctx.font = 'italic 600 ' + r(20) + 'px Montserrat, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Jom semak kelayakan sekarang — sebelum promosi tamat.', W / 2, yCta + ctaH * 0.55);
-    ctx.textAlign = 'left';
-
-    /* ---------- BAR WHATSAPP ---------- */
-    var bg2 = ctx.createLinearGradient(P, yBar, W - P, yBar + barH);
-    bg2.addColorStop(0, C.navy); bg2.addColorStop(1, C.navy2);
-    ctx.fillStyle = bg2;
-    roundRect(ctx, P, yBar, innerW, barH, r(16)); ctx.fill();
-
-    var iconR = r(barH * 0.30), icx = P + r(20) + iconR;
-    circle(ctx, icx, yBar + barH / 2, iconR);
-    ctx.fillStyle = C.wa; ctx.fill();
-    /* ikon telefon (vektor) */
-    ctx.save();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = Math.max(3, iconR * 0.30);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(icx, yBar + barH / 2 - iconR * 0.12, iconR * 0.56, Math.PI * 0.18, Math.PI * 0.82);
-    ctx.stroke();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(icx - iconR * 0.52, yBar + barH / 2 + iconR * 0.30, iconR * 0.19, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(icx + iconR * 0.52, yBar + barH / 2 + iconR * 0.30, iconR * 0.19, 0, Math.PI * 2); ctx.fill();
+    y+=settingH+gap;
+    rect(P,y,I,resultH,15,'#FFF','#DAE2EA');section('HASIL KIRAAN',y);
+    var outputs=[
+      ['SELLING PRICE',rm0(d.selling)],
+      ['INSURANCE EST.',rm0(d.insurance)],
+      ['OTR PRICE',rm0(d.otr)],
+      ['DOWNPAYMENT',rm0(d.dp)],
+      ['LOAN AMOUNT',rm0(d.loan)]
+    ];
+    var rh=(resultH-53-2*g)/3;
+    outputs.forEach(function(v,i){
+      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(rh+g),cw,rh,v[0],v[1],i===2);
+    });
+    y+=resultH+gap;
+    var red=ctx.createLinearGradient(P,y,W-P,y+monthlyH);
+    red.addColorStop(0,'#930018');red.addColorStop(.55,'#CE112C');red.addColorStop(1,'#F62E48');
+    rect(P,y,I,monthlyH,18,red);
+    txt('MONTHLY',P+28,y+monthlyH*.42,small?34:(tall?50:40),'#FFF');
+    txt(d.months+' BULAN',P+28,y+monthlyH*.75,small?23:(tall?31:26),'#FFE0E6');
+    txt(rm2(d.monthly),W-P-27,y+monthlyH*.67,small?76:(tall?105:91),'#FFF','right',I*.63);
+    y+=monthlyH+gap;
+    var dark=ctx.createLinearGradient(P,y,W-P,y+agentH);
+    dark.addColorStop(0,'#10243C');dark.addColorStop(1,'#1C4065');
+    rect(P,y,I,agentH,15,dark);
+    var av=small?25:(tall?42:32),ax=P+20+av,ay=y+agentH/2;
+    ctx.save();circle(ctx,ax,ay,av);ctx.clip();
+    ctx.fillStyle='#EAEFF6';ctx.fillRect(ax-av,ay-av,av*2,av*2);
+    if(d.agentPhoto)coverDraw(ctx,d.agentPhoto,ax-av,ay-av,av*2,av*2);
     ctx.restore();
-
-    var waPx = fitText(ctx, 'WhatsApp Saya Sekarang', innerW * 0.44, '800 __PX__px Montserrat, Arial, sans-serif', r(25));
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '800 ' + waPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('WhatsApp Saya Sekarang', icx + iconR + r(14), yBar + barH * 0.60);
-
-    ctx.textAlign = 'right';
-    var phPx = fitText(ctx, v('phone'), innerW * 0.42, '800 __PX__px Montserrat, Arial, sans-serif', r(barH * 0.44));
-    ctx.font = '800 ' + phPx + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText(v('phone'), W - P - r(22), yBar + barH * 0.63);
-    ctx.textAlign = 'left';
-
-    ctx.fillStyle = C.grey2;
-    ctx.font = '500 ' + r(17) + 'px Montserrat, Arial, sans-serif';
-    ctx.fillText('Anggaran sahaja \u00b7 Harga tertakluk kepada terma & syarat', P, H - r(6));
+    ctx.strokeStyle='#FFF';ctx.lineWidth=2;circle(ctx,ax,ay,av);ctx.stroke();
+    var nx=ax+av+16;
+    txt(v('name'),nx,y+agentH*.43,small?24:(tall?34:28),'#FFF','left',I*.46);
+    txt(v('role'),nx,y+agentH*.72,small?17:(tall?24:20),'#D1DEE9','left',I*.46);
+    txt(v('phone'),W-P-20,y+agentH*.56,small?29:(tall?43:36),'#FFF','right',I*.4);
+    txt('WHATSAPP',W-P-20,y+agentH*.83,small?13:(tall?19:16),'#43EC83','right',I*.4);
+    y+=agentH+gap;
+    txt('Anggaran sahaja · Harga & kelulusan tertakluk kepada terma dan syarat.',
+      P,Math.min(H-13,y+16),18,'#637387','left',I);
   }
 
   /* ---------- caption WhatsApp ---------- */
-  function buildCaption(d) {
-    var L = [];
-    L.push('🚗 ' + d.model + ' — ' + d.variant);
-    var lowest = Math.min(d.m5 || Infinity, d.m7 || Infinity, d.m9 || Infinity);
-    if (!isFinite(lowest)) lowest = d.monthly;
-    L.push('💰 Bulanan serendah ' + rm2(lowest) + ' sebulan (9 tahun)');
-    L.push('📊 Harga ' + rm0(d.otr) + ' · Rebate ' + rm0(d.rebate) + ' · Deposit ' + rm0(d.dp));
-    L.push('📞 ' + v('name') + ' ' + v('phone'));
-    L.push('Nak kiraan penuh untuk model lain? WhatsApp saya 👇');
-    return L.join('\n');
+  function buildCaption(d){
+    return [
+      '🚗 '+d.model+' — '+d.variant,
+      '📋 OTR Mode: '+d.otrModeLabel+' | Rebate: '+rm0(d.rebate),
+      '💳 Deposit: '+d.depositLabel+' ('+rm0(d.dp)+')',
+      '📅 Loan: '+d.years+' tahun ('+d.months+' bulan) | Interest: '+d.rate+'% | NCD: '+d.ncd+'%',
+      '💰 Selling Price: '+rm0(d.selling)+' | Insurance: '+rm0(d.insurance),
+      '🚘 OTR Price: '+rm0(d.otr)+' | Loan Amount: '+rm0(d.loan),
+      '✅ MONTHLY: '+rm2(d.monthly)+'/bulan',
+      '📞 '+v('name')+' · '+v('phone'),
+      'Kiraan anggaran tertakluk kepada terma dan kelulusan bank.'
+    ].join('\n');
   }
 
   /* ---------- UI ---------- */
@@ -3277,7 +3113,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     sbb.onclick = saveProfile;
     sb.appendChild(sbb); adv.appendChild(sb);
     box.appendChild(adv);
-    box.appendChild(mk('p', 'pg-hint', 'Nama, telefon & gambar sudah terbenam. Hanya kiraan berubah ikut kalkulator.'));
+    box.appendChild(mk('p', 'pg-hint', 'Poster ikut semua input dan hasil kiraan semasa.'));
     statusEl = mk('div', 'pg-status'); box.appendChild(statusEl);
 
     bDl.onclick = download; bWa.onclick = shareWa; bCap.onclick = copyCaption;
@@ -3302,6 +3138,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     var d = currentData();
     if (!d) { setStatus('Kalkulator belum sedia.', 'err'); return; }
     var token = ++renderToken;
+    lastBlob = null;
     var override = photoOverride(d.modelId);
     Promise.all([
       loadImageSafe(override || d.carUrl),
@@ -3314,11 +3151,11 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       d.agentBg = imgs[2] || null;
       lastData = d;
       renderPoster(canvas, d, currentSize);
-      canvas.toBlob(function (b) { lastBlob = b; }, 'image/png');
+      canvas.toBlob(function (b) { if (token === renderToken) lastBlob = b; }, 'image/png');
     });
   }
 
-  function fileName(d) { return 'POSTER-' + (d.model || 'PROTON').replace(/\s+/g, '-') + '-RM' + Math.round(d.monthly) + '.png'; }
+  function fileName(d) { return 'POSTER-' + (d.model || 'PROTON').replace(/\s+/g, '-') + '-RM' + Number(d.monthly || 0).toFixed(2) + '.png'; }
 
   function download() {
     if (!lastBlob || !lastData) { setStatus('Poster belum sedia.', 'err'); return; }
