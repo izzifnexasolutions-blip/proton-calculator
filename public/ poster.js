@@ -150,11 +150,14 @@
       dp: r.dp, loan: r.loan, rate: rate, ncd: st.ncdPct,
       otrModeLabel: st.otrMode === 'tanpa' ? 'Tanpa Insurans' : 'Dengan Insurans',
       depositLabel: (function () {
-        var el = document.getElementById('select-deposit');
-        if (st.depositSel === 'custom') return 'Custom (' + rm0(st.customDeposit || 0) + ')';
-        if (el && el.selectedOptions && el.selectedOptions[0]) return el.selectedOptions[0].textContent.trim();
-        var n = Number(st.depositSel || 0);
-        return n === 0 ? 'Full Loan' : (n < 100 ? n + '%' : rm0(n));
+        var sel=st.depositSel;
+        if(sel==null||sel===''){var el=document.getElementById('select-deposit');sel=el?el.value:'';}
+        if(sel==='custom')return 'Custom';
+        var n=Number(sel);
+        if(sel==='0'&&Number(r.dp)===0)return 'Full Loan';
+        if(sel!==''&&isFinite(n)&&n>=100)return rm0(n);
+        if(sel!==''&&isFinite(n)&&n>0&&n<100)return n+'%';
+        return Number(r.dp)>0?'Deposit':'Full Loan';
       })(),
       rebate: (typeof window._getRebate === 'function') ? window._getRebate() : 0,
       m5: monthlyAt(5), m7: monthlyAt(7), m9: monthlyAt(9),
@@ -319,22 +322,86 @@
       P,Math.min(H-13,y+16),18,'#637387','left',I);
   }
 
-  /* ---------- caption WhatsApp ---------- */
-  function buildCaption(d){
-    return [
-      '🚗 '+d.model+' — '+d.variant,
-      '📋 OTR Mode: '+d.otrModeLabel+' | Rebate: '+rm0(d.rebate),
-      '💳 Deposit: '+d.depositLabel+' ('+rm0(d.dp)+')',
-      '📅 Loan: '+d.years+' tahun ('+d.months+' bulan) | Interest: '+d.rate+'% | NCD: '+d.ncd+'%',
-      '💰 Selling Price: '+rm0(d.selling)+' | Insurance: '+rm0(d.insurance),
-      '🚘 OTR Price: '+rm0(d.otr)+' | Loan Amount: '+rm0(d.loan),
-      '✅ MONTHLY: '+rm2(d.monthly)+'/bulan',
-      '📞 '+v('name')+' · '+v('phone'),
-      'Kiraan anggaran tertakluk kepada terma dan kelulusan bank.'
-    ].join('\n');
+  var CAPKEY='faris_caption_settings_v1';
+  var CAPFIELDS=[
+    ['model','Model / varian'],['monthly','Monthly'],['term','Tempoh loan'],['otr','Harga OTR'],
+    ['deposit','Deposit'],['rebate','Rebate'],['selling','Selling Price'],['insurance','Insurans'],
+    ['loan','Loan Amount'],['rate','Interest'],['ncd','NCD'],['otrMode','OTR Mode'],
+    ['contact','Nama & telefon'],['disclaimer','Nota anggaran']
+  ];
+  var CAPPRESETS={
+    ringkas:['model','monthly','term','otr','deposit','rebate','contact','disclaimer'],
+    minimum:['model','monthly','term','contact'],
+    lengkap:CAPFIELDS.map(function(row){return row[0];})
+  };
+  var captionCfg={intro:'',outro:'Berminat? WhatsApp saya untuk semak kelayakan.',fields:{}};
+  function loadCaptionCfg(){
+    CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=CAPPRESETS.ringkas.indexOf(x[0])>=0;});
+    try{
+      var s=JSON.parse(localStorage.getItem(CAPKEY)||'null');
+      if(s && typeof s==='object'){
+        if(typeof s.intro==='string')captionCfg.intro=s.intro.slice(0,250);
+        if(typeof s.outro==='string')captionCfg.outro=s.outro.slice(0,250);
+        if(s.fields && typeof s.fields==='object')CAPFIELDS.forEach(function(x){
+          if(typeof s.fields[x[0]]==='boolean')captionCfg.fields[x[0]]=s.fields[x[0]];
+        });
+      }
+    }catch(e){}
+  }
+  function saveCaptionCfg(){try{localStorage.setItem(CAPKEY,JSON.stringify(captionCfg));}catch(e){setStatus('Simpanan browser gagal.','err');}}
+  function useCaptionPreset(key){
+    var p=CAPPRESETS[key]||CAPPRESETS.ringkas;
+    CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=p.indexOf(x[0])>=0;});
+    saveCaptionCfg();updateCaptionControls();
+  }
+  function updateCaptionControls(){
+    if(!ui || !ui.cap)return;
+    var c=ui.cap;
+    if(document.activeElement!==c.intro)c.intro.value=captionCfg.intro;
+    if(document.activeElement!==c.outro)c.outro.value=captionCfg.outro;
+    CAPFIELDS.forEach(function(x){c.checks[x[0]].checked=!!captionCfg.fields[x[0]];});
+    var matched='';
+    Object.keys(CAPPRESETS).forEach(function(key){
+      if(CAPFIELDS.every(function(x){return !!captionCfg.fields[x[0]]===(CAPPRESETS[key].indexOf(x[0])>=0);}))matched=key;
+    });
+    c.presets.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.preset===matched);});
+    updateCaptionPreview();
+  }
+  function updateCaptionPreview(){
+    if(!ui||!ui.cap)return;
+    var d=currentData(),value=d?buildCaption(d):'Pilih kereta dahulu.';
+    ui.cap.preview.textContent=value;
+    ui.cap.count.textContent=value.length+' aksara';
   }
 
-  /* ---------- UI ---------- */
+  /* ---------- caption WhatsApp ---------- */
+  function buildCaption(d){
+    if(!d)return '';
+    var c=captionCfg.fields,sections=[];
+    if(captionCfg.intro.trim())sections.push(captionCfg.intro.trim());
+    if(c.model)sections.push('🚗 *'+d.model+'*\nVarian: '+d.variant);
+    var main=[];
+    if(c.monthly)main.push('💰 *Bulanan: '+rm2(d.monthly)+'/bulan*');
+    if(c.term)main.push('📅 Tempoh: '+d.years+' tahun ('+d.months+' bulan)');
+    if(c.otr)main.push('🚘 Harga OTR: '+rm0(d.otr));
+    if(c.deposit)main.push('💳 Deposit ('+d.depositLabel+'): '+rm0(d.dp));
+    if(c.rebate && Number(d.rebate)>0)main.push('🎁 Rebate: '+rm0(d.rebate));
+    if(main.length)sections.push(main.join('\n'));
+    var extra=[];
+    if(c.selling)extra.push('Selling Price: '+rm0(d.selling));
+    if(c.insurance)extra.push('Insurans: '+rm0(d.insurance));
+    if(c.loan)extra.push('Loan Amount: '+rm0(d.loan));
+    if(c.rate)extra.push('Interest: '+d.rate+'%');
+    if(c.ncd)extra.push('NCD: '+d.ncd+'%');
+    if(c.otrMode)extra.push('OTR Mode: '+d.otrModeLabel);
+    if(extra.length)sections.push(extra.join('\n'));
+    if(captionCfg.outro.trim())sections.push(captionCfg.outro.trim());
+    if(c.contact)sections.push('📲 '+v('name')+': '+v('phone'));
+    if(c.disclaimer)sections.push('_Anggaran sahaja. Tertakluk kepada terma, syarat & kelulusan bank._');
+    return sections.join('\n\n');
+  }
+
+    /* ---------- UI ---------- */
   var ui = null, canvas = null, statusEl = null, lastBlob = null, lastData = null;
 
   function setStatus(msg, kind) {
@@ -375,7 +442,21 @@
       '.pg-status{font:600 12px Montserrat,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:10px;min-height:16px}',
       '.pg-status.pg-ok{color:#7EE787}.pg-status.pg-err{color:#ff6b6b}',
       '.pg-hint{font:500 11px Montserrat,Arial,sans-serif;color:rgba(255,255,255,.42);margin:6px 0 0}',
-      '#pg-adv{display:none;margin-top:6px}#pg-adv.on{display:block}'
+      '#pg-adv{display:none;margin-top:6px}#pg-adv.on{display:block}',
+      '.pg-cap-panel{background:#191b21;border:1px solid #444956;border-radius:13px;padding:13px;margin:10px 0 18px}',
+      '.pg-cap-title{font:900 14px Montserrat,Arial,sans-serif;margin-bottom:7px;color:#fff}',
+      '.pg-cap-info{font:600 11px/1.5 Montserrat,Arial,sans-serif;color:#c0c7d1;margin-bottom:11px}',
+      '.pg-cap-presets{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}',
+      '.pg-cap-presets button{padding:8px 11px;background:#2a2d34;color:#fff;border:1px solid #555a66;border-radius:8px;font:800 11px Montserrat,Arial,sans-serif}',
+      '.pg-cap-presets button.on{background:#c40928;border-color:#ed2545}',
+      '.pg-cap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}',
+      '.pg-cap-item{background:#292c34;border:1px solid #3f424c;border-radius:9px;padding:9px 6px;display:flex;align-items:center;gap:7px;color:#f5f5f7;font:700 10px/1.35 Montserrat,Arial,sans-serif}',
+      '.pg-cap-item input{accent-color:#dd1737;width:16px;height:16px;flex:0 0 16px}',
+      '.pg-cap-label{font:900 10px Montserrat,Arial,sans-serif;margin:14px 0 6px;color:#eaecf0}',
+      '.pg-cap-text{width:100%;min-height:65px;box-sizing:border-box;border-radius:9px;border:1px solid #4a505c;padding:10px;resize:vertical;background:#2b2f38;color:#fff;font:600 12px/1.5 Montserrat,Arial,sans-serif}',
+      '.pg-cap-preview{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef3f8;border-radius:10px;padding:13px;min-height:100px;color:#13283f;font:600 12px/1.6 Montserrat,Arial,sans-serif;user-select:text}',
+      '.pg-cap-count{font:600 10px Montserrat,Arial,sans-serif;margin:5px 0;color:#bac3ce}',
+      '.pg-cap-save{width:100%;border:0;border-radius:10px;background:#c40928;color:white;padding:13px;margin-top:10px;font:900 12px Montserrat,Arial,sans-serif}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -427,8 +508,43 @@
 
     /* TETAPAN — tersembunyi; semua sudah terbenam */
     var adv = mk('div'); adv.id = 'pg-adv';
-    bSet.onclick = function () { adv.classList.toggle('on'); };
-    adv.appendChild(mk('div', 'pg-lbl', 'MAKLUMAT (sudah terbenam — ubah jika perlu)'));
+    bSet.onclick = function () { adv.classList.toggle('on');if(adv.classList.contains('on')){updateCaptionControls();adv.scrollIntoView({block:'start',behavior:'smooth'});} };
+    /* Caption WhatsApp controls */
+    var capPanel=mk('section','pg-cap-panel');
+    capPanel.appendChild(mk('div','pg-cap-title','💬 CAPTION WHATSAPP'));
+    capPanel.appendChild(mk('p','pg-cap-info','Pilih perkara yang nak ditulis bersama gambar poster. Tetapan ini tidak mengubah poster.'));
+    var capPresets=mk('div','pg-cap-presets');
+    [['ringkas','Ringkas'],['minimum','Paling Ringkas'],['lengkap','Lengkap']].forEach(function(it){
+      var b=mk('button',null,it[1]);b.type='button';b.dataset.preset=it[0];
+      b.onclick=function(){useCaptionPreset(it[0]);};capPresets.appendChild(b);
+    });
+    capPanel.appendChild(capPresets);
+    var capGrid=mk('div','pg-cap-grid'),capChecks={};
+    CAPFIELDS.forEach(function(it){
+      var label=mk('label','pg-cap-item'),cb=mk('input');cb.type='checkbox';
+      cb.checked=!!captionCfg.fields[it[0]];
+      cb.onchange=function(){captionCfg.fields[it[0]]=cb.checked;saveCaptionCfg();updateCaptionControls();};
+      capChecks[it[0]]=cb;label.appendChild(cb);label.appendChild(mk('span',null,it[1]));capGrid.appendChild(label);
+    });
+    capPanel.appendChild(capGrid);
+    capPanel.appendChild(mk('div','pg-cap-label','AYAT PEMBUKA (PILIHAN)'));
+    var capIntro=mk('textarea','pg-cap-text');capIntro.maxLength=250;
+    capIntro.placeholder='Contoh: Assalamualaikum, ini kiraan kereta anda.';
+    capIntro.oninput=function(){captionCfg.intro=capIntro.value;saveCaptionCfg();updateCaptionPreview();};
+    capPanel.appendChild(capIntro);
+    capPanel.appendChild(mk('div','pg-cap-label','AYAT PENUTUP'));
+    var capOutro=mk('textarea','pg-cap-text');capOutro.maxLength=250;
+    capOutro.placeholder='Contoh: Jom semak kelayakan loan.';
+    capOutro.oninput=function(){captionCfg.outro=capOutro.value;saveCaptionCfg();updateCaptionPreview();};
+    capPanel.appendChild(capOutro);
+    capPanel.appendChild(mk('div','pg-cap-label','PREVIEW WHATSAPP'));
+    var capPreview=mk('div','pg-cap-preview');capPanel.appendChild(capPreview);
+    var capCount=mk('div','pg-cap-count');capPanel.appendChild(capCount);
+    var capSave=mk('button','pg-cap-save','💾 SIMPAN CAPTION');
+    capSave.onclick=function(){saveCaptionCfg();setStatus('✓ Caption disimpan di browser ini.','ok');};
+    capPanel.appendChild(capSave);adv.appendChild(capPanel);
+    
+    adv.appendChild(mk('div', 'pg-lbl', 'MAKLUMAT PROFIL POSTER'));
     var f = {};
     [['name', 'Nama'], ['phone', 'No. WhatsApp'], ['role', 'Jawatan'], ['cred', 'Kredential']].forEach(function (p) {
       var i = mk('input', 'pg-in'); i.placeholder = DEFAULTS[p[0]] || p[1]; i.dataset.k = p[0];
@@ -455,7 +571,7 @@
     adv.appendChild(g2);
     var sb = mk('div', 'pg-row');
     var sbb = mk('button', 'pg-btn s', '💾 SIMPAN TETAPAN');
-    sbb.onclick = saveProfile;
+    sbb.onclick = function(){saveCaptionCfg();saveProfile();};
     sb.appendChild(sbb); adv.appendChild(sb);
     box.appendChild(adv);
     box.appendChild(mk('p', 'pg-hint', 'Poster ikut semua input dan hasil kiraan semasa.'));
@@ -464,8 +580,9 @@
     bDl.onclick = download; bWa.onclick = shareWa; bCap.onclick = copyCaption;
 
     document.body.appendChild(sheet);
-    ui = { sheet: sheet, inputs: f, sizeChips: sizeChips };
-    fillForm(); paintChips();
+    ui = { sheet: sheet, inputs: f, sizeChips: sizeChips,
+      cap:{intro:capIntro,outro:capOutro,checks:capChecks,preview:capPreview,count:capCount,presets:capPresets} };
+    fillForm();paintChips();updateCaptionControls();
   }
 
   function fillForm() {
@@ -497,6 +614,7 @@
       lastData = d;
       renderPoster(canvas, d, currentSize);
       canvas.toBlob(function (b) { if (token === renderToken) lastBlob = b; }, 'image/png');
+      updateCaptionPreview();
     });
   }
 
@@ -524,13 +642,13 @@
     }
   }
   function copyCaption() {
-    if (!lastData) { setStatus('Poster belum sedia.', 'err'); return; }
-    var cap = buildCaption(lastData);
+    var data=currentData();if(!data){setStatus('Calculator belum sedia.','err');return;}
+    var cap=buildCaption(data);
     (navigator.clipboard ? navigator.clipboard.writeText(cap) : Promise.reject())
       .then(function () { setStatus('✓ Caption disalin', 'ok'); })
       .catch(function () { setStatus('Caption: ' + cap, ''); });
   }
-  function open() { if (!ui) return; ui.sheet.classList.add('on'); document.body.style.overflow = 'hidden'; renderNow(); }
+  function open() { if (!ui) return; ui.sheet.classList.add('on'); document.body.style.overflow = 'hidden';renderNow();updateCaptionPreview(); }
   function close() { if (!ui) return; ui.sheet.classList.remove('on'); document.body.style.overflow = ''; }
 
   /* ---------- pasang ---------- */
@@ -556,6 +674,7 @@
   }
 
   loadProfile();
+  loadCaptionCfg();
   currentSize = profile.size || 'feed';
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
   else mount();
