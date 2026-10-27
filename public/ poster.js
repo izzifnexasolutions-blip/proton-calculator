@@ -206,9 +206,9 @@
     var ctx=canvas.getContext('2d'),small=H<=1100,tall=H>=1700;
     var P=52,I=W-P*2,gap=small?12:(tall?22:14);
     var top=small?32:(tall?60:44);
-    var headerH=small?128:(tall?175:150),carH=small?190:(tall?525:278);
-    var settingH=small?215:(tall?340:260),resultH=small?190:(tall?285:233);
-    var monthlyH=small?116:(tall?210:145),agentH=small?76:(tall?118:88);
+    var headerH=small?128:(tall?175:150),carH=small?165:(tall?475:245);
+    var settingH=small?255:(tall?385:300),resultH=small?205:(tall?295:245);
+    var monthlyH=small?110:(tall?210:145),agentH=small?76:(tall?118:88);
     var used=top+headerH+carH+settingH+resultH+monthlyH+agentH+24+gap*6;
     top+=Math.max(0,(H-used)*.36);
     function rect(x,y,w,h,r,color,stroke){
@@ -230,9 +230,9 @@
     }
     function tile(x,y,w,h,k,v,yellow){
       rect(x,y,w,h,10,yellow?'#FFE17A':'#F4F7FA','#DDE5EC');
-      var fs=h<54?13:(tall?19:16), vs=h<54?21:(tall?32:26);
-      txt(k,x+17,y+(h<54?14:21),fs,'#4B6076','left',w-34);
-      txt(v,x+17,y+h-(h<54?7:14),vs,'#10243C','left',w-34);
+      var short=h<52, fs=short?13:(tall?19:16), vs=short?20:(tall?32:26);
+      txt(k,x+17,y+(short?14:21),fs,'#4B6076','left',w-34);
+      txt(v,x+17,y+h-(short?5:7),vs,'#10243C','left',w-34);
     }
     ctx.fillStyle='#F0F3F8';ctx.fillRect(0,0,W,H);
     var paper=ctx.createLinearGradient(0,0,W,H);
