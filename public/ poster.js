@@ -204,11 +204,12 @@
     var wh=SIZES[sizeKey]||SIZES.feed,W=wh[0],H=wh[1];
     canvas.width=W;canvas.height=H;
     var ctx=canvas.getContext('2d'),small=H<=1100,tall=H>=1700;
-    var P=52,I=W-P*2,gap=small?12:(tall?22:14);
-    var top=small?32:(tall?60:44);
-    var headerH=small?128:(tall?175:150),carH=small?165:(tall?475:245);
-    var settingH=small?255:(tall?385:300),resultH=small?205:(tall?295:245);
-    var monthlyH=small?110:(tall?210:145),agentH=small?76:(tall?118:88);
+    /* V2: larger readable information cards at the same native 1080px export sizes. */
+    var P=52,I=W-P*2,gap=small?8:(tall?19:11);
+    var top=small?23:(tall?52:36);
+    var headerH=small?105:(tall?164:132),carH=small?116:(tall?420:224);
+    var settingH=small?325:(tall?450:365),resultH=small?255:(tall?345:285);
+    var monthlyH=small?102:(tall?198:130),agentH=small?68:(tall?115:83);
     var used=top+headerH+carH+settingH+resultH+monthlyH+agentH+24+gap*6;
     top+=Math.max(0,(H-used)*.36);
     function rect(x,y,w,h,r,color,stroke){
@@ -230,9 +231,17 @@
     }
     function tile(x,y,w,h,k,v,yellow){
       rect(x,y,w,h,10,yellow?'#FFE17A':'#F4F7FA','#DDE5EC');
-      var short=h<52, fs=short?13:(tall?19:16), vs=short?20:(tall?32:26);
-      txt(k,x+17,y+(short?14:21),fs,'#4B6076','left',w-34);
-      txt(v,x+17,y+h-(short?5:7),vs,'#10243C','left',w-34);
+      var wide=w>I*.70;
+      /* Full-width final cards use a left label and right value; all others
+         get larger stacked labels and figures. */
+      if(wide){
+        txt(k,x+22,y+h*.63,small?22:(tall?28:25),'#334F6B','left',w*.57);
+        txt(v,x+w-22,y+h*.66,small?31:(tall?44:39),'#10243C','right',w*.40);
+      }else{
+        var fs=small?17:(tall?26:22),vs=small?27:(tall?43:35);
+        txt(k,x+17,y+(small?21:(tall?32:26)),fs,'#39536B','left',w-34);
+        txt(v,x+17,y+h-(small?9:(tall?16:12)),vs,'#10243C','left',w-34);
+      }
     }
     ctx.fillStyle='#F0F3F8';ctx.fillRect(0,0,W,H);
     var paper=ctx.createLinearGradient(0,0,W,H);
@@ -240,8 +249,8 @@
     ctx.fillStyle=paper;ctx.fillRect(0,0,W,H);
     txt('KIRAAN LOAN KENDERAAN',P,top+22,23,'#D0212B');
     rect(P,top+30,115,5,2,'#E51E34');
-    txt(d.model,P,top+(small?83:92),small?58:65,'#10243C','left',I);
-    txt(d.variant,P,top+(small?119:132),small?27:31,'#566B80','left',I);
+    txt(d.model,P,top+(small?69:(tall?100:85)),small?54:(tall?69:65),'#10243C','left',I);
+    txt(d.variant,P,top+(small?98:(tall?145:119)),small?25:(tall?32:31),'#566B80','left',I);
     var y=top+headerH+gap;
     rect(P,y,I,carH,18,'#DFE6ED','#CFD9E5');
     ctx.save();roundRect(ctx,P,y,I,carH,18);ctx.clip();
@@ -266,7 +275,8 @@
     var pad=12,g=9,cw=(I-2*pad-g)/2;
     var th=(settingH-53-3*g)/4;
     inputs.forEach(function(v,i){
-      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(th+g),cw,th,v[0],v[1],false);
+      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(th+g),
+        i===inputs.length-1?I-pad*2:cw,th,v[0],v[1],false);
     });
     y+=settingH+gap;
     rect(P,y,I,resultH,15,'#FFF','#DAE2EA');section('HASIL KIRAAN',y);
@@ -279,7 +289,8 @@
     ];
     var rh=(resultH-53-2*g)/3;
     outputs.forEach(function(v,i){
-      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(rh+g),cw,rh,v[0],v[1],i===2);
+      tile(P+pad+(i%2)*(cw+g),y+47+Math.floor(i/2)*(rh+g),
+        i===outputs.length-1?I-pad*2:cw,rh,v[0],v[1],i===2);
     });
     y+=resultH+gap;
     var red=ctx.createLinearGradient(P,y,W-P,y+monthlyH);
