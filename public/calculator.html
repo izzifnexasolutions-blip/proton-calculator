@@ -2933,7 +2933,8 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       ui.cap.intro.disabled=!admin;ui.cap.outro.disabled=!admin;
       ui.cap.presets.querySelectorAll('button').forEach(function(x){x.disabled=!admin;});
     }
-    if(ui.gl.history.style.display==='none'&&globalToken)ui.gl.history.style.display='block';
+    ui.gl.history.style.display=globalToken?'block':'none';
+    if(!globalToken)ui.gl.history.textContent='';
   }
   function v(k) { return profile[k] || DEFAULTS[k] || ''; }
 
@@ -3332,7 +3333,33 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     var logout=mk('button','pg-global-secondary','LOG KELUAR ADMIN');logout.onclick=logoutGlobal;
     var refresh=mk('button','pg-global-secondary','↻ MUAT SEMULA GLOBAL');
     refresh.onclick=function(){globalDirty=false;loadGlobal(true);fetchGlobalHistory();};
-    signedBox.appendChild(refresh);signedBox.appendChild(logout);
+    signedBox.appendChild(refresh);
+    var migrate=mk('button','pg-global-secondary','↥ AMBIL TETAPAN LAMA PERANTI INI');
+    migrate.onclick=function(){
+      if(!markGlobalDirty())return;
+      var count=0;
+      try{
+        var oldCaption=JSON.parse(localStorage.getItem(CAPKEY)||'null');
+        if(oldCaption&&typeof oldCaption==='object'){
+          if(typeof oldCaption.intro==='string')captionCfg.intro=oldCaption.intro.slice(0,250);
+          if(typeof oldCaption.outro==='string')captionCfg.outro=oldCaption.outro.slice(0,250);
+          if(oldCaption.fields)CAPFIELDS.forEach(function(x){
+            if(typeof oldCaption.fields[x[0]]==='boolean')captionCfg.fields[x[0]]=oldCaption.fields[x[0]];
+          });
+          count++;
+        }
+        var oldProfile=JSON.parse(localStorage.getItem(LS_PROFILE)||'null');
+        if(oldProfile&&typeof oldProfile==='object'){
+          KEYS.forEach(function(k){if(typeof oldProfile[k]==='string')profile[k]=oldProfile[k];});
+          if(['feed','story','square'].indexOf(profile.size)>=0)currentSize=profile.size;
+          count++;
+        }
+      }catch(e){setStatus('Tetapan lama tidak dapat dibaca.','err');return;}
+      if(!count){globalDirty=false;setStatus('Tiada tetapan lama pada browser ini.','err');return;}
+      fillForm();paintChips();updateCaptionControls();renderNow();
+      setStatus('Tetapan lama dibaca. Semak dahulu, kemudian tekan SIMPAN TETAPAN untuk kongsi kepada semua peranti.','ok');
+    };
+    signedBox.appendChild(migrate);signedBox.appendChild(logout);
     globalPanel.appendChild(signedBox);
     var globalHistory=mk('div','pg-global-history');globalHistory.style.display='none';
     globalPanel.appendChild(globalHistory);
@@ -3381,8 +3408,8 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       f[p[0]] = i; adv.appendChild(i);
     });
     var g1 = mk('div', 'pg-row');
-    g1.appendChild(pickBtn('🧑 GAMBAR ANDA', 900, function (d) { profile.photo = d; renderNow(); }));
-    g1.appendChild(pickBtn('🌄 LATAR AI', 1600, function (d) { profile.bg = d; renderNow(); }));
+    g1.appendChild(pickBtn('🧑 GAMBAR ANDA', 900, function (d) {if(!markGlobalDirty())return;profile.photo=d;renderNow();}));
+    g1.appendChild(pickBtn('🌄 LATAR AI', 1600, function (d) {if(!markGlobalDirty())return;profile.bg=d;renderNow();}));
     adv.appendChild(g1);
     var g2 = mk('div', 'pg-row');
     g2.appendChild(pickBtn('🚗 GAMBAR KERETA', 1400, function (d) {
@@ -3392,6 +3419,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     var reset = mk('div');
     var rb = mk('button', 'pg-btn s', '↺ ASET ASAL');
     rb.onclick = function () {
+      if(!markGlobalDirty())return;
       profile.photo = ''; profile.bg = '';
       try { localStorage.removeItem(LS_PHOTO + (window.state || {}).modelId); } catch (e) {}
       setStatus('✓ Kembali ke aset asal', 'ok'); renderNow();
