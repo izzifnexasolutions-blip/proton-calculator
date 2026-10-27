@@ -2774,26 +2774,166 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
   var KEYS = ['name', 'phone', 'role', 'cred', 'tagline', 'logo', 'photo', 'bg', 'size'];
 
   function loadProfile() {
-    try { var raw = localStorage.getItem(LS_PROFILE); if (raw) Object.assign(profile, JSON.parse(raw)); } catch (e) {}
+    /* Old local profiles cannot override the centrally-managed shared default. */
   }
-  function saveProfile() {
-    try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch (e) {}
-    var sb = window._sb;
-    if (sb && window._sbReady) {
-      sb.from(SB_TABLE).upsert(Object.assign({ id: 1, updated_at: new Date().toISOString() }, profile))
-        .then(function (r) { if (r.error) throw r.error; setStatus('✓ Tetapan disimpan (Supabase)', 'ok'); })
-        .catch(function () { setStatus('✓ Disimpan dalam browser', 'ok'); });
-    } else { setStatus('✓ Disimpan dalam browser', 'ok'); }
+  function saveProfile() { return saveGlobal(); }
+  function syncProfileFromSupabase() { return loadGlobal(false); }
+
+  /* ---- SHARED GLOBAL SETTINGS: same defaults on every browser/device ---- */
+  var GLOBAL_URL='https://qagsczjxzshjxmmxvkbq.supabase.co/functions/v1/poster-settings';
+  var GLOBAL_TOKEN_KEY='faris_poster_admin_session';
+  var GLOBAL_DEVICE_KEY='faris_poster_device_id';
+  var globalVersion=0, globalLoaded=false, globalDirty=false, globalSaving=false,globalLoading=false;
+  var globalToken='';
+  try{globalToken=sessionStorage.getItem(GLOBAL_TOKEN_KEY)||'';}catch(e){}
+  function deviceId(){
+    try{
+      var id=localStorage.getItem(GLOBAL_DEVICE_KEY);
+      if(id && /^[a-zA-Z0-9_-]{8,80}$/.test(id))return id;
+      id=crypto.randomUUID ? crypto.randomUUID() : ('dev_'+Date.now()+'_'+Math.random().toString(36).slice(2));
+      localStorage.setItem(GLOBAL_DEVICE_KEY,id);return id;
+    }catch(e){return 'dev_'+Math.random().toString(36).slice(2)+Date.now();}
   }
-  function syncProfileFromSupabase() {
-    var sb = window._sb;
-    if (!sb || !window._sbReady) return;
-    sb.from(SB_TABLE).select('*').eq('id', 1).maybeSingle().then(function (r) {
-      if (r.error || !r.data) return;
-      var row = r.data, changed = false;
-      KEYS.forEach(function (k) { if (row[k] && row[k] !== profile[k]) { profile[k] = row[k]; changed = true; } });
-      if (changed) { try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); } catch (e) {} if (ui) fillForm(); }
-    }).catch(function () {});
+  function deviceLabel(){
+    var ua=navigator.userAgent||'';
+    if(/iphone/i.test(ua))return 'iPhone · Safari/Browser';
+    if(/ipad/i.test(ua))return 'iPad · Browser';
+    if(/android/i.test(ua))return 'Android · Browser';
+    if(/windows/i.test(ua))return 'Windows · Browser';
+    if(/macintosh|mac os/i.test(ua))return 'Mac · Browser';
+    return 'Browser';
+  }
+  function globalRequest(action,body,auth){
+    var opt={method:action==='get'?'GET':'POST',headers:{'Content-Type':'application/json'},cache:'no-store'};
+    if(action!=='get')opt.body=JSON.stringify(Object.assign({action:action},body||{}));
+    if(auth&&globalToken)opt.headers['Authorization']='Bearer '+globalToken;
+    return fetch(GLOBAL_URL,opt).then(function(res){
+      return res.json().catch(function(){return {ok:false,error:'Respons server tidak sah'};}).then(function(j){
+        if(!res.ok||!j.ok){var err=new Error(j.error||'Server gagal');err.status=res.status;throw err;}
+        return j;
+      });
+    });
+  }
+  function applyRemoteConfig(cfg,version,force){
+    if(!cfg||!cfg.caption||!cfg.profile)return;
+    if(globalDirty&&!force){
+      if(globalVersion && version!==globalVersion)setStatus('Tetapan global berubah pada peranti lain. Simpan atau muat semula dahulu.','err');
+      return;
+    }
+    captionCfg.intro=String(cfg.caption.intro||'');
+    captionCfg.outro=String(cfg.caption.outro||'');
+    CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=!!(cfg.caption.fields||{})[x[0]];});
+    KEYS.forEach(function(k){
+      if(typeof cfg.profile[k]==='string')profile[k]=cfg.profile[k];
+    });
+    currentSize=profile.size||'feed';
+    globalVersion=Number(version)||0;globalLoaded=true;globalDirty=false;
+    if(ui){fillForm();paintChips();updateCaptionControls();refreshGlobalUI();renderNow();}
+  }
+  function loadGlobal(force){
+    if(globalLoading)return Promise.resolve();
+    globalLoading=true;
+    return globalRequest('get').then(function(r){
+      if(!globalLoaded||Number(r.version)!==globalVersion || force)applyRemoteConfig(r.config,r.version,!!force);
+      globalLoaded=true;
+      refreshGlobalUI();
+    }).catch(function(e){
+      if(!globalLoaded)setStatus('Tetapan pusat tidak dapat dimuatkan. Semak internet dan cuba lagi.','err');
+    }).finally(function(){globalLoading=false;});
+  }
+  function markGlobalDirty(){
+    if(!globalToken||!globalLoaded){
+      setStatus('Log masuk admin untuk mengubah tetapan global.','err');
+      return false;
+    }
+    globalDirty=true;refreshGlobalUI();return true;
+  }
+  function saveGlobal(){
+    if(!globalToken){setStatus('Log masuk admin dahulu untuk simpan ke semua peranti.','err');return Promise.resolve();}
+    if(!globalLoaded){setStatus('Tunggu tetapan global dimuatkan.','err');return Promise.resolve();}
+    if(globalSaving)return Promise.resolve();
+    globalSaving=true;
+    var cfg={caption:{
+      intro:captionCfg.intro,outro:captionCfg.outro,
+      fields:Object.assign({},captionCfg.fields)
+    },profile:{}};
+    KEYS.forEach(function(k){cfg.profile[k]=String(profile[k]||'');});
+    cfg.profile.size=currentSize;
+    return globalRequest('save',{
+      config:cfg,version:globalVersion,device_id:deviceId(),device_label:deviceLabel()
+    },true).then(function(r){
+      globalVersion=Number(r.version);globalDirty=false;
+      setStatus('✓ Tetapan GLOBAL disimpan. Semua peranti akan menggunakan versi '+globalVersion+'.','ok');
+      refreshGlobalUI();fetchGlobalHistory();
+    }).catch(function(e){
+      setStatus((e.status===409?'Konflik tetapan: ':'Gagal simpan global: ')+e.message,'err');
+      if(e.status===401){globalToken='';try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}refreshGlobalUI();}
+      if(e.status===409){globalDirty=false;loadGlobal(true);}
+    }).finally(function(){globalSaving=false;refreshGlobalUI();});
+  }
+  function loginGlobal(){
+    if(!ui||!ui.gl)return;
+    var id=ui.gl.staff.value.trim(),pass=ui.gl.pass.value;
+    if(!id||!pass){setStatus('Masukkan ID admin dan passcode Lead Hub.','err');return;}
+    ui.gl.login.disabled=true;
+    globalRequest('login',{id:id,passcode:pass},false)
+      .then(function(r){
+        globalToken=r.token;
+        try{sessionStorage.setItem(GLOBAL_TOKEN_KEY,globalToken);}catch(e){}
+        ui.gl.pass.value='';
+        setStatus('✓ Admin disahkan: '+r.admin.name,'ok');
+        refreshGlobalUI();fetchGlobalHistory();return loadGlobal(true);
+      }).catch(function(e){setStatus('Log masuk admin gagal: '+e.message,'err');})
+      .finally(function(){ui.gl.login.disabled=false;});
+  }
+  function logoutGlobal(){
+    globalToken='';globalDirty=false;
+    try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}
+    loadGlobal(true);refreshGlobalUI();
+    setStatus('Sesi admin ditutup pada browser ini.','ok');
+  }
+  function checkGlobalAdmin(){
+    if(!globalToken)return;
+    globalRequest('check',{},true).then(function(r){
+      refreshGlobalUI();fetchGlobalHistory();
+    }).catch(function(){
+      globalToken='';try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}
+      refreshGlobalUI();
+    });
+  }
+  function fetchGlobalHistory(){
+    if(!globalToken||!ui||!ui.gl)return;
+    globalRequest('history',{},true).then(function(r){
+      var rows=r.history||[];
+      var summary=(r.devices||0)+' peranti pernah simpan tetapan · '+(r.changes||0)+' perubahan direkodkan.';
+      ui.gl.history.textContent=summary;
+      rows.slice(0,8).forEach(function(item){
+        var line=document.createElement('div');
+        line.textContent='v'+item.setting_version+' · '+item.device_label+' · '+
+          item.actor_name+' · '+new Date(item.created_at).toLocaleString('ms-MY');
+        ui.gl.history.appendChild(line);
+      });
+    }).catch(function(e){ui.gl.history.textContent='Tidak dapat membaca sejarah: '+e.message;});
+  }
+  function refreshGlobalUI(){
+    if(!ui||!ui.gl)return;
+    var admin=!!globalToken&&globalLoaded;
+    ui.gl.loginBox.style.display=globalToken?'none':'block';
+    ui.gl.signedBox.style.display=globalToken?'block':'none';
+    ui.gl.version.textContent=globalLoaded?'Versi global: '+globalVersion:'Menyambung ke tetapan global...';
+    ui.gl.state.textContent=globalDirty?'Ada perubahan belum disimpan.':'Tetapan pusat digunakan oleh semua peranti.';
+    var controls=ui.gl.advanced.querySelectorAll('input,textarea,button');
+    controls.forEach(function(el){
+      if(ui.gl.loginBox.contains(el)||ui.gl.signedBox.contains(el))return;
+      el.disabled=!admin;
+    });
+    ui.gl.save.disabled=!admin||globalSaving;
+    if(ui.cap){
+      CAPFIELDS.forEach(function(x){ui.cap.checks[x[0]].disabled=!admin;});
+      ui.cap.intro.disabled=!admin;ui.cap.outro.disabled=!admin;
+      ui.cap.presets.querySelectorAll('button').forEach(function(x){x.disabled=!admin;});
+    }
+    if(ui.gl.history.style.display==='none'&&globalToken)ui.gl.history.style.display='block';
   }
   function v(k) { return profile[k] || DEFAULTS[k] || ''; }
 
@@ -3003,22 +3143,13 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
   var captionCfg={intro:'',outro:'Berminat? WhatsApp saya untuk semak kelayakan.',fields:{}};
   function loadCaptionCfg(){
     CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=CAPPRESETS.ringkas.indexOf(x[0])>=0;});
-    try{
-      var s=JSON.parse(localStorage.getItem(CAPKEY)||'null');
-      if(s && typeof s==='object'){
-        if(typeof s.intro==='string')captionCfg.intro=s.intro.slice(0,250);
-        if(typeof s.outro==='string')captionCfg.outro=s.outro.slice(0,250);
-        if(s.fields && typeof s.fields==='object')CAPFIELDS.forEach(function(x){
-          if(typeof s.fields[x[0]]==='boolean')captionCfg.fields[x[0]]=s.fields[x[0]];
-        });
-      }
-    }catch(e){}
   }
-  function saveCaptionCfg(){try{localStorage.setItem(CAPKEY,JSON.stringify(captionCfg));}catch(e){setStatus('Simpanan browser gagal.','err');}}
+  function saveCaptionCfg(){ /* Saved via explicit SAVE GLOBAL after admin authorization. */ }
   function useCaptionPreset(key){
+    if(!markGlobalDirty())return;
     var p=CAPPRESETS[key]||CAPPRESETS.ringkas;
     CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=p.indexOf(x[0])>=0;});
-    saveCaptionCfg();updateCaptionControls();
+    updateCaptionControls();
   }
   function updateCaptionControls(){
     if(!ui || !ui.cap)return;
@@ -3109,6 +3240,14 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       '.pg-status.pg-ok{color:#7EE787}.pg-status.pg-err{color:#ff6b6b}',
       '.pg-hint{font:500 11px Montserrat,Arial,sans-serif;color:rgba(255,255,255,.42);margin:6px 0 0}',
       '#pg-adv{display:none;margin-top:6px}#pg-adv.on{display:block}',
+      '.pg-global-panel{background:#121d2b;border:1px solid #355272;border-radius:14px;padding:14px;margin:6px 0 17px}',
+      '.pg-global-status{color:#fff;font:900 12px Montserrat,Arial,sans-serif;margin:8px 0}',
+      '.pg-global-desc{color:#b9cedf;font:700 10px/1.6 Montserrat,Arial,sans-serif;margin:7px 0}',
+      '.pg-global-login .pg-in{display:block;width:100%;margin:8px 0;box-sizing:border-box}',
+      '.pg-global-secondary{display:inline-block;background:#273c55;border:1px solid #51657d;color:#fff;border-radius:9px;padding:10px;margin:6px 6px 6px 0;font:700 10px Montserrat,Arial,sans-serif;cursor:pointer}',
+      '.pg-global-history{margin-top:11px;color:#cfdae7;font:700 10px/1.6 Montserrat,Arial,sans-serif}',
+      '.pg-global-history>div{border-top:1px solid #3c4b5e;padding:5px 0}',
+      '.pg-cap-panel input:disabled,.pg-cap-panel textarea:disabled,.pg-cap-panel button:disabled,#pg-adv .pg-in:disabled{opacity:.60;cursor:not-allowed}',
       '.pg-cap-panel{background:#191b21;border:1px solid #444956;border-radius:13px;padding:13px;margin:10px 0 18px}',
       '.pg-cap-title{font:900 14px Montserrat,Arial,sans-serif;margin-bottom:7px;color:#fff}',
       '.pg-cap-info{font:600 11px/1.5 Montserrat,Arial,sans-serif;color:#c0c7d1;margin-bottom:11px}',
@@ -3175,6 +3314,30 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     /* TETAPAN — tersembunyi; semua sudah terbenam */
     var adv = mk('div'); adv.id = 'pg-adv';
     bSet.onclick = function () { adv.classList.toggle('on');if(adv.classList.contains('on')){updateCaptionControls();adv.scrollIntoView({block:'start',behavior:'smooth'});} };
+/* Global settings / admin sign in */
+    var globalPanel=mk('section','pg-global-panel');
+    globalPanel.appendChild(mk('div','pg-cap-title','🌍 TETAPAN GLOBAL · SEMUA PERANTI'));
+    var globalVersionEl=mk('div','pg-global-status','Menyambung ke Supabase...');
+    var globalStateEl=mk('div','pg-global-desc','Semua peranti menggunakan tetapan poster yang sama.');
+    globalPanel.appendChild(globalVersionEl);globalPanel.appendChild(globalStateEl);
+    var loginBox=mk('div','pg-global-login');
+    loginBox.appendChild(mk('div','pg-global-desc','Untuk ubah tetapan semua peranti, log masuk akaun admin Lead Hub.'));
+    var staffInput=mk('input','pg-in');staffInput.placeholder='ID ADMIN';staffInput.autocomplete='username';
+    var passInput=mk('input','pg-in');passInput.placeholder='PASSCODE ADMIN';passInput.type='password';passInput.autocomplete='current-password';
+    var loginButton=mk('button','pg-cap-save','🔐 LOG MASUK ADMIN');
+    loginButton.onclick=loginGlobal;
+    loginBox.appendChild(staffInput);loginBox.appendChild(passInput);loginBox.appendChild(loginButton);
+    globalPanel.appendChild(loginBox);
+    var signedBox=mk('div');signedBox.style.display='none';
+    var logout=mk('button','pg-global-secondary','LOG KELUAR ADMIN');logout.onclick=logoutGlobal;
+    var refresh=mk('button','pg-global-secondary','↻ MUAT SEMULA GLOBAL');
+    refresh.onclick=function(){globalDirty=false;loadGlobal(true);fetchGlobalHistory();};
+    signedBox.appendChild(refresh);signedBox.appendChild(logout);
+    globalPanel.appendChild(signedBox);
+    var globalHistory=mk('div','pg-global-history');globalHistory.style.display='none';
+    globalPanel.appendChild(globalHistory);
+    adv.appendChild(globalPanel);
+    
     /* Caption WhatsApp controls */
     var capPanel=mk('section','pg-cap-panel');
     capPanel.appendChild(mk('div','pg-cap-title','💬 CAPTION WHATSAPP'));
@@ -3189,32 +3352,32 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     CAPFIELDS.forEach(function(it){
       var label=mk('label','pg-cap-item'),cb=mk('input');cb.type='checkbox';
       cb.checked=!!captionCfg.fields[it[0]];
-      cb.onchange=function(){captionCfg.fields[it[0]]=cb.checked;saveCaptionCfg();updateCaptionControls();};
+      cb.onchange=function(){if(!markGlobalDirty()){cb.checked=!!captionCfg.fields[it[0]];return;}captionCfg.fields[it[0]]=cb.checked;updateCaptionControls();};
       capChecks[it[0]]=cb;label.appendChild(cb);label.appendChild(mk('span',null,it[1]));capGrid.appendChild(label);
     });
     capPanel.appendChild(capGrid);
     capPanel.appendChild(mk('div','pg-cap-label','AYAT PEMBUKA (PILIHAN)'));
     var capIntro=mk('textarea','pg-cap-text');capIntro.maxLength=250;
     capIntro.placeholder='Contoh: Assalamualaikum, ini kiraan kereta anda.';
-    capIntro.oninput=function(){captionCfg.intro=capIntro.value;saveCaptionCfg();updateCaptionPreview();};
+    capIntro.oninput=function(){if(!markGlobalDirty())return;captionCfg.intro=capIntro.value;updateCaptionPreview();};
     capPanel.appendChild(capIntro);
     capPanel.appendChild(mk('div','pg-cap-label','AYAT PENUTUP'));
     var capOutro=mk('textarea','pg-cap-text');capOutro.maxLength=250;
     capOutro.placeholder='Contoh: Jom semak kelayakan loan.';
-    capOutro.oninput=function(){captionCfg.outro=capOutro.value;saveCaptionCfg();updateCaptionPreview();};
+    capOutro.oninput=function(){if(!markGlobalDirty())return;captionCfg.outro=capOutro.value;updateCaptionPreview();};
     capPanel.appendChild(capOutro);
     capPanel.appendChild(mk('div','pg-cap-label','PREVIEW WHATSAPP'));
     var capPreview=mk('div','pg-cap-preview');capPanel.appendChild(capPreview);
     var capCount=mk('div','pg-cap-count');capPanel.appendChild(capCount);
     var capSave=mk('button','pg-cap-save','💾 SIMPAN CAPTION');
-    capSave.onclick=function(){saveCaptionCfg();setStatus('✓ Caption disimpan di browser ini.','ok');};
+    capSave.onclick=saveGlobal;
     capPanel.appendChild(capSave);adv.appendChild(capPanel);
     
     adv.appendChild(mk('div', 'pg-lbl', 'MAKLUMAT PROFIL POSTER'));
     var f = {};
     [['name', 'Nama'], ['phone', 'No. WhatsApp'], ['role', 'Jawatan'], ['cred', 'Kredential']].forEach(function (p) {
       var i = mk('input', 'pg-in'); i.placeholder = DEFAULTS[p[0]] || p[1]; i.dataset.k = p[0];
-      i.oninput = function () { profile[p[0]] = i.value; renderNow(); };
+      i.oninput = function () {if(!markGlobalDirty())return;profile[p[0]]=i.value;renderNow();};
       f[p[0]] = i; adv.appendChild(i);
     });
     var g1 = mk('div', 'pg-row');
@@ -3237,7 +3400,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     adv.appendChild(g2);
     var sb = mk('div', 'pg-row');
     var sbb = mk('button', 'pg-btn s', '💾 SIMPAN TETAPAN');
-    sbb.onclick = function(){saveCaptionCfg();saveProfile();};
+    sbb.onclick = saveGlobal;
     sb.appendChild(sbb); adv.appendChild(sb);
     box.appendChild(adv);
     box.appendChild(mk('p', 'pg-hint', 'Poster ikut semua input dan hasil kiraan semasa.'));
@@ -3248,7 +3411,10 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     document.body.appendChild(sheet);
     ui = { sheet: sheet, inputs: f, sizeChips: sizeChips,
       cap:{intro:capIntro,outro:capOutro,checks:capChecks,preview:capPreview,count:capCount,presets:capPresets} };
-    fillForm();paintChips();updateCaptionControls();
+    ui.gl={advanced:adv,loginBox:loginBox,signedBox:signedBox,
+      staff:staffInput,pass:passInput,login:loginButton,
+      save:sbb,version:globalVersionEl,state:globalStateEl,history:globalHistory};
+    fillForm();paintChips();updateCaptionControls();refreshGlobalUI();
   }
 
   function fillForm() {
@@ -3314,7 +3480,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       .then(function () { setStatus('✓ Caption disalin', 'ok'); })
       .catch(function () { setStatus('Caption: ' + cap, ''); });
   }
-  function open() { if (!ui) return; ui.sheet.classList.add('on'); document.body.style.overflow = 'hidden';renderNow();updateCaptionPreview(); }
+  function open() { if (!ui) return;ui.sheet.classList.add('on');document.body.style.overflow='hidden';loadGlobal(false);refreshGlobalUI();renderNow();updateCaptionPreview();}
   function close() { if (!ui) return; ui.sheet.classList.remove('on'); document.body.style.overflow = ''; }
 
   /* ---------- pasang ---------- */
@@ -3330,12 +3496,10 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       new MutationObserver(sync).observe(sp, { attributes: true, attributeFilter: ['class'] });
       sync();
     }
-    var tries = 0;
-    (function trySync() {
-      if (window._sbReady) { syncProfileFromSupabase(); return; }
-      if (++tries > 8) return;
-      setTimeout(trySync, 800);
-    })();
+    loadGlobal(true);
+    checkGlobalAdmin();
+    setInterval(function(){if(ui&&ui.sheet.classList.contains('on'))loadGlobal(false);},15000);
+    document.addEventListener('visibilitychange',function(){if(!document.hidden)loadGlobal(false);});
     window.pgPoster = { open: open, close: close, render: renderNow, profile: profile, DEFAULTS: DEFAULTS };
   }
 
