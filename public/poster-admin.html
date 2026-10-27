@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Akses Tetapan Poster · Faris Proton</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100svh;display:grid;place-items:center;padding:18px;background:radial-gradient(circle at top,#411321 0%,#0d1017 44%,#08090c 100%);color:#fff;font:600 14px/1.5 Montserrat,Arial,sans-serif}
+.panel{width:min(100%,440px);background:#171b24;border:1px solid #343c4b;border-radius:20px;padding:25px;box-shadow:0 26px 60px rgba(0,0,0,.48)}
+.eyebrow{font-weight:900;letter-spacing:.13em;color:#ff5a72;font-size:11px}
+h1{font-size:23px;line-height:1.25;margin:8px 0 12px}
+p{font-size:13px;color:#bfcedc;margin:8px 0 20px}
+label{display:block;margin:13px 0 5px;font-size:11px;color:#e5eaf1;font-weight:800}
+input{width:100%;padding:13px 14px;border-radius:10px;background:#262d3a;border:1px solid #4a5363;color:#fff;font-size:15px;outline-offset:3px}
+input:focus{outline:2px solid #f54762}
+button,.back{display:block;width:100%;text-align:center;padding:13px 15px;border-radius:10px;font-weight:900;font-size:13px;cursor:pointer;text-decoration:none}
+button{margin-top:20px;background:#ce1233;color:#fff;border:0}
+button:disabled{opacity:.5;cursor:progress}
+.back{margin-top:11px;color:#cdd7e4;background:#282f3b;border:1px solid #3c4655}
+.status{font-size:12px;color:#ffd1db;min-height:21px;margin-top:12px}
+.note{font-size:11px;color:#9facbd;line-height:1.6;margin-top:22px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main class="panel">
+  <div class="eyebrow">FARIS PROTON · OWNER ACCESS</div>
+  <h1>Akses Tetapan Global Poster</h1>
+  <p>Halaman ini berasingan daripada generator poster. Peranti yang sudah disahkan boleh terus mengurus tetapan tanpa menaip ID dan passcode semula sepanjang sesi masih sah.</p>
+  <section id="existing" class="hide">
+    <button id="continue" type="button">TERUS KE TETAPAN POSTER</button>
+    <button id="signout" type="button" class="back">TAMATKAN AKSES PERANTI INI</button>
+  </section>
+  <form id="signin">
+    <label for="admin-id">ID Admin Lead Hub</label>
+    <input id="admin-id" autocomplete="username" required maxlength="40" placeholder="ID admin">
+    <label for="passcode">Passcode Admin</label>
+    <input id="passcode" type="password" autocomplete="current-password" required maxlength="100" placeholder="Passcode">
+    <button type="submit" id="submit">SAHKAN PERANTI & BUKA TETAPAN</button>
+  </form>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <a class="back" href="/">KEMBALI KE CALCULATOR</a>
+  <p class="note">Pengesahan menggunakan akaun admin Lead Hub yang sedia ada. Tetapan global dilindungi supaya orang luar tidak boleh mengubah nombor WhatsApp, nama dan caption untuk semua peranti. Akses hanya disimpan dalam sesi tab ini.</p>
+</main>
+<script>
+(function(){
+  'use strict';
+  const API='https://qagsczjxzshjxmmxvkbq.supabase.co/functions/v1/poster-settings';
+  const KEY='faris_poster_admin_session';
+  const $=id=>document.getElementById(id);
+  const token=()=>{try{return sessionStorage.getItem(KEY)||'';}catch(e){return '';}};
+  const clear=()=>{try{sessionStorage.removeItem(KEY);}catch(e){}};
+  const show=verified=>{
+    $('existing').classList.toggle('hide',!verified);
+    $('signin').classList.toggle('hide',verified);
+  };
+  const request=async(action,payload,t)=>{
+    const res=await fetch(API,{method:'POST',
+      headers:{'Content-Type':'application/json',...(t?{'Authorization':'Bearer '+t}:{})},
+      body:JSON.stringify({action,...(payload||{})}),cache:'no-store'});
+    const j=await res.json().catch(()=>({ok:false,error:'Respons pelayan tidak sah'}));
+    if(!res.ok||!j.ok)throw new Error(j.error||'Pengesahan gagal');
+    return j;
+  };
+  const go=()=>location.replace('/#poster-settings');
+  $('continue').onclick=go;
+  $('signout').onclick=()=>{clear();show(false);$('status').textContent='Akses admin pada tab ini ditamatkan.';};
+  $('signin').onsubmit=async(e)=>{
+    e.preventDefault();
+    const btn=$('submit');btn.disabled=true;
+    $('status').textContent='Sedang mengesahkan akaun...';
+    try{
+      const r=await request('login',{id:$('admin-id').value.trim(),passcode:$('passcode').value});
+      if(!r.token)throw Error('Token sesi tidak diterima');
+      try{sessionStorage.setItem(KEY,r.token);}catch(e){throw Error('Pelayar tidak membenarkan simpanan sesi');}
+      $('passcode').value='';
+      go();
+    }catch(err){$('status').textContent=err.message||'Pengesahan gagal';}
+    finally{btn.disabled=false;}
+  };
+  if(token()){
+    request('check',null,token()).then(()=>show(true)).catch(()=>{clear();show(false);});
+  }
+})();
+</script>
+</body>
+</html>
