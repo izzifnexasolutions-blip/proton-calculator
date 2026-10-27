@@ -2765,11 +2765,8 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 
   /* ---- SHARED GLOBAL SETTINGS: same defaults on every browser/device ---- */
   var GLOBAL_URL='https://qagsczjxzshjxmmxvkbq.supabase.co/functions/v1/poster-settings';
-  var GLOBAL_TOKEN_KEY='faris_poster_admin_session';
   var GLOBAL_DEVICE_KEY='faris_poster_device_id';
   var globalVersion=0, globalLoaded=false, globalDirty=false, globalSaving=false,globalLoading=false;
-  var globalToken='';
-  try{globalToken=sessionStorage.getItem(GLOBAL_TOKEN_KEY)||'';}catch(e){}
   function deviceId(){
     try{
       var id=localStorage.getItem(GLOBAL_DEVICE_KEY);
@@ -2787,10 +2784,9 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     if(/macintosh|mac os/i.test(ua))return 'Mac · Browser';
     return 'Browser';
   }
-  function globalRequest(action,body,auth){
+  function globalRequest(action,body){
     var opt={method:action==='get'?'GET':'POST',headers:{'Content-Type':'application/json'},cache:'no-store'};
     if(action!=='get')opt.body=JSON.stringify(Object.assign({action:action},body||{}));
-    if(auth&&globalToken)opt.headers['Authorization']='Bearer '+globalToken;
     return fetch(GLOBAL_URL,opt).then(function(res){
       return res.json().catch(function(){return {ok:false,error:'Respons server tidak sah'};}).then(function(j){
         if(!res.ok||!j.ok){var err=new Error(j.error||'Server gagal');err.status=res.status;throw err;}
@@ -2801,113 +2797,75 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
   function applyRemoteConfig(cfg,version,force){
     if(!cfg||!cfg.caption||!cfg.profile)return;
     if(globalDirty&&!force){
-      if(globalVersion && version!==globalVersion)setStatus('Tetapan global berubah pada peranti lain. Simpan atau muat semula dahulu.','err');
+      if(globalVersion&&version!==globalVersion)setStatus('Tetapan global berubah pada peranti lain. Muat semula untuk lihat perubahan atau simpan semula.','err');
       return;
     }
     captionCfg.intro=String(cfg.caption.intro||'');
     captionCfg.outro=String(cfg.caption.outro||'');
     CAPFIELDS.forEach(function(x){captionCfg.fields[x[0]]=!!(cfg.caption.fields||{})[x[0]];});
-    KEYS.forEach(function(k){
-      if(typeof cfg.profile[k]==='string')profile[k]=cfg.profile[k];
-    });
+    KEYS.forEach(function(k){if(typeof cfg.profile[k]==='string')profile[k]=cfg.profile[k];});
     currentSize=profile.size||'feed';
-    globalVersion=Number(version)||0;globalLoaded=true;globalDirty=false;
+    globalVersion=Number(version)||0;
+    globalLoaded=true;globalDirty=false;
     if(ui){fillForm();paintChips();updateCaptionControls();refreshGlobalUI();renderNow();}
   }
   function loadGlobal(force){
     if(globalLoading)return Promise.resolve();
     globalLoading=true;
     return globalRequest('get').then(function(r){
-      if(!globalLoaded||Number(r.version)!==globalVersion || force)applyRemoteConfig(r.config,r.version,!!force);
-      globalLoaded=true;
-      refreshGlobalUI();
-    }).catch(function(e){
-      if(!globalLoaded)setStatus('Tetapan pusat tidak dapat dimuatkan. Semak internet dan cuba lagi.','err');
+      if(!globalLoaded||Number(r.version)!==globalVersion||force)applyRemoteConfig(r.config,r.version,!!force);
+      globalLoaded=true;refreshGlobalUI();
+    }).catch(function(){
+      setStatus('Tetapan pusat tidak dapat dimuatkan. Semak internet dan cuba lagi.','err');
     }).finally(function(){globalLoading=false;});
   }
   function markGlobalDirty(){
-    if(!globalToken||!globalLoaded){
-      setStatus('Log masuk admin untuk mengubah tetapan global.','err');
-      return false;
-    }
+    if(!globalLoaded){setStatus('Tetapan global belum dimuatkan. Cuba lagi sebentar.','err');return false;}
     globalDirty=true;refreshGlobalUI();return true;
   }
   function saveGlobal(){
-    if(!globalToken){setStatus('Log masuk admin dahulu untuk simpan ke semua peranti.','err');return Promise.resolve();}
-    if(!globalLoaded){setStatus('Tunggu tetapan global dimuatkan.','err');return Promise.resolve();}
+    if(!globalLoaded){setStatus('Tetapan global belum dimuatkan. Cuba lagi.','err');return Promise.resolve();}
     if(globalSaving)return Promise.resolve();
     globalSaving=true;
-    var cfg={caption:{
-      intro:captionCfg.intro,outro:captionCfg.outro,
-      fields:Object.assign({},captionCfg.fields)
+    var config={caption:{
+      intro:captionCfg.intro,outro:captionCfg.outro,fields:Object.assign({},captionCfg.fields)
     },profile:{}};
-    KEYS.forEach(function(k){cfg.profile[k]=String(profile[k]||'');});
-    cfg.profile.size=currentSize;
+    KEYS.forEach(function(k){config.profile[k]=String(profile[k]||'');});
+    config.profile.size=currentSize;
     return globalRequest('save',{
-      config:cfg,version:globalVersion,device_id:deviceId(),device_label:deviceLabel()
-    },true).then(function(r){
+      config:config,version:globalVersion,device_id:deviceId(),device_label:deviceLabel()
+    }).then(function(r){
       globalVersion=Number(r.version);globalDirty=false;
-      setStatus('✓ Tetapan GLOBAL disimpan. Semua peranti akan menggunakan versi '+globalVersion+'.','ok');
+      setStatus('✓ Tetapan global disimpan untuk semua peranti (versi '+globalVersion+').','ok');
       refreshGlobalUI();fetchGlobalHistory();
     }).catch(function(e){
-      setStatus((e.status===409?'Konflik tetapan: ':'Gagal simpan global: ')+e.message,'err');
-      if(e.status===401){globalToken='';try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}refreshGlobalUI();}
-      if(e.status===409){globalDirty=false;loadGlobal(true);}
+      setStatus(e.status===409?'Tetapan berubah pada peranti lain. Tekan MUAT SEMULA GLOBAL untuk lihat versi terbaru.':'Gagal simpan global: '+e.message,'err');
+      refreshGlobalUI();
     }).finally(function(){globalSaving=false;refreshGlobalUI();});
   }
-  function loginGlobal(){
-    /* Authorization happens on a separate, protected admin page. */
-    window.location.assign('/poster-admin.html');
-  }
-  function logoutGlobal(){
-    globalToken='';globalDirty=false;
-    try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}
-    loadGlobal(true);refreshGlobalUI();
-    setStatus('Sesi admin ditutup pada browser ini.','ok');
-  }
-  function checkGlobalAdmin(){
-    if(!globalToken)return;
-    globalRequest('check',{},true).then(function(r){
-      refreshGlobalUI();fetchGlobalHistory();
-    }).catch(function(){
-      globalToken='';try{sessionStorage.removeItem(GLOBAL_TOKEN_KEY)}catch(e){}
-      refreshGlobalUI();
-    });
-  }
   function fetchGlobalHistory(){
-    if(!globalToken||!ui||!ui.gl)return;
-    globalRequest('history',{},true).then(function(r){
-      var rows=r.history||[];
-      var summary=(r.devices||0)+' peranti pernah simpan tetapan · '+(r.changes||0)+' perubahan direkodkan.';
-      ui.gl.history.textContent=summary;
-      rows.slice(0,8).forEach(function(item){
+    if(!ui||!ui.gl)return;
+    globalRequest('history',{}).then(function(r){
+      ui.gl.history.textContent=(r.devices||0)+' peranti telah menyimpan tetapan · '+(r.changes||0)+' perubahan direkodkan.';
+      (r.history||[]).slice(0,8).forEach(function(item){
         var line=document.createElement('div');
-        line.textContent='v'+item.setting_version+' · '+item.device_label+' · '+
-          item.actor_name+' · '+new Date(item.created_at).toLocaleString('ms-MY');
+        line.textContent='v'+item.setting_version+' · '+item.device_label+' · '+new Date(item.created_at).toLocaleString('ms-MY');
         ui.gl.history.appendChild(line);
       });
-    }).catch(function(e){ui.gl.history.textContent='Tidak dapat membaca sejarah: '+e.message;});
+    }).catch(function(e){ui.gl.history.textContent='Sejarah tidak dapat dimuatkan: '+e.message;});
   }
   function refreshGlobalUI(){
     if(!ui||!ui.gl)return;
-    var admin=!!globalToken&&globalLoaded;
-    ui.gl.loginBox.style.display=globalToken?'none':'block';
-    ui.gl.signedBox.style.display=globalToken?'block':'none';
     ui.gl.version.textContent=globalLoaded?'Versi global: '+globalVersion:'Menyambung ke tetapan global...';
-    ui.gl.state.textContent=globalDirty?'Ada perubahan belum disimpan.':'Tetapan pusat digunakan oleh semua peranti.';
-    var controls=ui.gl.advanced.querySelectorAll('input,textarea,button');
-    controls.forEach(function(el){
-      if(ui.gl.loginBox.contains(el)||ui.gl.signedBox.contains(el))return;
-      el.disabled=!admin;
-    });
-    ui.gl.save.disabled=!admin||globalSaving;
+    ui.gl.state.textContent=globalDirty?'Ada perubahan belum disimpan.':'Semua peranti menggunakan tetapan global yang sama.';
+    ui.gl.save.disabled=!globalLoaded||globalSaving;
+    ui.gl.topSave.disabled=!globalLoaded||globalSaving;
     if(ui.cap){
-      CAPFIELDS.forEach(function(x){ui.cap.checks[x[0]].disabled=!admin;});
-      ui.cap.intro.disabled=!admin;ui.cap.outro.disabled=!admin;
-      ui.cap.presets.querySelectorAll('button').forEach(function(x){x.disabled=!admin;});
+      CAPFIELDS.forEach(function(x){ui.cap.checks[x[0]].disabled=!globalLoaded;});
+      ui.cap.intro.disabled=!globalLoaded;ui.cap.outro.disabled=!globalLoaded;
+      ui.cap.presets.querySelectorAll('button').forEach(function(x){x.disabled=!globalLoaded;});
     }
-    ui.gl.history.style.display=globalToken?'block':'none';
-    if(!globalToken)ui.gl.history.textContent='';
+    ui.gl.advanced.querySelectorAll('.pg-profile-input').forEach(function(el){el.disabled=!globalLoaded;});
   }
   function v(k) { return profile[k] || DEFAULTS[k] || ''; }
 
@@ -3288,55 +3246,26 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     /* TETAPAN — tersembunyi; semua sudah terbenam */
     var adv = mk('div'); adv.id = 'pg-adv';
     bSet.onclick = function () { adv.classList.toggle('on');if(adv.classList.contains('on')){updateCaptionControls();adv.scrollIntoView({block:'start',behavior:'smooth'});} };
-/* Global settings / admin sign in */
+    /* Tetapan global boleh diubah pada mana-mana peranti, tanpa login. */
     var globalPanel=mk('section','pg-global-panel');
     globalPanel.appendChild(mk('div','pg-cap-title','🌍 TETAPAN GLOBAL · SEMUA PERANTI'));
     var globalVersionEl=mk('div','pg-global-status','Menyambung ke Supabase...');
-    var globalStateEl=mk('div','pg-global-desc','Semua peranti menggunakan tetapan poster yang sama.');
+    var globalStateEl=mk('div','pg-global-desc','Simpan perubahan di sini untuk semua telefon dan komputer.');
     globalPanel.appendChild(globalVersionEl);globalPanel.appendChild(globalStateEl);
-    var loginBox=mk('div','pg-global-login');
-    loginBox.appendChild(mk('p','pg-global-desc','Semua peranti menggunakan tetapan yang sama. Perubahan global hanya boleh disimpan daripada peranti yang mendapat kebenaran.'));
-    var loginButton=mk('button','pg-global-secondary','🔒 BUKA AKSES TETAPAN');
-    loginButton.type='button';loginButton.onclick=loginGlobal;
-    loginBox.appendChild(loginButton);
-    globalPanel.appendChild(loginBox);
-    var signedBox=mk('div');signedBox.style.display='none';
-    var logout=mk('button','pg-global-secondary','LOG KELUAR ADMIN');logout.onclick=logoutGlobal;
-    var refresh=mk('button','pg-global-secondary','↻ MUAT SEMULA GLOBAL');
-    refresh.onclick=function(){globalDirty=false;loadGlobal(true);fetchGlobalHistory();};
-    signedBox.appendChild(refresh);
-    var migrate=mk('button','pg-global-secondary','↥ AMBIL TETAPAN LAMA PERANTI INI');
-    migrate.onclick=function(){
-      if(!markGlobalDirty())return;
-      var count=0;
-      try{
-        var oldCaption=JSON.parse(localStorage.getItem(CAPKEY)||'null');
-        if(oldCaption&&typeof oldCaption==='object'){
-          if(typeof oldCaption.intro==='string')captionCfg.intro=oldCaption.intro.slice(0,250);
-          if(typeof oldCaption.outro==='string')captionCfg.outro=oldCaption.outro.slice(0,250);
-          if(oldCaption.fields)CAPFIELDS.forEach(function(x){
-            if(typeof oldCaption.fields[x[0]]==='boolean')captionCfg.fields[x[0]]=oldCaption.fields[x[0]];
-          });
-          count++;
-        }
-        var oldProfile=JSON.parse(localStorage.getItem(LS_PROFILE)||'null');
-        if(oldProfile&&typeof oldProfile==='object'){
-          KEYS.forEach(function(k){if(typeof oldProfile[k]==='string')profile[k]=oldProfile[k];});
-          if(['feed','story','square'].indexOf(profile.size)>=0)currentSize=profile.size;
-          count++;
-        }
-      }catch(e){setStatus('Tetapan lama tidak dapat dibaca.','err');return;}
-      if(!count){globalDirty=false;setStatus('Tiada tetapan lama pada browser ini.','err');return;}
-      fillForm();paintChips();updateCaptionControls();renderNow();
-      setStatus('Tetapan lama dibaca. Semak dahulu, kemudian tekan SIMPAN TETAPAN untuk kongsi kepada semua peranti.','ok');
+    var globalSave=mk('button','pg-cap-save','💾 SIMPAN UNTUK SEMUA PERANTI');
+    globalSave.type='button';globalSave.onclick=saveGlobal;
+    globalPanel.appendChild(globalSave);
+    var globalRefresh=mk('button','pg-global-secondary','↻ MUAT SEMULA GLOBAL');
+    globalRefresh.type='button';
+    globalRefresh.onclick=function(){
+      if(globalDirty&&!window.confirm('Buang perubahan yang belum disimpan dan muat semula tetapan global?'))return;
+      globalDirty=false;loadGlobal(true).then(fetchGlobalHistory);
     };
-    signedBox.appendChild(migrate);signedBox.appendChild(logout);
-    globalPanel.appendChild(signedBox);
-    var globalHistory=mk('div','pg-global-history');globalHistory.style.display='none';
+    globalPanel.appendChild(globalRefresh);
+    var globalHistory=mk('div','pg-global-history');
     globalPanel.appendChild(globalHistory);
     adv.appendChild(globalPanel);
-    
-    /* Caption WhatsApp controls */
+        /* Caption WhatsApp controls */
     var capPanel=mk('section','pg-cap-panel');
     capPanel.appendChild(mk('div','pg-cap-title','💬 CAPTION WHATSAPP'));
     capPanel.appendChild(mk('p','pg-cap-info','Pilih perkara yang nak ditulis bersama gambar poster. Tetapan ini tidak mengubah poster.'));
@@ -3374,7 +3303,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     adv.appendChild(mk('div', 'pg-lbl', 'MAKLUMAT PROFIL POSTER'));
     var f = {};
     [['name', 'Nama'], ['phone', 'No. WhatsApp'], ['role', 'Jawatan'], ['cred', 'Kredential']].forEach(function (p) {
-      var i = mk('input', 'pg-in'); i.placeholder = DEFAULTS[p[0]] || p[1]; i.dataset.k = p[0];
+      var i = mk('input', 'pg-in pg-profile-input'); i.placeholder = DEFAULTS[p[0]] || p[1]; i.dataset.k = p[0];
       i.oninput = function () {if(!markGlobalDirty())return;profile[p[0]]=i.value;renderNow();};
       f[p[0]] = i; adv.appendChild(i);
     });
@@ -3410,9 +3339,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
     document.body.appendChild(sheet);
     ui = { sheet: sheet, inputs: f, sizeChips: sizeChips,
       cap:{intro:capIntro,outro:capOutro,checks:capChecks,preview:capPreview,count:capCount,presets:capPresets} };
-    ui.gl={advanced:adv,loginBox:loginBox,signedBox:signedBox,
-      login:loginButton,
-      save:sbb,version:globalVersionEl,state:globalStateEl,history:globalHistory};
+    ui.gl={advanced:adv,save:sbb,topSave:globalSave,version:globalVersionEl,state:globalStateEl,history:globalHistory};
     fillForm();paintChips();updateCaptionControls();refreshGlobalUI();
   }
 
@@ -3495,15 +3422,11 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
       new MutationObserver(sync).observe(sp, { attributes: true, attributeFilter: ['class'] });
       sync();
     }
-    loadGlobal(true);
-    checkGlobalAdmin();
+    loadGlobal(true).then(fetchGlobalHistory);
     setInterval(function(){if(ui&&ui.sheet.classList.contains('on'))loadGlobal(false);},15000);
     document.addEventListener('visibilitychange',function(){if(!document.hidden)loadGlobal(false);});
     window.pgPoster = { open: open, close: close, render: renderNow, profile: profile, DEFAULTS: DEFAULTS };
-    if(location.hash==='#poster-settings'){
-      open();ui.gl.advanced.classList.add('on');refreshGlobalUI();
-      history.replaceState(null,'',location.pathname+location.search);
-    }
+
   }
 
   loadProfile();
