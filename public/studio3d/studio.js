@@ -47,7 +47,7 @@ function mapPart(){const role=$('part-key').value,path=$('part-node').value,node
 function testPivot(){const role=$('part-key').value,s=draft.hinges[role],path=draft.nodeMap[role],entry=nodes.find(n=>n.path===path);if(!parts.includes(role)||!s?.ready||!entry)throw Error('Pivot belum dipetakan kepada mesh berasingan.');let rig=activeRig.get(role);if(s.nativePivot && entry.obj.name===role){if(!rig){rig={native:true,node:entry.obj,axis:s.axis,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.node.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Pivot asli GLB '+role+(rig.open?' dibuka.':' ditutup.'));return;}if(!rig){const group=new THREE.Group();group.name='PreviewPivot_'+role;group.position.set(...s.pivot);modelContainer.add(group);modelContainer.updateMatrixWorld(true);const parent=entry.obj.parent;group.attach(entry.obj);rig={group,node:entry.obj,parent,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.group.rotation.set(0,0,0);rig.group.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Preview '+role+(rig.open?' dibuka.':' ditutup.')+' Semak kedudukan pivot secara manual.');}
 async function makePhoto(file,category){if(!imgTypes.has(file.type)||file.size>12*1024*1024)throw Error('Foto hanya JPG/PNG/WebP, maksimum 12 MB.');const bytes=new Uint8Array(await file.slice(0,12).arrayBuffer());const valid=(file.type==='image/jpeg'&&bytes[0]===255&&bytes[1]===216)||(file.type==='image/png'&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71)||(file.type==='image/webp'&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP');if(!valid)throw Error('Kandungan gambar tidak padan dengan jenis fail.');
   const bitmap=await createImageBitmap(file);try{if(category==='interior_panorama'&&Math.abs(bitmap.width/bitmap.height-2)>.12)throw Error('Panorama mestilah kira-kira 2:1.');const ratio=Math.min(1,4096/bitmap.width,4096/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*ratio));canvas.height=Math.max(1,Math.round(bitmap.height*ratio));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.87));if(!blob)throw Error('Gagal membersihkan metadata imej.');return{category,name:file.name,width:canvas.width,height:canvas.height,sha256:await digest(blob),blob,url:URL.createObjectURL(blob),privatePath:null};}finally{bitmap.close();}}
-function renderPhotos(){const wrap=$('photos');wrap.replaceChildren();photos.forEach((p,i)=>{const div=document.createElement('div');div.className='photo';const img=document.createElement('img');img.src=p.url;img.alt=p.category;const cap=document.createElement('p');cap.textContent=p.category+' · '+p.width+'×'+p.height;const actions=document.createElement('div');actions.className='actions';const remove=document.createElement('button');remove.type='button';remove.textContent='Padam';remove.addEventListener('click',()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);markDirty();renderPhotos();capabilities();});const move=document.createElement('button');move.type='button';move.className='subtle';move.textContent='↑';move.disabled=i===0;move.addEventListener('click',()=>{[photos[i-1],photos[i]]=[photos[i],photos[i-1]];markDirty();renderPhotos();});actions.append(move,remove);div.append(img,cap,actions);wrap.append(div);});$('draft-list').textContent=photos.length+' foto dibuka; tekan Simpan Draf untuk menyimpan GLB dan gambar pada peranti ini.';}
+function renderPhotos(){const wrap=$('photos');wrap.replaceChildren();photos.forEach((p,i)=>{const div=document.createElement('div');div.className='photo';const img=document.createElement('img');img.src=p.url;img.alt=p.category;const cap=document.createElement('p');cap.textContent=p.category+' · '+p.width+'×'+p.height;const actions=document.createElement('div');actions.className='actions';const remove=document.createElement('button');remove.type='button';remove.textContent='Padam';remove.addEventListener('click',()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);markDirty();renderPhotos();capabilities();});const move=document.createElement('button');move.type='button';move.className='subtle';move.textContent='↑';move.disabled=i===0;move.addEventListener('click',()=>{[photos[i-1],photos[i]]=[photos[i],photos[i-1]];markDirty();renderPhotos();});actions.append(move,remove);div.append(img,cap,actions);wrap.append(div);});$('draft-list').textContent=photos.length+' foto asal dibuka; 5 sudut rujukan CGI tersedia secara berasingan. Simpan Draf menyimpan aset pada peranti ini.';}
 function showPano(){const p=photos.find(x=>x.category==='interior_panorama');if(!p){note('Tiada panorama RHD 2:1. Muat naik imej panorama terlebih dahulu.',true);return;}if(panoObjectURL!==p.url){panoSphere.material.map?.dispose();const texture=new THREE.TextureLoader().load(p.url);texture.colorSpace=THREE.SRGBColorSpace;panoSphere.material.map=texture;panoSphere.material.needsUpdate=true;panoObjectURL=p.url;}mode=mode==='model'?'pano':'model';$('webgl-scene').hidden=mode==='pano';$('panorama-scene').hidden=mode!=='pano';$('toggle-pano').textContent=mode==='pano'?'Kembali ke GLB':'Panorama 360°';window.dispatchEvent(new Event('resize'));}
 function manifest(){input();const media=photos.map((p,index)=>({category:p.category,name:p.name,width:p.width,height:p.height,sha256:p.sha256,privatePath:p.privatePath,order:index}));return{...draft,photos:media,inspection:{status:'unverified'},featureAvailability:{exterior:!!glbRoot||photos.some(p=>p.category.startsWith('exterior_')),doors:parts.some(k=>k.startsWith('door_')&&draft.hinges[k]?.ready),engine:!!draft.nodeMap.engine||photos.some(p=>p.category==='engine'),boot:!!draft.hinges.trunk?.ready||photos.some(p=>p.category==='boot'),interior:!!draft.nodeMap.interior||photos.some(p=>p.category==='interior_panorama'),eagle:!!glbRoot,underbody:!!draft.nodeMap.underbody||photos.some(p=>p.category==='underbody')} };
 }
@@ -200,11 +200,68 @@ async function loadIswaraDemo(){
  const m=await mr.json(),glb=new File([await gr.blob()],'iswara.glb',{type:'model/gltf-binary'});
  await fillIswara(m,glb);
 }
+
+// Iswara visual review: generated image references are NOT geometrical 3D.
+const ISWARA_VIEW_PATH='/studio3d/assets/';
+const ISWARA_VIEW_FILES=new Map([
+ ['Semua sudut','iswara-visual-reference-board.webp'],
+ ['Depan 45°','iswara-front-three-quarter.webp'],
+ ['Sisi','iswara-side-profile.webp'],
+ ['Belakang 45°','iswara-rear-three-quarter.webp'],
+ ['Depan','iswara-front-view.webp'],
+ ['Belakang','iswara-rear-view.webp']
+]);
+let iswaraReferenceMode=true;
+function setIswaraPreviewMode(view){
+ const reference=view!=='glb';
+ iswaraReferenceMode=reference;
+ $('iswara-reference-panel').hidden=!reference;
+ $('webgl-scene').hidden=reference||mode==='pano';
+ $('panorama-scene').hidden=reference||mode!=='pano';
+ $('preview-footer-3d').hidden=reference;
+ $('preview-tools-3d').hidden=reference;
+ for(const [id,active] of [['iswara-view-reference',reference],['iswara-view-3d',!reference]]){
+  const el=$(id);el.classList.toggle('selected',active);el.setAttribute('aria-pressed',String(active));
+ }
+ stat(reference?'Rujukan CGI 2D · pilih sudut di bawah. Ini BUKAN model GLB.':(glbRoot?'GLB interaktif anggaran · seret untuk memutar.':'Muat GLB untuk 3D interaktif.'));
+ if(!reference)requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
+}
+function selectIswaraReference(label){
+ const file=ISWARA_VIEW_FILES.get(label);if(!file)return;
+ const url=ISWARA_VIEW_PATH+file;
+ $('iswara-ref-main-image').src=url;
+ $('iswara-ref-main-image').alt='Rujukan visual 2D Proton Iswara Aeroback: '+label;
+ $('iswara-ref-caption').textContent=label+' · Imej CGI 2D berdasarkan rujukan, bukan mesh GLB.';
+ for(const button of document.querySelectorAll('.iswara-angle')){
+  const on=button.dataset.refLabel===label;
+  button.classList.toggle('selected',on);
+  button.setAttribute('aria-pressed',String(on));
+ }
+}
+$('iswara-view-reference').addEventListener('click',()=>setIswaraPreviewMode('reference'));
+$('iswara-view-3d').addEventListener('click',()=>{
+ setIswaraPreviewMode('glb');
+ if(!glbRoot&&!$('listing-key').value.trim())loadIswaraDemo().catch(e=>note('GLB contoh tidak dapat dimuat: '+e.message,true));
+});
+for(const button of document.querySelectorAll('.iswara-angle')){
+ button.addEventListener('click',()=>selectIswaraReference(button.dataset.refLabel));
+}
+$('iswara-ref-enlarge').addEventListener('click',()=>{
+ const dialog=$('iswara-ref-dialog');
+ $('iswara-ref-dialog-image').src=$('iswara-ref-main-image').src;
+ $('iswara-dialog-caption').textContent=$('iswara-ref-caption').textContent;
+ if(typeof dialog.showModal==='function')dialog.showModal();
+ else window.open($('iswara-ref-main-image').src,'_blank','noopener,noreferrer');
+});
+$('iswara-ref-close').addEventListener('click',()=>$('iswara-ref-dialog').close());
+$('iswara-ref-dialog').addEventListener('click',e=>{if(e.target===$('iswara-ref-dialog'))e.target.close()});
+setIswaraPreviewMode('reference');
+
 const handler=(id,fn)=>$(id).addEventListener('click',()=>{try{const result=fn();if(result?.catch)result.catch(e=>note(cloudError(e),true));}catch(e){note(e.message,true);}});
 handler('load-iswara-demo',loadIswaraDemo);
 $('iswara-package').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{await importIswaraZip(file);}catch(err){updateIswara('Import ditolak: '+err.message);note(err.message,true);}finally{e.target.value='';}});
 if(new URLSearchParams(location.search).get('preset')==='iswara')loadIswaraDemo().catch(e=>updateIswara('Import contoh gagal: '+e.message));
-try{initWebgl();}catch(err){stat('WebGL tidak tersedia: '+(err.message||err)+'. Import foto masih boleh digunakan.');$('webgl-scene').textContent='Paparan WebGL tidak dapat dimulakan pada peranti ini.';}$('car-model').value='saga';$('glb-upload').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{stat('Membaca GLB…');await openGLB(file);markDirty();}catch(err){stat('GLB ditolak; kalkulator utama tidak terjejas.');note(err.message,true);}e.target.value='';});
+try{initWebgl();}catch(err){stat('WebGL tidak tersedia: '+(err.message||err)+'. Import foto masih boleh digunakan.');$('webgl-scene').textContent='Paparan WebGL tidak dapat dimulakan pada peranti ini.';}$('car-model').value='saga';$('glb-upload').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{stat('Membaca GLB…');await openGLB(file);setIswaraPreviewMode('glb');markDirty();}catch(err){stat('GLB ditolak; kalkulator utama tidak terjejas.');note(err.message,true);}e.target.value='';});
 $('photo-upload').addEventListener('change',async e=>{const category=$('photo-category').value;for(const f of (e.target.files||[])){try{const p=await makePhoto(f,category);if(photos.some(x=>x.sha256===p.sha256)){URL.revokeObjectURL(p.url);note('Foto duplikat diabaikan: '+f.name);continue;}photos.push(p);markDirty();}catch(err){note(err.message,true);}}renderPhotos();capabilities();e.target.value='';});
 $('part-key').addEventListener('change',loadPivotForm);handler('map-part',mapPart);handler('test-pivot',testPivot);handler('reset-pivot',()=>{const k=$('part-key').value;resetRig(k);delete draft.nodeMap[k];delete draft.hinges[k];loadPivotForm();capabilities();markDirty();});handler('reset-camera',()=>{if(modelContainer)cameraFit(modelContainer);});handler('toggle-pano',showPano);
 handler('save-draft',saveLocalDraft);handler('load-draft',loadLocalDraft);handler('submit-review',localReview);handler('approve-draft',()=>changeStatus('approved'));handler('publish-draft',publish);handler('unpublish-draft',unpublish);handler('rollback-draft',rollback);handler('export-json',()=>{const m=manifest();download('drive3d-'+m.listingKey+'.json',m);note('Manifest dimuat turun; fail GLB/foto perlu disimpan berasingan.');});
