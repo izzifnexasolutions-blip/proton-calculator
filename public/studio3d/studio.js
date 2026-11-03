@@ -34,7 +34,7 @@ function initWebgl(){scene=new THREE.Scene();scene.background=new THREE.Color(0x
   const animate=()=>{requestAnimationFrame(animate);if(document.hidden)return;controls.update();if(mode==='model')renderer.render(scene,camera);else{panoCamera.rotation.order='YXZ';panoCamera.rotation.set(pitch,yaw,0);panoRenderer.render(panoScene,panoCamera);}};animate();}
 function collectNodes(root){const res=[];function walk(obj,path){res.push({obj,path,name:obj.name||obj.type});obj.children.forEach((child,i)=>walk(child,path?path+'/'+i:String(i)));}walk(root,'');return res;}
 function capabilities(){const map=draft.nodeMap,hinges=draft.hinges;const flags={exterior:!!glbRoot||photos.some(p=>p.category.startsWith('exterior_')),engine:!!map.engine||photos.some(p=>p.category==='engine'),doors:parts.some(k=>k.startsWith('door_')&&hinges[k]?.ready),boot:!!hinges.trunk?.ready||photos.some(p=>p.category==='boot'),interior:!!map.interior||photos.some(p=>p.category==='interior_panorama'),eagle:!!glbRoot,underbody:!!map.underbody||photos.some(p=>p.category==='underbody')};$('capabilities').innerHTML=Object.entries(flags).map(([k,v])=>'<span class="'+(v?'ok':'')+'">'+esc(k)+' '+(v?'✓':'—')+'</span>').join('');}
-function resetRig(role){const rig=activeRig.get(role);if(!rig)return;rig.group.rotation.set(0,0,0);rig.group.updateMatrixWorld(true);rig.parent.attach(rig.node);rig.group.parent?.remove(rig.group);activeRig.delete(role);}
+function resetRig(role){const rig=activeRig.get(role);if(!rig)return;if(rig.native){rig.node.rotation[rig.axis]=0;activeRig.delete(role);return;}rig.group.rotation.set(0,0,0);rig.group.updateMatrixWorld(true);rig.parent.attach(rig.node);rig.group.parent?.remove(rig.group);activeRig.delete(role);}
 function clearGLB(){for(const role of [...activeRig.keys()])resetRig(role);if(modelContainer){scene.remove(modelContainer);cleanup(modelContainer);}glbRoot=null;modelContainer=null;nodes=[];$('part-node').replaceChildren(new Option('Import GLB dahulu',''));}
 async function openGLB(file){if(!file||file.size<20||file.size>30*1024*1024)throw Error('Had GLB ialah 30 MB.');const h=new DataView(await file.slice(0,20).arrayBuffer());if(h.getUint32(0,true)!==0x46546c67||h.getUint32(4,true)!==2||h.getUint32(8,true)!==file.size||h.getUint32(16,true)!==0x4e4f534a)throw Error('Fail bukan GLB glTF 2.0 yang sah.');
   const loader=new GLTFLoader(),draco=new DRACOLoader();draco.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');loader.setDRACOLoader(draco);let parsed;try{parsed=await loader.parseAsync(await file.arrayBuffer(),'');}finally{draco.dispose();}if(!parsed.scene.children.length)throw Error('GLB kosong.');
@@ -44,7 +44,7 @@ async function openGLB(file){if(!file||file.size<20||file.size>30*1024*1024)thro
 function loadPivotForm(){const role=$('part-key').value,s=draft.hinges[role];$('part-node').value=draft.nodeMap[role]||'';for(let i=0;i<3;i++)$('pivot-'+['x','y','z'][i]).value=s?.pivot?.[i]??0;$('pivot-axis').value=s?.axis||'y';$('pivot-angle').value=s?.angle??60;$('part-separated').checked=!!s?.ready;}
 function mapPart(){const role=$('part-key').value,path=$('part-node').value,node=nodes.find(n=>n.path===path);if(!node)throw Error('Sila pilih node GLB yang sah.');const separate=$('part-separated').checked;const hinge=parts.includes(role);if(hinge&&!separate)throw Error('Untuk pintu/bonet/but, sahkan mesh berasingan dahulu.');resetRig(role);
   draft.nodeMap[role]=path;if(hinge)draft.hinges[role]={pivot:['x','y','z'].map(k=>Number($('pivot-'+k).value)||0),axis:$('pivot-axis').value,angle:Number($('pivot-angle').value)||0,ready:separate};markDirty();capabilities();note('Mapping '+role+' ke node '+path+' disimpan dalam draf.');}
-function testPivot(){const role=$('part-key').value,s=draft.hinges[role],path=draft.nodeMap[role],entry=nodes.find(n=>n.path===path);if(!parts.includes(role)||!s?.ready||!entry)throw Error('Pivot belum dipetakan kepada mesh berasingan.');let rig=activeRig.get(role);if(!rig){const group=new THREE.Group();group.name='PreviewPivot_'+role;group.position.set(...s.pivot);modelContainer.add(group);modelContainer.updateMatrixWorld(true);const parent=entry.obj.parent;group.attach(entry.obj);rig={group,node:entry.obj,parent,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.group.rotation.set(0,0,0);rig.group.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Preview '+role+(rig.open?' dibuka.':' ditutup.')+' Semak kedudukan pivot secara manual.');}
+function testPivot(){const role=$('part-key').value,s=draft.hinges[role],path=draft.nodeMap[role],entry=nodes.find(n=>n.path===path);if(!parts.includes(role)||!s?.ready||!entry)throw Error('Pivot belum dipetakan kepada mesh berasingan.');let rig=activeRig.get(role);if(s.nativePivot && entry.obj.name===role){if(!rig){rig={native:true,node:entry.obj,axis:s.axis,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.node.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Pivot asli GLB '+role+(rig.open?' dibuka.':' ditutup.'));return;}if(!rig){const group=new THREE.Group();group.name='PreviewPivot_'+role;group.position.set(...s.pivot);modelContainer.add(group);modelContainer.updateMatrixWorld(true);const parent=entry.obj.parent;group.attach(entry.obj);rig={group,node:entry.obj,parent,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.group.rotation.set(0,0,0);rig.group.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Preview '+role+(rig.open?' dibuka.':' ditutup.')+' Semak kedudukan pivot secara manual.');}
 async function makePhoto(file,category){if(!imgTypes.has(file.type)||file.size>12*1024*1024)throw Error('Foto hanya JPG/PNG/WebP, maksimum 12 MB.');const bytes=new Uint8Array(await file.slice(0,12).arrayBuffer());const valid=(file.type==='image/jpeg'&&bytes[0]===255&&bytes[1]===216)||(file.type==='image/png'&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71)||(file.type==='image/webp'&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP');if(!valid)throw Error('Kandungan gambar tidak padan dengan jenis fail.');
   const bitmap=await createImageBitmap(file);try{if(category==='interior_panorama'&&Math.abs(bitmap.width/bitmap.height-2)>.12)throw Error('Panorama mestilah kira-kira 2:1.');const ratio=Math.min(1,4096/bitmap.width,4096/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*ratio));canvas.height=Math.max(1,Math.round(bitmap.height*ratio));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.87));if(!blob)throw Error('Gagal membersihkan metadata imej.');return{category,name:file.name,width:canvas.width,height:canvas.height,sha256:await digest(blob),blob,url:URL.createObjectURL(blob),privatePath:null};}finally{bitmap.close();}}
 function renderPhotos(){const wrap=$('photos');wrap.replaceChildren();photos.forEach((p,i)=>{const div=document.createElement('div');div.className='photo';const img=document.createElement('img');img.src=p.url;img.alt=p.category;const cap=document.createElement('p');cap.textContent=p.category+' · '+p.width+'×'+p.height;const actions=document.createElement('div');actions.className='actions';const remove=document.createElement('button');remove.type='button';remove.textContent='Padam';remove.addEventListener('click',()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);markDirty();renderPhotos();capabilities();});const move=document.createElement('button');move.type='button';move.className='subtle';move.textContent='↑';move.disabled=i===0;move.addEventListener('click',()=>{[photos[i-1],photos[i]]=[photos[i],photos[i-1]];markDirty();renderPhotos();});actions.append(move,remove);div.append(img,cap,actions);wrap.append(div);});$('draft-list').textContent=photos.length+' foto dibuka; draf media disimpan ke cloud hanya selepas butang Simpan Draf.';}
@@ -70,7 +70,66 @@ async function publish(){if(busy)return;busy=true;try{const user=await authorize
   const r=await sb.rpc('drive3d_publish',{p_listing_id:savedId,p_public_manifest:publicManifest});if(r.error)throw r.error;setStage('published');note('Versi diterbitkan melalui fungsi Supabase. Buka showroom berasingan untuk ujian.');$('cloud-state').textContent='Published';}catch(e){note(cloudError(e),true);}finally{busy=false;}}
 async function unpublish(){try{await authorize();if(!savedId||draft.status!=='published')throw Error('Tiada versi terbitan untuk ditarik balik.');const r=await sb.rpc('drive3d_unpublish',{p_listing_id:savedId});if(r.error)throw r.error;setStage('approved');note('Senarai ditarik balik daripada showroom. Fail awam versi lama mungkin masih boleh dicapai secara langsung sehingga objek storan dipadam.');}catch(e){note(cloudError(e),true);}}
 async function rollback(){try{await authorize();if(!savedId)throw Error('Muat listing Cloud sebelum rollback.');const r=await sb.from('drive_3d_public_history').select('version,created_at').eq('listing_id',savedId).eq('action','publish').order('created_at',{ascending:false}).limit(12);if(r.error)throw r.error;const choices=[...new Set((r.data||[]).map(x=>x.version))];if(!choices.length)throw Error('Belum ada versi terbitan.');const version=Number(prompt('Pilih versi yang hendak dipulihkan: '+choices.join(', '),String(choices[0])));if(!choices.includes(version))throw Error('Versi tidak sah.');const x=await sb.rpc('drive3d_rollback',{p_listing_id:savedId,p_version:version});if(x.error)throw x.error;setStage('published');note('Versi '+version+' berjaya dipulihkan. Semak showroom secara berasingan.');}catch(e){note(cloudError(e),true);}}
+
+// Iswara A->GLB->C importer. All data stays an unapproved local draft until explicit admin save.
+const ISWARA_MANIFEST='/studio3d/assets/iswara_manifest.json';
+const ISWARA_GLB='/studio3d/assets/iswara-aeroback-2000-rigged.glb';
+const updateIswara=msg=>{$('iswara-import-status').textContent=msg;};
+async function fillIswara(m,glb,archive=null){
+ if(!m || m.schemaVersion!=='1.0.0'||!/^[-\w]{3,64}$/.test(m.listingKey)||m.vehicle?.modelKey!=='iswara')throw Error('Manifest Iswara tidak sah / versi tidak disokong.');
+ if(!glb||glb.size>30*1024*1024)throw Error('Fail GLB tiada / melebihi had 30MB.');
+ // Fresh local draft, no ownership/approval flags carried from archive.
+ for(const p of photos)URL.revokeObjectURL(p.url);
+ photos=[];savedId=null;
+ draft={...makeDraft(),...m,vehicle:{...m.vehicle,driveSide:'RHD',price:null,priceStatus:'unverified'},
+     listingKey:m.listingKey,status:'draft',rights:false,privacy:false,published:false,nodeMap:{},hinges:{}};
+ $('listing-key').value=m.listingKey;$('car-model').value='iswara';
+ $('variant').value=m.vehicle.variant||'1.3 Aeroback Manual';$('car-year').value=m.vehicle.year||2000;
+ $('price').value='';$('drive-side').value='RHD';$('asset-source').value=(m.source||'Rujukan foto/Spec.pdf pengguna').slice(0,250);
+ $('rights-checked').checked=false;$('privacy-checked').checked=false;
+ await openGLB(glb);
+ for(const role of parts){const entry=nodes.find(n=>n.name===role);const cfg=m.hinges?.[role];if(!entry||!cfg)continue;
+  draft.nodeMap[role]=entry.path;
+  draft.hinges[role]={pivot:[0,0,0],axis:cfg.axis==='x'?'x':'y',angle:Number(cfg.angle)||60,ready:true,nativePivot:true};
+ }
+ if(archive){const rows=Array.isArray(m.photos)?m.photos.slice(0,60):[];
+  let count=0;for(const p of rows){if(!/^photos\/[a-zA-Z0-9_-]+\.webp$/.test(p.file||''))continue;
+   const file=archive.file(p.file);if(!file)continue;
+   const bytes=await file.async('blob');if(bytes.size>12*1024*1024)throw Error('Gambar di dalam ZIP melebihi had 12MB.');
+   const f=new File([bytes],p.name||p.file,{type:'image/webp'});
+   const processed=await makePhoto(f,p.category||'exterior_front');
+   if(!photos.some(x=>x.sha256===processed.sha256)){photos.push(processed);count++;}
+   else URL.revokeObjectURL(processed.url);
+  }
+  updateIswara('Iswara dimuat sebagai DRAF; '+count+' foto diperiksa. Sila semak lesen, plat dan data enjin sebelum simpan/terbit.');
+ }else updateIswara('Model Iswara GLB diimport; untuk 27 foto, pilih ZIP pakej penuh. Status DRAF belum diterbitkan.');
+ setStage('draft');renderPhotos();capabilities();loadPivotForm();
+ note('Iswara siap diisi sebagai draf. GLB rig berasingan: 4 pintu, bonet dan hatch. Tiada auto-publish.');
+}
+async function importIswaraZip(file){
+ if(!file||file.size>40*1024*1024)throw Error('ZIP maksimum 40MB.');
+ if(!window.JSZip)throw Error('Pustaka unzip belum dimuat. Semak capaian CDN.');
+ updateIswara('Membaca ZIP, GLB, spesifikasi dan foto…');
+ const zip=await window.JSZip.loadAsync(file,{checkCRC32:true});
+ const total=Object.values(zip.files).reduce((sum,p)=>sum+(Number(p._data?.uncompressedSize)||0),0);
+ if(total>65*1024*1024||Object.keys(zip.files).length>150)throw Error('ZIP terlalu besar atau mempunyai terlalu banyak fail.');
+ const mfile=zip.file('iswara_manifest.json'),gfile=zip.file('iswara.glb');
+ if(!mfile||!gfile)throw Error('Pakej memerlukan iswara_manifest.json dan iswara.glb di root ZIP.');
+ const m=JSON.parse(await mfile.async('string'));
+ const glb=new File([await gfile.async('blob')],'iswara.glb',{type:'model/gltf-binary'});
+ await fillIswara(m,glb,zip);
+}
+async function loadIswaraDemo(){
+ updateIswara('Memuat model 3D dari repository pembangunan…');
+ const [mr,gr]=await Promise.all([fetch(ISWARA_MANIFEST,{cache:'no-store'}),fetch(ISWARA_GLB,{cache:'no-store'})]);
+ if(!mr.ok||!gr.ok)throw Error('Aset Iswara belum didedahkan pada staging (HTTP '+mr.status+'/'+gr.status+').');
+ const m=await mr.json(),glb=new File([await gr.blob()],'iswara.glb',{type:'model/gltf-binary'});
+ await fillIswara(m,glb);
+}
 const handler=(id,fn)=>$(id).addEventListener('click',()=>{try{const result=fn();if(result?.catch)result.catch(e=>note(cloudError(e),true));}catch(e){note(e.message,true);}});
+handler('load-iswara-demo',loadIswaraDemo);
+$('iswara-package').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{await importIswaraZip(file);}catch(err){updateIswara('Import ditolak: '+err.message);note(err.message,true);}finally{e.target.value='';}});
+if(new URLSearchParams(location.search).get('preset')==='iswara')loadIswaraDemo().catch(e=>updateIswara('Import contoh gagal: '+e.message));
 try{initWebgl();}catch(err){stat('WebGL tidak tersedia: '+(err.message||err)+'. Import foto masih boleh digunakan.');$('webgl-scene').textContent='Paparan WebGL tidak dapat dimulakan pada peranti ini.';}$('car-model').value='saga';$('glb-upload').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{stat('Membaca GLB…');await openGLB(file);markDirty();}catch(err){stat('GLB ditolak; kalkulator utama tidak terjejas.');note(err.message,true);}e.target.value='';});
 $('photo-upload').addEventListener('change',async e=>{const category=$('photo-category').value;for(const f of (e.target.files||[])){try{const p=await makePhoto(f,category);if(photos.some(x=>x.sha256===p.sha256)){URL.revokeObjectURL(p.url);note('Foto duplikat diabaikan: '+f.name);continue;}photos.push(p);markDirty();}catch(err){note(err.message,true);}}renderPhotos();capabilities();e.target.value='';});
 $('part-key').addEventListener('change',loadPivotForm);handler('map-part',mapPart);handler('test-pivot',testPivot);handler('reset-pivot',()=>{const k=$('part-key').value;resetRig(k);delete draft.nodeMap[k];delete draft.hinges[k];loadPivotForm();capabilities();markDirty();});handler('reset-camera',()=>{if(modelContainer)cameraFit(modelContainer);});handler('toggle-pano',showPano);
