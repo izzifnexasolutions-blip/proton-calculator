@@ -536,5 +536,39 @@
       "path": "Iswara.zip/Gambar dan Video kereta/IMG_3432.MOV",
       "includedInImportPackage": false
     }
-  ]
+  ],
+  "visualReference": {
+    "type": "generated_2d_reference",
+    "is3dMesh": false,
+    "sourceDescription": "CGI image generated from user-supplied Proton Iswara Aeroback photos; intended for shape/color reference, not physical inspection or true 3D geometry",
+    "primaryPath": "/studio3d/assets/iswara-visual-reference-board.webp",
+    "angles": [
+      {
+        "label": "Front 3/4",
+        "path": "/studio3d/assets/iswara-front-three-quarter.webp"
+      },
+      {
+        "label": "Side profile",
+        "path": "/studio3d/assets/iswara-side-profile.webp"
+      },
+      {
+        "label": "Rear 3/4",
+        "path": "/studio3d/assets/iswara-rear-three-quarter.webp"
+      },
+      {
+        "label": "Front",
+        "path": "/studio3d/assets/iswara-front-view.webp"
+      },
+      {
+        "label": "Rear",
+        "path": "/studio3d/assets/iswara-rear-view.webp"
+      }
+    ]
+  },
+  "geometryAccuracy": {
+    "status": "approximate_low_poly",
+    "realisticSurfaceClaim": false,
+    "truePhotogrammetry": false,
+    "notes": "Existing interactive GLB is an approximate 3D placeholder; photoreal visual board is not automatically represented in that GLB."
+  }
 }
