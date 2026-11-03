@@ -1,0 +1,540 @@
+{
+  "schemaVersion": "1.0.0",
+  "template": "drive-studio-s0-s4",
+  "listingKey": "iswara-aeroback-2000-reference-001",
+  "vehicle": {
+    "modelKey": "iswara",
+    "modelName": "Proton Iswara",
+    "variant": "1.3 Aeroback / 5-speed Manual",
+    "year": 2000,
+    "driveSide": "rhd",
+    "price": null,
+    "priceStatus": "unverified",
+    "bodyType": "5-door hatchback",
+    "registrationReference": "AED 1921 (visible in user-provided photos; consider redaction for publication)",
+    "actualPaint": "faded dark charcoal / black; factory code unverified",
+    "visibleRims": "black aftermarket multi-spoke",
+    "driveLayout": "Front-engine / FWD"
+  },
+  "source": "User-supplied Iswara.zip (Spec.pdf and 27 reference photographs)",
+  "inspection": {
+    "status": "unverified",
+    "evidence": "Photos only; no physical inspection certificate"
+  },
+  "status": "draft",
+  "rights": false,
+  "privacy": false,
+  "licenseReviewed": false,
+  "published": false,
+  "asset": {
+    "filename": "iswara.glb",
+    "path": "iswara.glb",
+    "sha256": "c87800376780bd1aa96cca83813e7d9e59f6e65046d7a3c056261d6268505e6c",
+    "bytes": 365464,
+    "type": "application/octet-stream",
+    "modelType": "approximate-procedural-3d",
+    "privatePath": null
+  },
+  "photos": [
+    {
+      "order": 0,
+      "name": "photo_2026-11-04_01-23-59.jpg",
+      "file": "photos/01_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "0109ce225e30f925ec1353b327a4856b68f5b4a3fdd7bf23b90bd2ce4fdecc62",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-23-59.jpg",
+      "observed": true
+    },
+    {
+      "order": 1,
+      "name": "photo_2026-11-04_01-24-02.jpg",
+      "file": "photos/02_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "6abece0e5a953392a12a0c594980bbb27716fe79d7fb61d53db63ba1dd8afb42",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-02.jpg",
+      "observed": true
+    },
+    {
+      "order": 2,
+      "name": "photo_2026-11-04_01-24-03.jpg",
+      "file": "photos/03_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "98ffa45e3714dc2362d51f8bf827ec1a940e88710b36baa797ea2e1ba87643aa",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-03.jpg",
+      "observed": true
+    },
+    {
+      "order": 3,
+      "name": "photo_2026-11-04_01-24-04 (2).jpg",
+      "file": "photos/04_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "54327566b4d7bf7f17b7112099202acd8dfc04b21cc2f9189f871de291a4d12c",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-04 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 4,
+      "name": "photo_2026-11-04_01-24-04.jpg",
+      "file": "photos/05_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "e6caf8b8a4fced58e5c81cab4efdd45930765a05486c6c884fbf11ac9ec3ec82",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-04.jpg",
+      "observed": true
+    },
+    {
+      "order": 5,
+      "name": "photo_2026-11-04_01-24-05 (2).jpg",
+      "file": "photos/06_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "d3b43af8cb0d7564ea781d4d30f79ea5e7991918ed90c400e44a82cbbcac96d4",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-05 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 6,
+      "name": "photo_2026-11-04_01-24-05.jpg",
+      "file": "photos/07_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "1eb643ed87d4a0ad9d4f2bca024a9f92b59805d2fd9e16568d8347a6e5d2c692",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-05.jpg",
+      "observed": true
+    },
+    {
+      "order": 7,
+      "name": "photo_2026-11-04_01-24-06.jpg",
+      "file": "photos/08_engine.webp",
+      "category": "engine",
+      "width": 1280,
+      "height": 960,
+      "sha256": "08269f4f97c93da91a918982baf40d6ef84871aa551fc4550c3fe4cc9a289af5",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-06.jpg",
+      "observed": true
+    },
+    {
+      "order": 8,
+      "name": "photo_2026-11-04_01-24-07 (2).jpg",
+      "file": "photos/09_exterior_front.webp",
+      "category": "exterior_front",
+      "width": 1280,
+      "height": 960,
+      "sha256": "ebd03f79cf3e39d3e17b371eb5ceb4c886ca8828645840edce4aa0643405d2ac",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-07 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 9,
+      "name": "photo_2026-11-04_01-24-07.jpg",
+      "file": "photos/10_exterior_front.webp",
+      "category": "exterior_front",
+      "width": 1280,
+      "height": 960,
+      "sha256": "b9935c0b67705881b8a5fa1bca8d5b686d1dd3e4e83b5758e9ea5b24df549d69",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-07.jpg",
+      "observed": true
+    },
+    {
+      "order": 10,
+      "name": "photo_2026-11-04_01-24-08 (2).jpg",
+      "file": "photos/11_exterior_front_right.webp",
+      "category": "exterior_front_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "a572960a57884a69dea73f92cc7c4f0860767d6ec06f287aa84ae2666b268331",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-08 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 11,
+      "name": "photo_2026-11-04_01-24-08.jpg",
+      "file": "photos/12_exterior_front_right.webp",
+      "category": "exterior_front_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "1d0875b630c8dae58a02374bc03bd27075c65ea6c83d6d9304e3ae5defb81eb1",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-08.jpg",
+      "observed": true
+    },
+    {
+      "order": 12,
+      "name": "photo_2026-11-04_01-24-09.jpg",
+      "file": "photos/13_exterior_right.webp",
+      "category": "exterior_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "db512228fe78e05e3df904e96866ddaa6d7d58e4e781c4bfd982a5a62b523230",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-09.jpg",
+      "observed": true
+    },
+    {
+      "order": 13,
+      "name": "photo_2026-11-04_01-24-10 (2).jpg",
+      "file": "photos/14_exterior_rear_right.webp",
+      "category": "exterior_rear_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "b58930edcf4135aa4a0fd02b7c4ad9f788c07427a67b01c177c966c8990194b6",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-10 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 14,
+      "name": "photo_2026-11-04_01-24-10.jpg",
+      "file": "photos/15_exterior_rear_right.webp",
+      "category": "exterior_rear_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "13b67047d425c50d1ce93d24a4cb41167ffe32cf757292c3aafe4d47ffe0e4d6",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-10.jpg",
+      "observed": true
+    },
+    {
+      "order": 15,
+      "name": "photo_2026-11-04_01-24-11 (2).jpg",
+      "file": "photos/16_exterior_rear.webp",
+      "category": "exterior_rear",
+      "width": 1280,
+      "height": 960,
+      "sha256": "caa73515cf396bcbb110a043eb3722421c8920c0bbc74e506f69abe734e262e8",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-11 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 16,
+      "name": "photo_2026-11-04_01-24-11.jpg",
+      "file": "photos/17_exterior_rear.webp",
+      "category": "exterior_rear",
+      "width": 1280,
+      "height": 960,
+      "sha256": "c551b367fb7381e43126dc6295f63d46d6c6edee55986f6655abebba072328d4",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-11.jpg",
+      "observed": true
+    },
+    {
+      "order": 17,
+      "name": "photo_2026-11-04_01-24-12 (2).jpg",
+      "file": "photos/18_boot.webp",
+      "category": "boot",
+      "width": 1280,
+      "height": 960,
+      "sha256": "c6d63f3db3bc2f4b9a5d5098c38202575e7ff58ee139bcd91b65bf358aac9f71",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-12 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 18,
+      "name": "photo_2026-11-04_01-24-12.jpg",
+      "file": "photos/19_boot.webp",
+      "category": "boot",
+      "width": 1280,
+      "height": 960,
+      "sha256": "4065d95a0deafc60f1f70d75df572d09d2dbe0aab0135f6d2c6449b089bb95a9",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-12.jpg",
+      "observed": true
+    },
+    {
+      "order": 19,
+      "name": "photo_2026-11-04_01-24-13.jpg",
+      "file": "photos/20_exterior_rear_right.webp",
+      "category": "exterior_rear_right",
+      "width": 1280,
+      "height": 960,
+      "sha256": "b4d3f482d50e29ceae102074a22ea6c5a12c1d9af8cffa3d2f83c81279ef54b8",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-13.jpg",
+      "observed": true
+    },
+    {
+      "order": 20,
+      "name": "photo_2026-11-04_01-24-36 (2).jpg",
+      "file": "photos/21_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 1280,
+      "height": 960,
+      "sha256": "93e3b601eb0f5c7c89dd9415888ea7d43e0ee2f26d273f40057a91a27e678a43",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-36 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 21,
+      "name": "photo_2026-11-04_01-24-36.jpg",
+      "file": "photos/22_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 1280,
+      "height": 960,
+      "sha256": "0b215506ad7b6eae292d619c1daca47f12df8478507185d0bf6035822a011362",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-36.jpg",
+      "observed": true
+    },
+    {
+      "order": 22,
+      "name": "photo_2026-11-04_01-24-37 (2).jpg",
+      "file": "photos/23_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 1280,
+      "height": 960,
+      "sha256": "a4376b2b869250edb68a56fb5336570cbce2f4724ab81168cad73f831418fe16",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-37 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 23,
+      "name": "photo_2026-11-04_01-24-37.jpg",
+      "file": "photos/24_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 1280,
+      "height": 960,
+      "sha256": "dd2ccd2b63d756cbc3d9b06ff5cbf3505359f78dd970ffe016fe7407c3c1fc67",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-37.jpg",
+      "observed": true
+    },
+    {
+      "order": 24,
+      "name": "photo_2026-11-04_01-24-38 (2).jpg",
+      "file": "photos/25_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 960,
+      "height": 1280,
+      "sha256": "dc099dc1990eac5f0e94d8ba914f344d4354e30f0375c1cd041cca9e147d8b80",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-38 (2).jpg",
+      "observed": true
+    },
+    {
+      "order": 25,
+      "name": "photo_2026-11-04_01-24-38.jpg",
+      "file": "photos/26_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 1280,
+      "height": 960,
+      "sha256": "c3f32ccb23341ed3237983f603fdf0b06885be380e8b7ca20f5ee2b8456f8385",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-38.jpg",
+      "observed": true
+    },
+    {
+      "order": 26,
+      "name": "photo_2026-11-04_01-24-39.jpg",
+      "file": "photos/27_interior_dashboard.webp",
+      "category": "interior_dashboard",
+      "width": 960,
+      "height": 1280,
+      "sha256": "4d0cb620ef007a13172aefd93ab5c8fec0e7d7cb35c021199784ec8bd7618ed1",
+      "privatePath": null,
+      "source": "Iswara.zip/Gambar dan Video kereta/photo_2026-11-04_01-24-39.jpg",
+      "observed": true
+    }
+  ],
+  "nodeNameMap": {
+    "hood": "hood",
+    "trunk": "trunk",
+    "door_fr": "door_fr",
+    "door_fl": "door_fl",
+    "door_rr": "door_rr",
+    "door_rl": "door_rl"
+  },
+  "nodeMap": {},
+  "hinges": {
+    "hood": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "x",
+      "angle": -54,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    },
+    "trunk": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "x",
+      "angle": 58,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    },
+    "door_fr": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "y",
+      "angle": -64,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    },
+    "door_fl": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "y",
+      "angle": 64,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    },
+    "door_rr": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "y",
+      "angle": -64,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    },
+    "door_rl": {
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "axis": "y",
+      "angle": 64,
+      "ready": true,
+      "nativePivot": true,
+      "coordinates": "node-local"
+    }
+  },
+  "featureAvailability": {
+    "exterior": true,
+    "doors": true,
+    "engine": true,
+    "boot": true,
+    "interior": true,
+    "eagle": true,
+    "underbody": false,
+    "photoPanorama360": false,
+    "interactiveGlb360": true
+  },
+  "technicalSpecifications": {
+    "basis": "As stated in user PDF, not independently verified; values are approximately for Iswara 2000 variant",
+    "displacementCc": 1298,
+    "engineCode": "4G13",
+    "engineCylinders": "Inline-4",
+    "engineTiming": "SOHC",
+    "valves": {
+      "pdfText": "8 injap",
+      "observedPhotoEngineCover": "MAGMA 12 VALVE",
+      "status": "conflicting; verification required"
+    },
+    "fuelSystem": "Carburetor or injection depending on variant; exact vehicle not verified",
+    "maxPower": "74–75 PS @ 6,000 rpm (PDF estimate)",
+    "maxTorque": "~101 Nm @ 4,000 rpm (PDF estimate)",
+    "topSpeed": "150–160 km/h (PDF estimate)",
+    "zeroTo100": "13–14 s (PDF estimate)",
+    "transmission": "5-speed manual",
+    "drivetrain": "FWD",
+    "clutch": "Dry single plate; cable operated (PDF)",
+    "steering": "Right-hand drive; rack and pinion with hydraulic assist (PDF)",
+    "suspensionFront": "MacPherson strut (PDF)",
+    "suspensionRear": "Trailing-arm spring setup (PDF)",
+    "frontBrakes": "Solid disc",
+    "rearBrakes": "Drum",
+    "factoryTire": "165/70 R13; actual aftermarket rims visible, actual tire size not verified",
+    "dimensionsMmApprox": {
+      "lengthAeroback": 3960,
+      "width": 1610,
+      "height": 1390
+    },
+    "seats": 5,
+    "factoryColorExamplesFromPdf": [
+      "Trident Silver",
+      "Solid White",
+      "Midnight/Dark Blue",
+      "Mercury Grey",
+      "Classic Red",
+      "Bordeaux Red/Maroon"
+    ]
+  },
+  "condition": {
+    "paint": "Oxidized, heavily faded and peeling/scratched in reference photos",
+    "wheel": "Black multi-spoke aftermarket; exact size unverified",
+    "interior": "Dark/grey dashboard, manual gear shift, right-hand steering; visible seat covers",
+    "engine": "4G13 family indicated in PDF, engine-bay photo shows MAGMA 12 VALVE label",
+    "disclaimer": "Not a verified vehicle inspection or accurate 3D scan"
+  },
+  "modelGeneration": {
+    "method": "manually scripted mesh reconstruction; no chargeable AI API",
+    "accuracy": "illustrative reconstruction, not scan-accurate",
+    "geometryDetail": "Exterior shell, windows, four wheels, cabin simplified, engine simplified, articulated door/hood/hatch nodes"
+  },
+  "reviewChecklist": {
+    "identityConfirmed": false,
+    "mechanicalSpecificationsChecked": false,
+    "meshShapeReviewed": false,
+    "privacyPlateReviewed": false,
+    "licenseRightsConfirmed": false,
+    "adminApproved": false
+  },
+  "sourceVideos": [
+    {
+      "name": "IMG_3431.MOV",
+      "path": "Iswara.zip/Gambar dan Video kereta/IMG_3431.MOV",
+      "includedInImportPackage": false
+    },
+    {
+      "name": "IMG_3430.MOV",
+      "path": "Iswara.zip/Gambar dan Video kereta/IMG_3430.MOV",
+      "includedInImportPackage": false
+    },
+    {
+      "name": "IMG_3408.MOV",
+      "path": "Iswara.zip/Gambar dan Video kereta/IMG_3408.MOV",
+      "includedInImportPackage": false
+    },
+    {
+      "name": "IMG_3432.MOV",
+      "path": "Iswara.zip/Gambar dan Video kereta/IMG_3432.MOV",
+      "includedInImportPackage": false
+    }
+  ]
+}

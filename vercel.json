@@ -10,6 +10,13 @@
         "Cache-Control": "no-store, max-age=0, must-revalidate"
       },
       "dest": "/calculator.html"
+    },
+    {
+      "src": "^/studio3d/?$",
+      "dest": "/studio3d/index.html"
+    },
+    {
+      "handle": "filesystem"
     }
   ]
 }
