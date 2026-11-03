@@ -5,6 +5,7 @@
 begin;
 
 -- Supabase Auth users may read only their OWN staff profile (not write roles).
+grant select on public.sales_staff_profiles to authenticated;
 create policy "drive3d_staff_self_read" on public.sales_staff_profiles
   for select to authenticated using (user_id = (select auth.uid()));
 
@@ -113,4 +114,22 @@ begin
 end;$$;
 revoke all on function public.drive3d_unpublish(uuid) from public,anon;
 grant execute on function public.drive3d_unpublish(uuid) to authenticated;
+-- Restore only a previously published public manifest; full audit history retained.
+create or replace function public.drive3d_rollback(p_listing_id uuid,p_version integer)
+returns void language plpgsql security definer set search_path = '' as $$
+declare v public.drive_3d_listings%rowtype; m jsonb;
+begin
+ if (select auth.uid()) is null or not exists(select 1 from public.sales_staff_profiles s where s.user_id=(select auth.uid()) and s.role='admin' and s.is_active) then raise exception 'Admin role required'; end if;
+ select * into v from public.drive_3d_listings where id=p_listing_id and owner_id=(select auth.uid()) for update;
+ if not found then raise exception 'Listing not owned by admin';end if;
+ select h.public_manifest into m from public.drive_3d_public_history h where h.listing_id=p_listing_id and h.version=p_version and h.action='publish' order by h.created_at desc limit 1;
+ if m is null then raise exception 'Published version not found';end if;
+ insert into public.drive_3d_public(listing_id,listing_key,published,version,manifest,published_at)values(v.id,v.listing_key,true,p_version,m,now())
+ on conflict(listing_id) do update set published=true,version=excluded.version,manifest=excluded.manifest,published_at=now();
+ insert into public.drive_3d_public_history(listing_id,version,public_manifest,action,actor_id)values(v.id,p_version,m,'rollback',(select auth.uid()));
+ update public.drive_3d_listings set status='published',updated_at=now(),version=version+1 where id=v.id;
+end;$$;
+revoke all on function public.drive3d_rollback(uuid,integer) from public,anon;
+grant execute on function public.drive3d_rollback(uuid,integer) to authenticated;
+
 commit;
