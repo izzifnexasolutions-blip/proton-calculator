@@ -47,12 +47,86 @@ function mapPart(){const role=$('part-key').value,path=$('part-node').value,node
 function testPivot(){const role=$('part-key').value,s=draft.hinges[role],path=draft.nodeMap[role],entry=nodes.find(n=>n.path===path);if(!parts.includes(role)||!s?.ready||!entry)throw Error('Pivot belum dipetakan kepada mesh berasingan.');let rig=activeRig.get(role);if(s.nativePivot && entry.obj.name===role){if(!rig){rig={native:true,node:entry.obj,axis:s.axis,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.node.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Pivot asli GLB '+role+(rig.open?' dibuka.':' ditutup.'));return;}if(!rig){const group=new THREE.Group();group.name='PreviewPivot_'+role;group.position.set(...s.pivot);modelContainer.add(group);modelContainer.updateMatrixWorld(true);const parent=entry.obj.parent;group.attach(entry.obj);rig={group,node:entry.obj,parent,open:false};activeRig.set(role,rig);}rig.open=!rig.open;rig.group.rotation.set(0,0,0);rig.group.rotation[s.axis]=rig.open?THREE.MathUtils.degToRad(s.angle):0;note('Preview '+role+(rig.open?' dibuka.':' ditutup.')+' Semak kedudukan pivot secara manual.');}
 async function makePhoto(file,category){if(!imgTypes.has(file.type)||file.size>12*1024*1024)throw Error('Foto hanya JPG/PNG/WebP, maksimum 12 MB.');const bytes=new Uint8Array(await file.slice(0,12).arrayBuffer());const valid=(file.type==='image/jpeg'&&bytes[0]===255&&bytes[1]===216)||(file.type==='image/png'&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71)||(file.type==='image/webp'&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP');if(!valid)throw Error('Kandungan gambar tidak padan dengan jenis fail.');
   const bitmap=await createImageBitmap(file);try{if(category==='interior_panorama'&&Math.abs(bitmap.width/bitmap.height-2)>.12)throw Error('Panorama mestilah kira-kira 2:1.');const ratio=Math.min(1,4096/bitmap.width,4096/bitmap.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*ratio));canvas.height=Math.max(1,Math.round(bitmap.height*ratio));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.87));if(!blob)throw Error('Gagal membersihkan metadata imej.');return{category,name:file.name,width:canvas.width,height:canvas.height,sha256:await digest(blob),blob,url:URL.createObjectURL(blob),privatePath:null};}finally{bitmap.close();}}
-function renderPhotos(){const wrap=$('photos');wrap.replaceChildren();photos.forEach((p,i)=>{const div=document.createElement('div');div.className='photo';const img=document.createElement('img');img.src=p.url;img.alt=p.category;const cap=document.createElement('p');cap.textContent=p.category+' · '+p.width+'×'+p.height;const actions=document.createElement('div');actions.className='actions';const remove=document.createElement('button');remove.type='button';remove.textContent='Padam';remove.addEventListener('click',()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);markDirty();renderPhotos();capabilities();});const move=document.createElement('button');move.type='button';move.className='subtle';move.textContent='↑';move.disabled=i===0;move.addEventListener('click',()=>{[photos[i-1],photos[i]]=[photos[i],photos[i-1]];markDirty();renderPhotos();});actions.append(move,remove);div.append(img,cap,actions);wrap.append(div);});$('draft-list').textContent=photos.length+' foto dibuka; draf media disimpan ke cloud hanya selepas butang Simpan Draf.';}
+function renderPhotos(){const wrap=$('photos');wrap.replaceChildren();photos.forEach((p,i)=>{const div=document.createElement('div');div.className='photo';const img=document.createElement('img');img.src=p.url;img.alt=p.category;const cap=document.createElement('p');cap.textContent=p.category+' · '+p.width+'×'+p.height;const actions=document.createElement('div');actions.className='actions';const remove=document.createElement('button');remove.type='button';remove.textContent='Padam';remove.addEventListener('click',()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);markDirty();renderPhotos();capabilities();});const move=document.createElement('button');move.type='button';move.className='subtle';move.textContent='↑';move.disabled=i===0;move.addEventListener('click',()=>{[photos[i-1],photos[i]]=[photos[i],photos[i-1]];markDirty();renderPhotos();});actions.append(move,remove);div.append(img,cap,actions);wrap.append(div);});$('draft-list').textContent=photos.length+' foto dibuka; tekan Simpan Draf untuk menyimpan GLB dan gambar pada peranti ini.';}
 function showPano(){const p=photos.find(x=>x.category==='interior_panorama');if(!p){note('Tiada panorama RHD 2:1. Muat naik imej panorama terlebih dahulu.',true);return;}if(panoObjectURL!==p.url){panoSphere.material.map?.dispose();const texture=new THREE.TextureLoader().load(p.url);texture.colorSpace=THREE.SRGBColorSpace;panoSphere.material.map=texture;panoSphere.material.needsUpdate=true;panoObjectURL=p.url;}mode=mode==='model'?'pano':'model';$('webgl-scene').hidden=mode==='pano';$('panorama-scene').hidden=mode!=='pano';$('toggle-pano').textContent=mode==='pano'?'Kembali ke GLB':'Panorama 360°';window.dispatchEvent(new Event('resize'));}
 function manifest(){input();const media=photos.map((p,index)=>({category:p.category,name:p.name,width:p.width,height:p.height,sha256:p.sha256,privatePath:p.privatePath,order:index}));return{...draft,photos:media,inspection:{status:'unverified'},featureAvailability:{exterior:!!glbRoot||photos.some(p=>p.category.startsWith('exterior_')),doors:parts.some(k=>k.startsWith('door_')&&draft.hinges[k]?.ready),engine:!!draft.nodeMap.engine||photos.some(p=>p.category==='engine'),boot:!!draft.hinges.trunk?.ready||photos.some(p=>p.category==='boot'),interior:!!draft.nodeMap.interior||photos.some(p=>p.category==='interior_panorama'),eagle:!!glbRoot,underbody:!!draft.nodeMap.underbody||photos.some(p=>p.category==='underbody')} };
 }
 function download(filename,data){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function cloudError(e){const msg=e?.message||String(e);if(msg.includes('drive_3d')||msg.includes('relation')||msg.includes('bucket not found'))return 'Skema/storan Supabase Drive Studio belum dipasang. Aset belum disegerakkan; fail asal masih di peranti. '+msg;return msg;}
+
+// No-login editor: local IndexedDB draft storage. Cloud RPC and storage RLS stay protected.
+const LOCAL_DB_NAME='faris-drive-studio-local-v1';
+const LOCAL_LAST_KEY='faris-drive-studio-last-listing';
+function openLocalDb(){return new Promise((resolve,reject)=>{
+ if(!('indexedDB' in window))return reject(Error('Pelayar ini tidak membenarkan simpanan IndexedDB.'));
+ const req=indexedDB.open(LOCAL_DB_NAME,1);
+ req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('drafts'))req.result.createObjectStore('drafts',{keyPath:'listingKey'});};
+ req.onsuccess=()=>resolve(req.result);
+ req.onerror=()=>reject(req.error||Error('Tidak dapat membuka draf tempatan.'));
+});}
+async function putLocalDraft(record){const db=await openLocalDb();try{
+ await new Promise((resolve,reject)=>{
+  const tx=db.transaction('drafts','readwrite');
+  tx.objectStore('drafts').put(record);
+  tx.oncomplete=()=>resolve();
+  tx.onabort=()=>reject(tx.error||Error('Gagal menyimpan draf. Semak ruang storan pelayar.'));
+  tx.onerror=()=>reject(tx.error||Error('Ralat IndexedDB.'));
+ });
+}finally{db.close();}}
+async function getLocalDraft(key){const db=await openLocalDb();try{
+ return await new Promise((resolve,reject)=>{
+  const tx=db.transaction('drafts','readonly');
+  const req=tx.objectStore('drafts').get(key);
+  req.onsuccess=()=>resolve(req.result||null);
+  req.onerror=()=>reject(req.error||Error('Tidak dapat membaca draf.'));
+ });
+}finally{db.close();}}
+async function saveLocalDraft(){if(busy)return;busy=true;try{
+ const m=manifest();
+ const record={
+  listingKey:m.listingKey,
+  manifest:{...m,status:m.status==='review'?'review':'draft',published:false,rights:!!m.rights,privacy:!!m.privacy},
+  glb:glbFile||null,
+  photos:photos.map(p=>({category:p.category,name:p.name,width:p.width,height:p.height,sha256:p.sha256,blob:p.blob,privatePath:null})),
+  savedAt:new Date().toISOString()
+ };
+ await putLocalDraft(record);
+ try{localStorage.setItem(LOCAL_LAST_KEY,m.listingKey);}catch(_){}
+ $('cloud-state').textContent='Draf lokal disimpan';
+ $('draft-list').textContent=photos.length+' foto, '+(glbFile?'1 fail GLB':'tiada GLB')+' disimpan dalam pelayar ini.';
+ note('Draf '+m.listingKey+' disimpan pada PERANTI INI sahaja. Tiada upload atau publish Supabase.');
+}catch(e){note('Gagal simpan lokal: '+(e.message||String(e)),true);}finally{busy=false;}}
+async function loadLocalDraft(){if(busy)return;busy=true;try{
+ let key=$('listing-key').value.trim();if(!key){try{key=localStorage.getItem(LOCAL_LAST_KEY)||'';}catch(_){}}
+ if(!/^[a-zA-Z0-9_-]{3,64}$/.test(key))throw Error('Masukkan ID kereta yang pernah disimpan.');
+ const row=await getLocalDraft(key);if(!row)throw Error('Draf '+key+' tidak dijumpai pada peranti/pelayar ini.');
+ const restored={...makeDraft(),...row.manifest,status:'draft',published:false};
+ for(const p of photos)if(p.url)URL.revokeObjectURL(p.url);
+ photos=(row.photos||[]).map(p=>({...p,privatePath:null,url:URL.createObjectURL(p.blob)}));
+ draft=restored;savedId=null;
+ $('listing-key').value=key;
+ $('car-model').value=restored.vehicle?.modelKey||'saga';
+ $('variant').value=restored.vehicle?.variant||'';
+ $('car-year').value=restored.vehicle?.year||'';
+ $('price').value=restored.vehicle?.price??'';
+ $('drive-side').value=restored.vehicle?.driveSide||'unknown';
+ $('asset-source').value=restored.source||'';
+ $('rights-checked').checked=!!restored.rights;
+ $('privacy-checked').checked=!!restored.privacy;
+ if(row.glb){
+  await openGLB(row.glb);
+  draft={...restored,asset:draft.asset,nodeMap:restored.nodeMap||{},hinges:restored.hinges||{}};
+ }else{clearGLB();glbFile=null;draft={...restored,asset:null};}
+ setStage('draft');renderPhotos();capabilities();loadPivotForm();
+ $('cloud-state').textContent='Draf lokal dimuat';
+ note('Draf '+key+' berjaya dimuat pada peranti ini. Sila semak semua mapping sebelum digunakan.');
+}catch(e){note('Gagal muat draf lokal: '+(e.message||String(e)),true);}finally{busy=false;}}
+function localReview(){
+ try{const m=manifest();if(!m.rights||!m.privacy)throw Error('Sahkan lesen aset dan privasi sebelum menanda semakan.');
+  setStage('review');
+  note('Draf ditanda untuk semakan di peranti ini sahaja. Tiada kelulusan atau publish ke cloud.');
+ }catch(e){note(e.message,true);}
+}
 async function authorize(){const {data:{user},error}=await sb.auth.getUser();if(error||!user)throw Error('Sesi tidak aktif. Sila log masuk semula.');const r=await sb.from('sales_staff_profiles').select('role,is_active').eq('user_id',user.id).eq('role','admin').eq('is_active',true).maybeSingle();if(r.error||!r.data)throw Error('Akaun ini tidak mempunyai hak admin aktif.');return user;}
 async function cloudSave(){if(busy)return;busy=true;try{const user=await authorize();const m=manifest();for(const p of photos){if(!p.privatePath){const path='photo/'+user.id+'/'+m.listingKey+'/'+crypto.randomUUID()+'.webp';const up=await sb.storage.from('drive3d-private').upload(path,p.blob,{contentType:'image/webp',upsert:false});if(up.error)throw up.error;p.privatePath=path;}}if(glbFile&&!m.asset?.privatePath){const path='glb/'+user.id+'/'+m.listingKey+'/'+crypto.randomUUID()+'.glb';const up=await sb.storage.from('drive3d-private').upload(path,glbFile,{contentType:'model/gltf-binary',upsert:false});if(up.error)throw up.error;draft.asset.privatePath=path;}
   const updated=manifest();const row={listing_key:updated.listingKey,owner_id:user.id,manifest:updated,status:updated.status,updated_at:new Date().toISOString()};let result;if(savedId)result=await sb.from('drive_3d_listings').update(row).eq('id',savedId).select('id').single();else result=await sb.from('drive_3d_listings').insert(row).select('id').single();if(result.error)throw result.error;savedId=result.data.id;note('Draf disimpan dalam Supabase secara persendirian. ID: '+savedId);$('cloud-state').textContent='Draf Supabase';return savedId;}catch(e){note(cloudError(e),true);throw e;}finally{busy=false;}}
@@ -133,6 +207,6 @@ if(new URLSearchParams(location.search).get('preset')==='iswara')loadIswaraDemo(
 try{initWebgl();}catch(err){stat('WebGL tidak tersedia: '+(err.message||err)+'. Import foto masih boleh digunakan.');$('webgl-scene').textContent='Paparan WebGL tidak dapat dimulakan pada peranti ini.';}$('car-model').value='saga';$('glb-upload').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{stat('Membaca GLB…');await openGLB(file);markDirty();}catch(err){stat('GLB ditolak; kalkulator utama tidak terjejas.');note(err.message,true);}e.target.value='';});
 $('photo-upload').addEventListener('change',async e=>{const category=$('photo-category').value;for(const f of (e.target.files||[])){try{const p=await makePhoto(f,category);if(photos.some(x=>x.sha256===p.sha256)){URL.revokeObjectURL(p.url);note('Foto duplikat diabaikan: '+f.name);continue;}photos.push(p);markDirty();}catch(err){note(err.message,true);}}renderPhotos();capabilities();e.target.value='';});
 $('part-key').addEventListener('change',loadPivotForm);handler('map-part',mapPart);handler('test-pivot',testPivot);handler('reset-pivot',()=>{const k=$('part-key').value;resetRig(k);delete draft.nodeMap[k];delete draft.hinges[k];loadPivotForm();capabilities();markDirty();});handler('reset-camera',()=>{if(modelContainer)cameraFit(modelContainer);});handler('toggle-pano',showPano);
-handler('save-draft',cloudSave);handler('load-draft',loadCloudDraft);handler('submit-review',()=>changeStatus('review'));handler('approve-draft',()=>changeStatus('approved'));handler('publish-draft',publish);handler('unpublish-draft',unpublish);handler('rollback-draft',rollback);handler('export-json',()=>{const m=manifest();download('drive3d-'+m.listingKey+'.json',m);note('Manifest dimuat turun; fail GLB/foto perlu disimpan berasingan.');});
+handler('save-draft',saveLocalDraft);handler('load-draft',loadLocalDraft);handler('submit-review',localReview);handler('approve-draft',()=>changeStatus('approved'));handler('publish-draft',publish);handler('unpublish-draft',unpublish);handler('rollback-draft',rollback);handler('export-json',()=>{const m=manifest();download('drive3d-'+m.listingKey+'.json',m);note('Manifest dimuat turun; fail GLB/foto perlu disimpan berasingan.');});
 for(const id of ['listing-key','car-model','variant','car-year','price','drive-side','asset-source','rights-checked','privacy-checked'])$(id).addEventListener('input',markDirty);
-capabilities();note('Studio sedia. Simpan ke Supabase selepas migration / role disediakan. AI generation OFF.');
+capabilities();try{const k=localStorage.getItem(LOCAL_LAST_KEY);if(k&&!$('listing-key').value)$('listing-key').value=k;}catch(_){}note('Studio terbuka tanpa login. Import/preview/simpan draf adalah lokal; terbit ke cloud tidak tersedia. AI generation OFF.');
