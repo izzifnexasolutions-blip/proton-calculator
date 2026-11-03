@@ -9,7 +9,7 @@ if(studio)studio.hidden=false;
 const state=document.getElementById('cloud-state');
 if(state)state.textContent='Editor terbuka · simpan lokal';
 try{
-  await import('/studio3d/studio.js');
+  await import('/studio3d/studio.js?v=open-editor-20261104');
 }catch(err){
   const note=document.getElementById('save-status');
   if(note){note.textContent='Editor gagal dimulakan: '+(err?.message||String(err));note.classList.add('error');}
