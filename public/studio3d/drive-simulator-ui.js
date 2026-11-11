@@ -1,5 +1,7 @@
 import {VEHICLES,PRESETS,REGIONS,estimate} from "./drive-sim-core.js";
 import {createRoutePlanner} from "./drive-phase2.js";
+import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
+import {createSmartDashboard} from "./drive-smart-ui.js";
 const $=id=>document.getElementById(id);
 // The map is the FIRST and CENTRAL interaction, not the last block after forms.
 // Reorder existing DOM nodes only; preserve their IDs and existing listeners.
@@ -19,7 +21,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null;
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 const simulationMs=12000;
 function stopSimulation(){
@@ -33,30 +35,46 @@ function getInputs(){
     soc:parseFloat($("soc").value),people:parseInt($("people").value,10),cargo:parseFloat($("cargo").value),
     road:$("road").value,mode:$("mode").value,traffic:$("traffic").value,surface:$("surface").value,
     ac:$("ac").checked,rain:$("rain").checked,
+    batteryHealth:parseFloat($("battery-health").value),temperature:$("temperature").value,
+    wind:$("wind").value,slope:$("slope").value,tire:$("tire").value,
+    hvac:$("hvac").value,regen:$("regen").value,
+    night:$("night").checked,aggressive:$("aggressive").checked,
     tariff:parseFloat($("tariff").value)
   };
 }
 function updateAnimation(){
   if(!result)return;
-  const kmDone=result.km*progress,kwhUsed=result.needed*progress;
-  const currentSoc=Math.max(0,result.startSoc-kwhUsed/result.car.battery*100);
+  const reading=sampleJourney(result,progress);
+  if(!reading)return;
+  // Do not imply that a depleted vehicle can still finish the trip.
+  const limit=Math.min(1,result.stopAtKm/result.km);
+  const kmDone=reading.km,kwhUsed=reading.kwh,currentSoc=reading.soc;
   $("battery-live").textContent=fmt(currentSoc,1)+"%";
-  $("battery-label").textContent="Bateri selepas "+fmt(kmDone,1)+" km";
+  $("battery-label").textContent="Anggaran selepas "+fmt(kmDone,1)+" km";
   const fill=$("battery-fill");
   fill.style.width=Math.min(100,currentSoc)+"%";
   fill.style.background=currentSoc<12?"#ff7581":currentSoc<28?"#f5cc76":"linear-gradient(90deg,#74dba7,#b6f3b8)";
-  $("used-live").textContent=fmt(kwhUsed,2)+" kWh digunakan";
-  $("left-live").textContent=fmt(Math.max(0,result.km-kmDone),1)+" km lagi";
+  $("used-live").textContent=fmt(kwhUsed,2)+" kWh daripada "+fmt(result.needed,2)+" kWh perlu";
+  $("left-live").textContent=fmt(Math.max(0,result.km-kmDone),1)+" km belum dilalui";
   $("progress-fill").style.width=Math.round(progress*100)+"%";
   $("progress").setAttribute("aria-valuenow",String(Math.round(progress*100)));
-  $("progress-text").textContent=Math.round(progress*100)+"% · "+(playing?"Sedang disimulasikan":progress>=1?"Selesai":"Belum bermula");
+  const depleted=limit<1-1e-7&&progress>=limit-1e-7;
+  $("progress-text").textContent=Math.round(progress*100)+"% · "+(depleted?"Bateri habis sebelum tiba":playing?"Simulasi sedang berjalan":progress>=1?"Selesai":"Sedia");
+  const mapAnimating=routePlanner?.onDriveProgress(progress,result)||false;
+  smart?.frame(result,{...reading,canStillDrive:!depleted},playing&&!depleted,mapAnimating);
 }
 function animate(now){
   raf=0;if(!playing)return;
   if(!startedAt)startedAt=now;
-  progress=Math.min(1,(elapsed+now-startedAt)/simulationMs);
+  const maxProgress=Math.min(1,Math.max(0,result?.stopAtKm/result?.km||0));
+  progress=Math.min(maxProgress,(elapsed+now-startedAt)/simulationMs);
   updateAnimation();
-  if(progress>=1){playing=false;elapsed=simulationMs;$("play").textContent="↻ Mainkan semula";return;}
+  if(progress>=maxProgress-1e-7){
+    playing=false;elapsed=simulationMs;
+    $("play").textContent=maxProgress<1?"↻ Ulang · perlu cas":"↻ Mainkan semula";
+    smart?.frame(result,{...sampleJourney(result,progress),canStillDrive:maxProgress>=1},false,routePlanner?.hasActualRoute||false);
+    return;
+  }
   raf=requestAnimationFrame(animate);
 }
 function invalid(message){
@@ -76,6 +94,8 @@ function invalid(message){
   $("battery-fill").style.width="0%";
   $("progress-fill").style.width="0%";
   routePlanner?.onEstimate(null);
+  routePlanner?.onDriveProgress(0,null);
+  smart?.render(null);
 }
 function refresh(){
   stopSimulation();
@@ -83,7 +103,7 @@ function refresh(){
   if(!Number.isFinite(raw.distance)||raw.distance<1||raw.distance>1000){invalid("Masukkan jarak 1 hingga 1,000 km.");return;}
   if(!Number.isFinite(raw.speed)||raw.speed<25||raw.speed>130){invalid("Masukkan purata kelajuan antara 25 hingga 130 km/j.");return;}
   if(!Number.isFinite(raw.tariff)||raw.tariff<0||raw.tariff>5){invalid("Masukkan kadar elektrik antara RM0 hingga RM5/kWh.");return;}
-  result=estimate(raw);
+  result=calculateJourney(raw,selectedScenario);
   $("play").disabled=false;
   $("variant-prime").classList.toggle("active",variant==="prime");
   $("variant-premium").classList.toggle("active",variant==="premium");
@@ -94,7 +114,7 @@ function refresh(){
   $("soc-out").textContent=result.startSoc+"%";
   $("people-out").textContent=result.people+" orang";
   $("cargo-out").textContent=result.cargoKg+" kg";
-  $("m-arrival").textContent=fmt(result.arrivalSoc,1)+"%";
+  $("m-arrival").textContent=result.reachAtAll?fmt(result.arrivalSoc,1)+"%":"0%*";
   $("m-range").textContent=fmt(result.rangeAtArrival,0);
   const dial=$("metric-dial");
   if(dial)dial.style.setProperty("--soc-angle",Math.max(0,Math.min(360,result.arrivalSoc*3.6))+"deg");
@@ -115,7 +135,7 @@ function refresh(){
     status.textContent="Bateri awal hampir pada had simpanan 10%. Cas dahulu sebelum memulakan perjalanan untuk margin keselamatan.";
   }else if(!result.reachAtAll){
     status.className="status bad";
-    status.textContent="Tenaga permulaan tidak mencukupi mengikut anggaran. Rancang pengecasan sepanjang perjalanan.";
+    status.textContent="BATERI TIDAK CUKUP: anggaran kereta berhenti pada km "+fmt(result.stopAtKm,1)+" daripada "+fmt(result.km,1)+" km. Kos/tenaga di atas ialah keperluan untuk melengkapkan seluruh perjalanan, bukan tenaga yang tersedia sekarang.";
   }else if(!result.reachWithReserve){
     status.className="status warn";
     status.textContent="Baki di destinasi di bawah 10% SOC. Pertimbangkan tambahan sekitar "+fmt(result.extraEnergyToReserve,1)+" kWh untuk tiba dengan simpanan.";
@@ -125,6 +145,7 @@ function refresh(){
   }
   renderIntelligence(raw);
   routePlanner?.onEstimate(result);
+  smart?.render(result);
   updateAnimation();
 }
 function syncRoute(focus=true){
@@ -284,7 +305,7 @@ function renderIntelligence(options){
     head.textContent="Tidak perlu top-up mengikut anggaran";
     detail.textContent="Anggaran baki "+fmt(result.arrivalSoc,1)+"% SOC dan buffer "+fmt(result.rangeAtArrival,0)+" km hingga 10%. Semak bateri, suhu dan lokasi pengecas sebenar.";
   }
-  const compare={prime:estimate({...options,variant:"prime"}),premium:estimate({...options,variant:"premium"})};
+  const compare={prime:calculateJourney({...options,variant:"prime"},selectedScenario),premium:calculateJourney({...options,variant:"premium"},selectedScenario)};
   for(const key of ["prime","premium"]){
     const item=compare[key];
     $("cmp-"+key+"-soc").textContent=fmt(item.arrivalSoc,1)+"%";
@@ -324,7 +345,7 @@ for(const id of ["distance","speed","soc","people","cargo","road","mode","traffi
 }
 $("play").addEventListener("click",()=>{
   if(!result)return;
-  if(progress>=1){stopSimulation();updateAnimation();}
+  if(progress>=1||progress>=Math.min(1,result.stopAtKm/result.km)-1e-7){stopSimulation();updateAnimation();}
   if(playing){
     playing=false;if(startedAt)elapsed=Math.min(simulationMs,elapsed+performance.now()-startedAt);
     startedAt=0;if(raf)cancelAnimationFrame(raf);raf=0;
@@ -336,7 +357,7 @@ $("play").addEventListener("click",()=>{
   $("play").textContent="Ⅱ Jeda simulasi";
   raf=requestAnimationFrame(animate);
 });
-$("reset").addEventListener("click",()=>{stopSimulation();updateAnimation()});
+$("reset").addEventListener("click",()=>{stopSimulation();updateAnimation();smart?.resetFrame();});
 $("copy").addEventListener("click",async()=>{
   if(!result)return;
   const route=PRESETS[routeKey];
@@ -349,7 +370,10 @@ $("copy").addEventListener("click",async()=>{
     "Purata kelajuan andaian: "+result.speed+" km/j",
     "Penggunaan tenaga: "+fmt(result.kwh100,1)+" kWh/100 km",
     "Tenaga diperlukan: "+fmt(result.needed,2)+" kWh",
-    "Bateri destinasi: "+fmt(result.arrivalSoc,1)+"%",
+    "Bateri destinasi: "+(result.reachAtAll?fmt(result.arrivalSoc,1)+"%":"TIDAK SAMPAI, habis sekitar km "+fmt(result.stopAtKm,1)),
+    "Senario: "+result.scenarioName,
+    "Kesihatan bateri (andaian): "+result.batteryHealth+"%",
+    "Tenaga tambah ke 10%: "+fmt(result.extraEnergyToReserve,2)+" kWh",
     "Kos elektrik berdasarkan tarif input: RM"+fmt(result.estimatedCost,2),
     "Status simpanan 10%: "+(result.reachWithReserve?"Anggaran cukup":"Rancang pengecasan"),
     "Wilayah: "+REGIONS[PRESETS[routeKey]?.region||regionKey].label,
