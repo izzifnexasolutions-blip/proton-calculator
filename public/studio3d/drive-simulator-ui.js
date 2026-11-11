@@ -1,6 +1,18 @@
 import {VEHICLES,PRESETS,REGIONS,estimate} from "./drive-sim-core.js";
 import {createRoutePlanner} from "./drive-phase2.js";
 const $=id=>document.getElementById(id);
+// The map is the FIRST and CENTRAL interaction, not the last block after forms.
+// Reorder existing DOM nodes only; preserve their IDs and existing listeners.
+function arrangeMapFirst(){
+  const header=$("route-heading")?.closest(".card-head");
+  const toolbar=$("pin-toolbar");
+  const hint=$("map-howto");
+  const map=document.querySelector(".map-hero-wrap");
+  if(header&&toolbar&&hint&&map){
+    header.after(toolbar,hint,map);
+  }
+}
+arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const params=new URLSearchParams(location.search);
 let variant=params.get("variant")==="prime"?"prime":"premium";
@@ -391,6 +403,10 @@ routePlanner=createRoutePlanner({
     $("route-source").hidden=true;
     syncUrl();
     refresh();
+    // Remove old dashed preset reference immediately; do not zoom the map
+    // away while the user is in the middle of dropping pins.
+    const oldGuide=map?.getSource?.("guide");
+    if(oldGuide)oldGuide.setData({type:"FeatureCollection",features:[]});
   }
 });
 $("route").value=routeKey;

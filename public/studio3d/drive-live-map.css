@@ -1,0 +1,118 @@
+/* FARIS e.MAS 5 · Map-First LIVE Studio v3
+   One-column vertical display for iPhone, screen sharing and live demos.
+   Progressive disclosure reduces duplicate presets; pins visible above map.
+ */
+:root{--live-cyan:#9beaf8;--live-rose:#ff6d8c;--live-bg:#0d1928}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+.shell{display:flex!important;flex-direction:column;align-items:stretch;max-width:1190px!important;padding:14px 14px 60px!important;margin:0 auto}
+.header{order:0;width:100%;max-width:1050px;margin:0 auto 12px!important;padding:8px 0 13px}
+.headline{order:1;width:100%;max-width:920px;margin:8px auto 18px!important}
+.headline h1{font-size:clamp(31px,4.2vw,51px)!important;line-height:1.11}
+.headline p{max-width:700px;line-height:1.65!important}
+.mast{order:3;width:100%;max-width:920px;margin:0 auto 15px!important}
+.main-layout,.main-layout>.col,.main-layout>aside{display:contents!important}
+.main-layout .card{width:100%;max-width:920px;margin:0 auto 16px!important}
+.main-layout>.col>section:first-child{order:2}
+.main-layout>aside>section:first-child{order:4}
+.main-layout>.col>section:nth-child(2){order:5}
+.main-layout>aside>section:nth-child(2){order:6}
+.main-layout>.col>section:nth-child(3){order:7}
+.main-layout>aside>section:nth-child(3){order:8}
+.main-layout>.col>section:nth-child(4){order:9}
+.footer{order:10;margin:5px auto 15px!important}
+.main-layout .card{border-radius:27px;padding:21px;box-shadow:0 20px 55px #0005}
+.main-layout>.col>section:first-child{background:linear-gradient(160deg,#1d3149 0%,#13263a 49%,#0f1f30 100%);border:1px solid #4e77967a}
+.card-head h2{font-size:23px!important}
+.card-head{margin-bottom:14px!important}
+.main-layout>.col>section:first-child .card-head .tag{background:#16475b;color:#b3f5ff;border-color:#56a6bb}
+.location-rail{margin-bottom:10px}
+.region-strip{margin:12px 0 9px;scrollbar-width:thin}
+.quick-label,.quick-routes{margin:0}
+.more-routes{margin:2px 0 13px;border:1px solid #45677d;border-radius:13px;padding:10px 12px;background:#102338}
+.more-routes summary{cursor:pointer;font-size:11px;font-weight:850;color:#b3e5fa;display:flex;align-items:center;gap:6px}
+.more-routes[open] .quick-label{margin-top:12px}
+.more-routes[open] .quick-routes{margin-top:7px;padding-bottom:3px}
+.pin-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:9px 0 12px}
+.pin-card{min-width:0;text-align:left;display:flex;flex-direction:column;gap:5px;border:1px solid #4d8398;border-radius:18px;background:linear-gradient(145deg,#193a50,#112739);color:#fff;padding:13px 15px;min-height:97px;box-shadow:inset 0 1px #ffffff12}
+.pin-card .pin-step{color:#80dbe9;font-size:10px;letter-spacing:.11em;font-weight:900}
+.pin-card strong{font-size:15px;font-weight:900;color:#f0fbff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pin-card small{font-size:10px;color:#a9cad8}
+.pin-card.active{background:linear-gradient(145deg,#22516b,#163d52);border-color:#f5c582;box-shadow:0 0 0 2px #e9b86d45,0 10px 24px #081826}
+.pin-card.active .pin-step{color:#ffe39c}
+.pin-card--end{border-color:#8b6076}
+.pin-card--end .pin-step{color:#ff93ae}
+.pin-card--end.active{border-color:#ff8eab;box-shadow:0 0 0 2px #ef739648,0 10px 24px #081826}
+.pin-hint{margin:0 0 9px;font-size:11px;color:#c5d8e8;line-height:1.55}
+.pin-hint b{color:#c0effc}
+.map-hero-wrap{margin:0 0 15px!important;position:relative}
+#map{height:clamp(465px,58vh,655px)!important;width:100%;border-radius:20px!important;border:1px solid #5a829b!important;background:#0e2539}
+.digital-map-wrap{padding:8px!important;border-radius:24px!important;background:linear-gradient(145deg,#173d55,#12263a)!important;box-shadow:0 18px 34px #0006!important}
+.map-controls{right:17px!important;bottom:18px!important}
+.map-topline{top:18px!important}
+.pin-map-message{position:absolute;top:55px;left:50%;transform:translateX(-50%);z-index:8;width:max-content;max-width:calc(100% - 24px);padding:11px 14px;text-align:center;background:#122d43f2;border:2px solid #f4c078;border-radius:999px;color:#fff2d3;font-weight:900;font-size:11px;line-height:1.3;box-shadow:0 8px 28px #040e1fbb;pointer-events:none}
+body.is-picking #map,.is-picking #map canvas{cursor:crosshair!important}
+#route2-status{scroll-margin-block:100px}
+.map-protocol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:4px 0 14px}
+.map-protocol span{font-size:10px;font-weight:800;color:#bad9ec;background:#132b40;border:1px solid #345772;padding:9px 10px;border-radius:11px;text-align:center}
+.map-protocol span b{color:#9ef0fa}
+.map-legend-slim{font-size:10px!important;line-height:1.65!important;padding:0 5px}
+.route2-panel{margin:15px 0!important;scroll-margin-block:20px;border-radius:20px!important;padding:17px!important}
+.route2-head h3{font-size:25px!important}
+.route2-select-grid{gap:10px}
+.route2-pick{min-height:41px!important;border-radius:12px!important;background:#2b4f64}
+.route2-go{font-size:13px!important;min-height:48px!important;border-radius:14px!important}
+.route2-results{gap:11px}
+.route2-status{border-radius:13px}
+.route2-policy{font-size:9px}
+.main-layout>.col>section:first-child>.field{margin-bottom:10px}
+.main-layout>.col>section:first-child>.inline-name{margin:7px 0 0}
+.main-layout>.col>section:first-child>.route-context-hud{margin-top:14px}
+.mast .metric{border-radius:19px;min-height:124px!important}
+.metric-number{font-size:clamp(30px,3.8vw,44px)!important}
+.selection{max-width:480px;margin-inline:auto}
+.main-layout>aside>section:first-child .card-head{text-align:center;justify-content:center}
+.main-layout>aside>section:first-child #spec-line{text-align:center}
+.main-layout>aside>section:first-child .two-cols{grid-template-columns:repeat(2,minmax(0,1fr))}
+.main-layout>.col>section:nth-child(2) .intelligence-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#play,#copy{font-size:13px}
+.live-banner{display:flex;gap:9px;align-items:center;justify-content:center;margin:6px auto 14px;padding:9px 14px;border-radius:999px;max-width:max-content;background:#174a597c;border:1px solid #4c8ca1;color:#c6edf7;font-size:10px;font-weight:850;letter-spacing:.07em}
+.live-dot{height:7px;width:7px;background:#6cf1cf;border-radius:50%;box-shadow:0 0 11px #66ecce;flex-shrink:0}
+@media(min-width:1080px){
+ .shell{max-width:1120px!important}
+ .main-layout .card,.mast,.headline{max-width:930px}
+ #map{height:585px!important}
+}
+@media(max-width:760px){
+ .shell{padding:9px 9px 40px!important}
+ .header{padding:8px 0 11px!important;margin-bottom:5px!important}
+ .headline{margin:9px auto 13px!important}
+ .headline h1{font-size:31px!important}
+ .headline p{font-size:11px!important}
+ .main-layout .card{padding:14px!important;margin-bottom:12px!important;border-radius:21px}
+ .card-head h2{font-size:20px!important}
+ #map{height:min(64svh,540px)!important;min-height:380px}
+ .pin-toolbar{gap:7px}
+ .pin-card{min-height:88px;border-radius:14px;padding:11px 10px}
+ .pin-card strong{font-size:12px}
+ .pin-card .pin-step,.pin-card small{font-size:9px}
+ .map-protocol{gap:4px}
+ .map-protocol span{font-size:9px;padding:8px 4px}
+ .map-status{font-size:8px}
+ .map-source{display:none}
+ .route2-panel{padding:12px!important}
+ .route2-select-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .route2-select-grid select{min-width:0}
+ .mast{gap:7px}
+ .metric-number{font-size:31px!important}
+ .region-strip{margin:8px 0}
+ .main-layout>.col>section:nth-child(2) .intelligence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:380px){
+ #map{height:390px!important;min-height:350px}
+ .pin-card strong{font-size:11px}
+ .map-protocol span{font-size:8px}
+ .route2-select-grid{grid-template-columns:1fr}
+ .pin-map-message{font-size:10px;top:54px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
