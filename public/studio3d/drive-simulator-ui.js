@@ -280,13 +280,13 @@ function renderIntelligence(options){
   };
   const tripRegion=PRESETS[routeKey]?.region||regionKey;
   $("ctx-region").textContent=REGIONS[tripRegion]?.short||"Malaysia";
-  $("ctx-road").textContent=labels.roads[result.road];
-  $("ctx-surface").textContent=labels.surfaces[result.surface];
-  $("ctx-traffic").textContent=labels.traffic[result.traffic];
+  $("ctx-road").textContent=result.composite?"7 zon berbeza":labels.roads[result.road];
+  $("ctx-surface").textContent=result.composite?"Ikut zon":labels.surfaces[result.surface];
+  $("ctx-traffic").textContent=result.composite?"Ikut zon":labels.traffic[result.traffic];
   $("ctx-mode").textContent=labels.mode[result.mode];
-  $("ctx-weather").textContent=result.rain?"Hujan (andaian)":"Kering (andaian)";
+  $("ctx-weather").textContent=result.composite?"Campuran 7 zon":result.rain?"Hujan (andaian)":"Kering (andaian)";
   $("hud-region").textContent=(REGIONS[tripRegion]?.short||"Malaysia").toUpperCase();
-  $("hud-road").textContent=labels.roads[result.road].toUpperCase();
+  $("hud-road").textContent=result.composite?"7 ZON":labels.roads[result.road].toUpperCase();
   const strip=$("verdict-strip");
   const isLow=result.startSoc<=10;
   const state=isLow||!result.reachWithReserve?(result.reachAtAll?"warn":"bad"):"safe";
@@ -340,7 +340,12 @@ $("variant-prime").addEventListener("click",()=>chooseVariant("prime"));
 $("variant-premium").addEventListener("click",()=>chooseVariant("premium"));
 $("route").addEventListener("change",()=>{const preset=PRESETS[$("route").value];if(preset)regionKey=preset.region||"malaysia";syncRoute(true);});
 for(const id of ["distance","speed","soc","people","cargo","road","mode","traffic","surface","ac","rain","tariff"]){
-  $(id).addEventListener("input",refresh);
+  $(id).addEventListener("input",()=>{
+    if(selectedScenario!=="all"&&selectedScenario!=="manual"){
+      selectedScenario="manual";smart?.setActive("manual");
+    }
+    refresh();
+  });
   if(["distance","speed","tariff"].includes(id))$(id).addEventListener("change",refresh);
 }
 $("play").addEventListener("click",()=>{
@@ -398,6 +403,11 @@ const scenarioDefaults={
 };
 function applyScenarioInputs(id,settings){
   selectedScenario=id;
+  // The master journey owns speed, road, rain and traffic on each segment.
+  // Those global fields are unavailable while the 7-zone model is active.
+  const perZone=["speed","road","mode","traffic","surface","ac","rain","temperature","wind","slope","hvac","regen"];
+  for(const field of perZone){const el=$(field);if(el)el.disabled=id==="all";}
+  $("smart-advanced").open=id==="worst"||id==="battery";
   if(id!=="all"){
     // Scenario settings reset previous optional stress factors. Keep the user's
     // distance, initial SOC and tariff untouched.
@@ -417,7 +427,7 @@ smart=createSmartDashboard({
     // Editing a preset makes it user-customised, except the composite "all"
     // mode, which deliberately keeps user SOC/load/SOH and zone assumptions.
     if(selectedScenario!=="all"&&selectedScenario!=="manual"){
-      selectedScenario="manual";
+      selectedScenario="manual";smart?.setActive("manual");
     }
     $("battery-health-out").textContent=$("battery-health").value+"%";
     refresh();
