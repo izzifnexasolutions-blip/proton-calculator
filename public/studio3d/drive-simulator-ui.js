@@ -3,6 +3,7 @@ import {createRoutePlanner} from "./drive-phase2.js";
 import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
+import {createPhase5Planner} from "./drive-phase5.js";
 const $=id=>document.getElementById(id);
 // The map is the FIRST and CENTRAL interaction, not the last block after forms.
 // Reorder existing DOM nodes only; preserve their IDs and existing listeners.
@@ -22,7 +23,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,selectedScenario="manual";
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
 function stopSimulation(){
@@ -63,7 +64,21 @@ function updateAnimation(){
   $("progress-text").textContent=Math.round(progress*100)+"% · "+(depleted?"Bateri habis sebelum tiba":playing?"Simulasi sedang berjalan":progress>=1?"Selesai":"Sedia");
   const mapAnimating=routePlanner?.onDriveProgress(progress,result)||false;
   smart?.frame(result,{...reading,canStillDrive:!depleted},playing&&!depleted,mapAnimating);
-  phase4?.render(result,progress,playing&&!depleted,{...reading,canStillDrive:!depleted});
+  const realZone=phase5?.onDrive(kmDone);
+  // Apply a route scene only when OSRM or SRTM provides an identifiable
+  // category. Unknown roads keep the user's scenario, not invented facts.
+  const originalSettings=reading.stage?.settings||{};
+  const roadKind=realZone?.kind;
+  const actualRoad=roadKind==="highway"?"highway":roadKind==="rural"?"rural":
+    roadKind==="hilly"?"hilly":null;
+  const driveReading=realZone&&actualRoad?{...reading,stage:{
+    ...reading.stage,settings:{...originalSettings,road:actualRoad,
+      ...(realZone.type==="uphill"?{slope:"up"}:
+        realZone.type==="downhill"?{slope:"down"}:{})}
+  }}:reading;
+  phase4?.render(result,progress,playing&&!depleted,{...driveReading,canStillDrive:!depleted});
+  if(realZone&&realZone.kind!=="unknown")
+    $("drive-current-zone").textContent=realZone.label+" · data laluan";
 }
 function animate(now){
   raf=0;if(!playing)return;
@@ -98,6 +113,7 @@ function invalid(message){
   $("progress-fill").style.width="0%";
   routePlanner?.onEstimate(null);
   routePlanner?.onDriveProgress(0,null);
+  phase5?.onBatteryChanged();
   smart?.render(null);
   phase4?.render(null,0,false,null);
 }
@@ -152,6 +168,7 @@ function refresh(){
   renderIntelligence(raw);
   routePlanner?.onEstimate(result);
   smart?.render(result);
+  phase5?.onBatteryChanged();
   updateAnimation();
 }
 function syncRoute(focus=true){
@@ -169,6 +186,7 @@ function syncRoute(focus=true){
     $("route-source").hidden=true;
   }
   syncUrl();
+  phase5?.reset();
   routePlanner?.onPresetChanged(preset);
   refresh();updateMap(focus==="region"?"region":focus?"route":"overview");renderRegions();
 }
@@ -205,6 +223,7 @@ function installMapGuide(){
   mapReady=true;$("map-fallback").hidden=true;
   updateMap(mapInitialized?"region":"overview");
   routePlanner?.onMapReady();
+  phase5?.onMapReady();
   mapInitialized=true;
 }
 function initMap(){
@@ -506,9 +525,11 @@ routePlanner=createRoutePlanner({
     refresh();
     renderRegions();
     updateMap("region");
+    phase5?.onRoute(routePlanner?.route);
     return result;
   },
   onRouteInvalidated:()=>{
+    phase5?.reset();
     // Invalidate the old route's battery output rather than leaving stale SOC.
     routeKey="custom";
     $("route").value="custom";
@@ -522,6 +543,12 @@ routePlanner=createRoutePlanner({
     const oldGuide=map?.getSource?.("guide");
     if(oldGuide)oldGuide.setData({type:"FeatureCollection",features:[]});
   }
+});
+phase5=createPhase5Planner({
+  getRoute:()=>routePlanner?.route,
+  getResult:()=>result,
+  getMap:()=>map,
+  mapReady:()=>mapReady
 });
 $("route").value=routeKey;
 syncRoute(false);

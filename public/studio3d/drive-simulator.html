@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="./drive-live-map.css?v=20261112d">
 <link rel="stylesheet" href="./drive-smart-digital.css?v=20261112e">
 <link rel="stylesheet" href="./drive-phase4.css?v=20261112a">
+<link rel="stylesheet" href="./drive-phase5.css?v=20261112b">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -28,7 +29,7 @@
     <a class="active" aria-current="page" href="/studio3d/drive-simulator.html">⚡ Drive Simulator</a>
   </nav>
 </header>
-<div class="live-banner"><span class="live-dot"></span> MALAYSIA · SMART EV 3D DRIVE LAB · PHASE 04</div>
+<div class="live-banner"><span class="live-dot"></span> MALAYSIA · LIVE ROAD & CHARGING INTELLIGENCE · PHASE 05</div>
 <section class="headline" aria-labelledby="heading">
   <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
   <h1 id="heading">Malaysia <span class="neon-heading">Smart EV Journey Lab.</span></h1>
@@ -41,6 +42,68 @@
   <div class="metric"><div class="metric-label">PROJECTED ENERGY COST</div><div class="metric-number" id="m-cost">—</div><div class="metric-unit">RM · untuk keseluruhan jarak input</div></div>
 </section>
 
+
+<section class="phase5-hub card" id="phase5-hub" aria-labelledby="phase5-heading">
+  <div class="phase5-heading">
+    <div><div class="phase5-overline"><span class="phase5-pulse"></span> FASA 5 · MALAYSIA JOURNEY INTELLIGENCE</div>
+      <h2 id="phase5-heading">Jalan Sebenar. <em>Cas Pintar.</em></h2>
+      <p>Kenal pasti nama jalan dan ketinggian sepanjang perjalanan, kemudian cari stesen pengecas yang benar-benar direkodkan di OpenStreetMap. Tiada peta berbayar.</p>
+    </div>
+    <div class="phase5-head-badge">OSRM <span>+</span> OSM <span>+</span> SRTM</div>
+  </div>
+  <div class="phase5-action-bar">
+    <button type="button" id="phase5-scan" class="phase5-scan">⌁ Analisis Laluan + Cari Pengecas</button>
+    <span class="phase5-action-note">Hanya aktif selepas laluan OSRM berjaya. Setiap tekan membuat satu carian kepada dua pelayan percuma.</span>
+  </div>
+  <div class="phase5-status" id="phase5-status" role="status" aria-live="polite">Kira laluan OSRM dahulu, kemudian tekan analisis.</div>
+  <div class="phase5-data-grid">
+    <div><small>DATA JALAN</small><strong id="phase5-route-source">Tiada laluan OSRM</strong></div>
+    <div><small>KETINGGIAN</small><strong id="phase5-data-source">SRTM belum dimuatkan</strong></div>
+    <div><small>PENGECAS</small><strong id="phase5-charger-source">OSM · belum ditemui</strong></div>
+  </div>
+  <div class="phase5-section-head">
+    <div><small>5A · ROUTE SITUATIONS</small><h3>Situasi Jalan & Bukit</h3></div>
+    <span class="phase5-tag" id="phase5-road-count">0 zon</span>
+  </div>
+  <div class="phase5-road-strip" id="phase5-road-strip" role="img" aria-label="Profil anggaran jenis jalan sepanjang laluan"></div>
+  <div class="phase5-situation-now" id="phase5-active-zone"><span class="phase5-zone-dot"></span> Jenis jalan akan dipaparkan semasa simulasi dimainkan.</div>
+  <details class="phase5-more"><summary>Lihat pecahan laluan dan sumber data</summary>
+    <div class="phase5-road-list" id="phase5-road-list"></div>
+  </details>
+  <p class="phase5-data-notice">Jenis jalan daripada <strong>nama/rujukan OSRM</strong> ialah inferens, bukan klasifikasi OSM lengkap. Ketinggian SRTM ialah sampel bumi kasar, bukan cerun tepat atas jalan. Bandar, kampung, gunung dan jem yang tidak disokong data sebenar tetap dianggap <strong>ilustrasi/senario</strong>.</p>
+  <div class="phase5-split-head">
+    <div><small>5B + 5C · AC/DC CHARGING INTELLIGENCE</small><h3>Di Mana Kena Berhenti Cas?</h3></div>
+    <div class="phase5-reserve">15% <small>RESERVE KE STESEN</small></div>
+  </div>
+  <div class="phase5-risk" id="phase5-risk">
+    <small>BATTERY SAFETY CHECK</small>
+    <strong id="phase5-arrival-status">—</strong>
+  </div>
+  <div class="phase5-plan">
+    <div class="phase5-plan-head"><div><small>CADANGAN HENTIAN · BELUM DISAHKAN</small>
+      <h4 id="phase5-plan-title">Kira laluan dahulu</h4></div>
+      <span class="phase5-pill" id="phase5-scan-count">0 stesen</span></div>
+    <p id="phase5-plan-desc">Hentian pengecas hanya boleh dicadangkan selepas laluan OSRM sebenar disahkan.</p>
+    <div id="phase5-stops" class="phase5-stops"></div>
+    <div id="phase5-alternatives" class="phase5-alternatives"></div>
+    <div class="phase5-charge-total"><span>MASA MENGECAS</span><strong id="phase5-total-time">Belum dikira</strong></div>
+  </div>
+  <div class="phase5-confirm-bar">
+    <button type="button" id="phase5-verify" class="phase5-verify" disabled>⌖ Semak Jalan Masuk Ke Hentian</button>
+    <button type="button" id="phase5-copy" class="phase5-copy" disabled>▤ Salin Ringkasan Pelanggan</button>
+  </div>
+  <div class="phase5-verified" id="phase5-verified" role="status" aria-live="polite">Akses jalan ke stesen belum disahkan.</div>
+  <div class="phase5-section-head phase5-station-heading">
+    <div><small>5D · STATION DISCOVERY</small><h3>Stesen Berdekatan Laluan</h3></div>
+    <label class="phase5-filter-label" for="phase5-filter">Jenis soket
+      <select id="phase5-filter"><option value="all">Semua</option><option value="dc">DC · CCS2</option><option value="ac">AC · Type 2</option><option value="unknown">Belum diketahui</option></select>
+    </label>
+  </div>
+  <div class="phase5-station-list" id="phase5-station-list" aria-live="polite">
+    <p class="phase5-empty">Belum membuat carian. Tekan Analisis selepas mengira laluan.</p>
+  </div>
+  <p class="phase5-data-notice phase5-last"><strong>Nota wajib:</strong> Titik pengecas pada peta berasal daripada rekod OSM, bukan inventori lengkap atau status langsung. Jarak dari jalan ialah jarak geografi, bukan jarak memandu. DC yang disenaraikan ialah CCS2/Type 2 Combo jika tag wujud; Type 2 ialah AC. Kuasa dan masa cas yang tiada rekod tidak akan direka. Penggunaan tenaga, sasaran SOC dan masa cas ialah anggaran model, bukan jaminan untuk meneruskan perjalanan. <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> · <a href="https://www.opentopodata.org/" target="_blank" rel="noopener noreferrer">OpenTopoData</a> · <a href="https://overpass-api.de/" target="_blank" rel="noopener noreferrer">Overpass</a>.</p>
+</section>
 <section class="smart-hub card" id="smart-hub" aria-labelledby="smart-title">
  <div class="smart-title-row"><div><small class="smart-overline">◆ EV INTELLIGENCE · SCENARIO ENGINE V3</small><h2 id="smart-title">Smart Scenario <em>Lab</em></h2><p>Uji 21 senario pemanduan secara interaktif, tanpa andaian bahawa cuaca atau jalan sebenar mempunyai keadaan tersebut.</p></div><div class="smart-counter"><span id="smart-scenario-count">21</span> <small>SENARIO</small></div></div>
  <div class="smart-master"><div><small class="smart-overline">MASTER SIMULATION · ALL CONDITIONS</small><h3>7 Zon. 1 Perjalanan.</h3><p>Bandar sesak → lebuh raya → hujan → pendakian → kampung → turun bukit → panas & angin. Setiap zon mempunyai pengiraan tenaga berasingan.</p></div><button id="scenario-all" class="smart-go" type="button" aria-pressed="false">⚡ Jalankan Semua Keadaan</button></div>

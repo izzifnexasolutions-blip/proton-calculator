@@ -1,6 +1,6 @@
 {
-  "buildCommand": "",
-  "installCommand": "",
+  "buildCommand": "echo 'FARIS static public build: no npm needed'",
+  "installCommand": "echo 'FARIS static deploy: skip npm install'",
   "outputDirectory": "public",
   "framework": null,
   "routes": [

@@ -82,6 +82,40 @@ export function createDrive3D({container,onStatus}){
       group.userData={baseZ:z,type:tree?"tree":"building"};
       scene.add(group);scenery.push(group);
     }
+    // Stylized village houses, urban silhouettes and slow-moving traffic
+    // react to *selected* scenario or evidenced road type. They are never
+    // representations of actual homes/buildings/vehicles on the OSRM route.
+    const wallMat=new THREE.MeshStandardMaterial({color:0xd9b790,roughness:.95});
+    const roofMat=new THREE.MeshStandardMaterial({color:0x874d3f,roughness:.95});
+    const villageWall=new THREE.BoxGeometry(2.5,1.7,2.0);
+    const villageRoof=new THREE.ConeGeometry(2.2,1.3,4);
+    for(let j=0;j<12;j++){
+      const x=(j%2?1:-1)*(7.8+j%3),z=-89+j*15.1;
+      const home=new THREE.Group();home.position.set(x,0,z);
+      const walls=new THREE.Mesh(villageWall,wallMat);
+      walls.position.y=1.2;home.add(walls);
+      const roof=new THREE.Mesh(villageRoof,roofMat);
+      roof.position.y=2.65;roof.rotation.y=Math.PI/4;home.add(roof);
+      home.userData={type:"village",baseZ:z};
+      scene.add(home);scenery.push(home);
+    }
+    const trafficMat=[
+      new THREE.MeshStandardMaterial({color:0x8ebdc5,roughness:.55}),
+      new THREE.MeshStandardMaterial({color:0xded4bb,roughness:.55}),
+      new THREE.MeshStandardMaterial({color:0xa65b67,roughness:.55})
+    ];
+    const trafficBodyGeo=new THREE.BoxGeometry(1.75,.85,3.1);
+    const trafficRoofGeo=new THREE.BoxGeometry(1.50,.67,1.55);
+    for(let k=0;k<4;k++){
+      const z=-15-k*13.2;
+      const other=new THREE.Group();other.position.set(k%2?1.75:-1.75,0,z);
+      const body=new THREE.Mesh(trafficBodyGeo,trafficMat[k%3]);
+      body.position.y=.6;other.add(body);
+      const top=new THREE.Mesh(trafficRoofGeo,trafficMat[k%3]);
+      top.position.y=1.35;other.add(top);
+      other.userData={type:"traffic",baseZ:z};
+      scene.add(other);scenery.push(other);
+    }
     for(const x of [-25,25]){
       const hill=new THREE.Mesh(hillGeo,hillsMat);
       hill.scale.set(1.4,1.7,1.8);hill.position.set(x,1.1,-40);
@@ -134,8 +168,12 @@ export function createDrive3D({container,onStatus}){
       road.material.metalness=rain?.38:.12;
     }
     for(const item of scenery){
-      if(item.userData?.type==="building")item.visible=condition.road==="city"||condition.traffic==="heavy";
-      else if(item.userData?.type==="hill")item.visible=condition.road==="hilly"||condition.slope==="up"||condition.slope==="down";
+      const type=item.userData?.type;
+      if(type==="building")item.visible=condition.road==="city"||condition.traffic==="heavy";
+      else if(type==="village")item.visible=condition.road==="rural";
+      else if(type==="traffic")item.visible=condition.traffic==="heavy";
+      else if(type==="hill")item.visible=condition.road==="hilly"||
+        condition.slope==="up"||condition.slope==="down";
       else item.visible=true;
     }
   }

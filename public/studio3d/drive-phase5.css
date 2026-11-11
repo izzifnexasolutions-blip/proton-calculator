@@ -1,0 +1,122 @@
+/* FARIS e.MAS 5 Phase 5: true-route / charging lab | mobile-first live UI */
+.phase5-hub{order:4;width:100%;max-width:920px;margin:0 auto 16px!important;padding:22px;border-radius:27px;border:1px solid #3c7b9a;background:linear-gradient(145deg,#152c43,#0c1c30 88%);box-shadow:0 24px 64px #0007;--ac:#73e2b0;--dc:#dc9cff}
+.smart-hub{order:5!important}.drive-theatre{order:6!important}
+.main-layout>aside>section:first-child{order:7!important}
+.main-layout>.col>section:nth-child(2){order:8!important}
+.main-layout>aside>section:nth-child(2){order:9!important}
+.main-layout>.col>section:nth-child(3){order:10!important}
+.main-layout>aside>section:nth-child(3){order:11!important}
+.main-layout>.col>section:nth-child(4){order:12!important}
+.footer{order:13!important}
+.phase5-heading,.phase5-section-head,.phase5-split-head,.phase5-plan-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.phase5-heading{align-items:center;flex-wrap:wrap}
+.phase5-heading h2{font:700 clamp(29px,3.6vw,39px)/1.05 "Rajdhani",system-ui,sans-serif;margin:9px 0 7px;color:#f4fdff}
+.phase5-heading h2 em{font-style:normal;color:#8be2ef}
+.phase5-heading p{font-size:11px;color:#adc8dd;max-width:580px;line-height:1.8;margin:0}
+.phase5-overline,.phase5-section-head small,.phase5-split-head small{color:#80ddec;font-size:9px;letter-spacing:.14em;font-weight:900}
+.phase5-pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#87ecc8;box-shadow:0 0 13px #62efd2;margin-right:5px}
+.phase5-head-badge{border-radius:16px;border:1px solid #477b8e;background:#204259;color:#cff5ff;font:700 18px/1 "Rajdhani",system-ui,sans-serif;padding:11px 13px}
+.phase5-head-badge span{color:#77ddeb;margin:0 5px}
+.phase5-action-bar{margin:20px 0 11px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.phase5-scan{min-height:49px;border:1px solid #8af2ed;background:linear-gradient(120deg,#74e1ea,#36adca);color:#081e30;font-weight:950;font-size:12px;padding:11px 18px;border-radius:15px;box-shadow:0 9px 26px #46bfe72f}
+.phase5-scan:disabled{opacity:.52;cursor:not-allowed}
+.phase5-action-note{font-size:10px;line-height:1.6;color:#9cb9cb;flex:1;min-width:170px}
+.phase5-status{font-size:11px;line-height:1.65;padding:12px 13px;border-radius:13px;background:#15334a;border:1px solid #3b6e83;color:#d1e7f5}
+.phase5-status[data-state=success],.phase5-verified[data-state=success]{background:#19493d;color:#d2ffe5;border-color:#459e7b}
+.phase5-status[data-state=warn],.phase5-verified[data-state=warn]{background:#493b28;color:#fbe8c1;border-color:#a58350}
+.phase5-status[data-state=error],.phase5-verified[data-state=error]{background:#4c2839;color:#ffe0ea;border-color:#c85d79}
+.phase5-data-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:11px 0 21px}
+.phase5-data-grid>div{min-width:0;background:#10263b;border:1px solid #355c74;border-radius:14px;padding:11px}
+.phase5-data-grid small{display:block;font-size:9px;letter-spacing:.07em;color:#8cbad0;font-weight:900}
+.phase5-data-grid strong{display:block;color:#e1f5fa;font-size:11px;margin-top:6px;line-height:1.35;overflow-wrap:anywhere}
+.phase5-section-head,.phase5-split-head{align-items:center;margin-bottom:10px}
+.phase5-section-head h3,.phase5-split-head h3{font:700 24px/1.05 "Rajdhani",system-ui,sans-serif;color:#effeff;margin:7px 0 0}
+.phase5-tag,.phase5-pill{font-weight:850;font-size:10px;color:#b7edfa;border:1px solid #438399;background:#1a4559;padding:8px 10px;border-radius:999px;white-space:nowrap}
+.phase5-road-strip{height:38px;display:flex;gap:2px;border-radius:11px;border:1px solid #466781;background:#112a3b;overflow:hidden;padding:5px}
+.phase5-road-piece{height:100%;min-width:4px;flex-basis:0;border-radius:4px;position:relative}
+.phase5-road-piece[data-kind=highway]{background:linear-gradient(#72e9f4,#368fac)}
+.phase5-road-piece[data-kind=hilly]{background:linear-gradient(#ffdb9e,#c48c3e)}
+.phase5-road-piece[data-kind=rural]{background:linear-gradient(#a4f2c4,#4da579)}
+.phase5-road-piece[data-kind=road]{background:linear-gradient(#d0b6ff,#756ab9)}
+.phase5-road-piece[data-kind=unknown]{background:linear-gradient(#698ba3,#37596e)}
+.phase5-road-piece[data-active=true]{outline:2px solid white;outline-offset:-2px;filter:brightness(1.4)}
+.phase5-road-piece[title]{cursor:help}
+.phase5-situation-now{display:flex;align-items:center;gap:8px;margin:11px 0;padding:10px 13px;background:#16344b;border:1px solid #355d77;color:#d1e8f5;border-radius:13px;font-size:11px;line-height:1.5}
+.phase5-zone-dot{width:10px;height:10px;border-radius:50%;background:#7fe2df;flex:0 0 auto;box-shadow:0 0 11px #7debf7}
+.phase5-more{border:1px solid #355a72;border-radius:13px;padding:10px 12px;margin:10px 0 13px;background:#10273b}
+.phase5-more summary{cursor:pointer;color:#a9d8ef;font-size:11px;font-weight:900}
+.phase5-road-list{display:grid;gap:7px;padding-top:12px}
+.phase5-road-item{display:flex;gap:10px;align-items:center;background:#163147;border:1px solid #2d4e65;border-radius:11px;padding:9px}
+.phase5-road-icon{font-size:20px;min-width:25px}
+.phase5-road-info{min-width:0;flex:1;line-height:1.4}
+.phase5-road-info strong{display:block;font-size:11px;color:#deeff9}
+.phase5-road-info small{display:block;margin-top:3px;font-size:9px;color:#98b5cc}
+.phase5-road-item b{font-size:12px;white-space:nowrap;color:#d6f5f8}
+.phase5-data-notice{font-size:10px;line-height:1.75;color:#9ebbcf;margin:12px 0 21px}
+.phase5-data-notice strong{color:#d9e8ef}
+.phase5-split-head{margin-top:17px}
+.phase5-reserve{text-align:center;background:#393629;border:1px solid #8f8056;border-radius:13px;padding:10px 13px;font:700 25px/1 "Rajdhani",system-ui,sans-serif;color:#ffdc8b;white-space:nowrap}
+.phase5-reserve small{display:block;font:850 8px/1.5 Inter,system-ui,sans-serif;letter-spacing:.06em;color:#e6d4a3}
+.phase5-risk{background:linear-gradient(120deg,#1c464a,#133642);border:1px solid #549585;border-radius:16px;padding:14px;margin-bottom:11px}
+.phase5-risk[data-state=warn]{background:linear-gradient(120deg,#4f3d29,#332a2c);border-color:#bd9355}
+.phase5-risk[data-state=bad]{background:linear-gradient(120deg,#5a2c3f,#372235);border-color:#c16a87}
+.phase5-risk small{font-size:9px;color:#a1d0d2;display:block;letter-spacing:.1em;font-weight:900}
+.phase5-risk strong{display:block;font-size:16px;margin-top:5px;line-height:1.55;color:#ecfaf7}
+.phase5-plan{padding:15px;border:1px solid #457389;border-radius:18px;background:linear-gradient(135deg,#152e43,#142437)}
+.phase5-plan-head small{display:block;color:#8acddd;letter-spacing:.09em;font-size:9px;font-weight:900}
+.phase5-plan-head h4{font:700 25px/1 "Rajdhani",system-ui,sans-serif;color:#e7fafd;margin:7px 0}
+.phase5-plan>p{font-size:11px;line-height:1.6;color:#bbd0e0;margin:6px 0 14px}
+.phase5-stops{display:grid;gap:10px}
+.phase5-stop-card{background:#11283b;border:1px solid #3e6c85;border-radius:14px;padding:13px}
+.phase5-stop-card[data-kind=DC]{border-color:#9868b9;background:linear-gradient(125deg,#283048,#162c3e)}
+.phase5-stop-top{display:flex;align-items:center;gap:9px}
+.phase5-stop-top strong{font-size:14px;line-height:1.4;color:#effcff}
+.phase5-charger-type{background:#225b51;color:#c0ffe2;border:1px solid #4d9a81;border-radius:8px;padding:5px 9px;font-size:10px;font-weight:950}
+.phase5-stop-card[data-kind=DC] .phase5-charger-type{background:#5b326c;color:#f9d8ff;border-color:#ac71c6}
+.phase5-stop-card p{font-size:10px;color:#bed4e5;line-height:1.6;margin:8px 0}
+.phase5-stop-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.phase5-stop-metrics span{border-radius:9px;border:1px solid #406d81;background:#19354a;padding:9px 7px;text-align:center;font-size:10px;font-weight:850;color:#e7f8fa}
+.phase5-stop-warning{display:block;margin:10px 0 7px;font-size:9px;line-height:1.6;color:#ffdda7}
+.phase5-stop-card a{font-size:10px;color:#a5ecff;text-decoration:underline}
+.phase5-alternative{font-size:10px;line-height:1.5;color:#b6cadc;border:1px dashed #45687e;border-radius:9px;margin:9px 0 0;padding:8px 11px}
+.phase5-charge-total{display:flex;justify-content:space-between;gap:9px;flex-wrap:wrap;border-top:1px solid #365a75;padding:12px 2px 2px;margin-top:14px}
+.phase5-charge-total span{font-size:9px;color:#8ec8d6;font-weight:900;letter-spacing:.1em}
+.phase5-charge-total strong{font:700 20px/1.2 "Rajdhani",system-ui,sans-serif;color:#e3fbff}
+.phase5-confirm-bar{display:flex;gap:9px;margin:12px 0;flex-wrap:wrap}
+.phase5-confirm-bar button{flex:1;min-width:200px;min-height:44px;border-radius:12px;padding:10px 13px;font-size:11px;font-weight:900}
+.phase5-verify{background:linear-gradient(135deg,#e8aefa,#a865ce);color:#20102c;border:1px solid #fad1ff}
+.phase5-copy{background:#21445b;color:#dff8ff;border:1px solid #5f8ca5}
+.phase5-confirm-bar button:disabled{opacity:.45;cursor:not-allowed}
+.phase5-verified{border:1px solid #3f6880;background:#152c41;border-radius:13px;color:#b9d1e3;font-size:11px;line-height:1.7;padding:11px 13px}
+.phase5-station-heading{margin:20px 0 12px}
+.phase5-filter-label{font-size:9px;color:#9dc9d8;font-weight:850;display:flex;align-items:center;gap:8px}
+.phase5-filter-label select{background:#173a50;color:#def7ff;border:1px solid #487a93;border-radius:9px;font-size:10px;padding:8px;min-height:34px}
+.phase5-station-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.phase5-station-card{min-width:0;background:#132a3e;border:1px solid #3d647d;border-radius:13px;padding:12px}
+.phase5-station-card strong{font-size:12px;color:#e5f7fa;display:block;line-height:1.35}
+.phase5-station-card small{font-size:9px;color:#9dbdd1;display:block;margin:6px 0;line-height:1.45}
+.phase5-station-card .phase5-connectors{font-size:10px;font-weight:900;color:#e0bdfe}
+.phase5-station-card[data-type=AC] .phase5-connectors{color:#a4f2c9}
+.phase5-station-card a{font-size:10px;color:#9ae6fd;text-decoration:underline}
+.phase5-empty{font-size:11px;color:#a7c7d9;margin:8px 0}
+.phase5-last{margin-bottom:0;padding-top:13px;border-top:1px solid #36536d}
+.phase5-last a{color:#9be1f6;text-decoration:underline}
+@media(max-width:760px){
+.phase5-hub{padding:14px!important;border-radius:22px}
+.phase5-heading h2{font-size:29px}
+.phase5-head-badge{font-size:14px}
+.phase5-action-bar{margin:14px 0 10px}
+.phase5-scan{width:100%}
+.phase5-data-grid{gap:5px}
+.phase5-data-grid>div{padding:8px 6px}
+.phase5-data-grid strong{font-size:9px}
+.phase5-data-grid small{font-size:8px}
+.phase5-section-head h3,.phase5-split-head h3{font-size:21px}
+.phase5-station-list{grid-template-columns:1fr}
+.phase5-stop-metrics span{font-size:9px;padding:8px 4px}
+.phase5-confirm-bar button{width:100%;flex:auto}
+.phase5-plan{padding:12px}
+.phase5-risk strong{font-size:14px}
+.phase5-filter-label{flex-wrap:wrap;justify-content:end}
+}
+@media(max-width:380px){.phase5-stop-metrics{grid-template-columns:1fr 1fr}.phase5-stop-metrics span:nth-child(3){grid-column:1/-1}.phase5-data-grid{grid-template-columns:1fr 1fr}.phase5-data-grid>div:last-child{grid-column:1/-1}}
