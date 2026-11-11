@@ -1,5 +1,7 @@
 import {VEHICLES,PRESETS,REGIONS,estimate} from "./drive-sim-core.js";
 import {createRoutePlanner} from "./drive-phase2.js";
+import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
+import {createSmartDashboard} from "./drive-smart-ui.js";
 const $=id=>document.getElementById(id);
 // The map is the FIRST and CENTRAL interaction, not the last block after forms.
 // Reorder existing DOM nodes only; preserve their IDs and existing listeners.
@@ -19,7 +21,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null;
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 const simulationMs=12000;
 function stopSimulation(){
@@ -33,30 +35,46 @@ function getInputs(){
     soc:parseFloat($("soc").value),people:parseInt($("people").value,10),cargo:parseFloat($("cargo").value),
     road:$("road").value,mode:$("mode").value,traffic:$("traffic").value,surface:$("surface").value,
     ac:$("ac").checked,rain:$("rain").checked,
+    batteryHealth:parseFloat($("battery-health").value),temperature:$("temperature").value,
+    wind:$("wind").value,slope:$("slope").value,tire:$("tire").value,
+    hvac:$("hvac").value,regen:$("regen").value,
+    night:$("night").checked,aggressive:$("aggressive").checked,
     tariff:parseFloat($("tariff").value)
   };
 }
 function updateAnimation(){
   if(!result)return;
-  const kmDone=result.km*progress,kwhUsed=result.needed*progress;
-  const currentSoc=Math.max(0,result.startSoc-kwhUsed/result.car.battery*100);
+  const reading=sampleJourney(result,progress);
+  if(!reading)return;
+  // Do not imply that a depleted vehicle can still finish the trip.
+  const limit=Math.min(1,result.stopAtKm/result.km);
+  const kmDone=reading.km,kwhUsed=reading.kwh,currentSoc=reading.soc;
   $("battery-live").textContent=fmt(currentSoc,1)+"%";
-  $("battery-label").textContent="Bateri selepas "+fmt(kmDone,1)+" km";
+  $("battery-label").textContent="Anggaran selepas "+fmt(kmDone,1)+" km";
   const fill=$("battery-fill");
   fill.style.width=Math.min(100,currentSoc)+"%";
   fill.style.background=currentSoc<12?"#ff7581":currentSoc<28?"#f5cc76":"linear-gradient(90deg,#74dba7,#b6f3b8)";
-  $("used-live").textContent=fmt(kwhUsed,2)+" kWh digunakan";
-  $("left-live").textContent=fmt(Math.max(0,result.km-kmDone),1)+" km lagi";
+  $("used-live").textContent=fmt(kwhUsed,2)+" kWh daripada "+fmt(result.needed,2)+" kWh perlu";
+  $("left-live").textContent=fmt(Math.max(0,result.km-kmDone),1)+" km belum dilalui";
   $("progress-fill").style.width=Math.round(progress*100)+"%";
   $("progress").setAttribute("aria-valuenow",String(Math.round(progress*100)));
-  $("progress-text").textContent=Math.round(progress*100)+"% · "+(playing?"Sedang disimulasikan":progress>=1?"Selesai":"Belum bermula");
+  const depleted=limit<1-1e-7&&progress>=limit-1e-7;
+  $("progress-text").textContent=Math.round(progress*100)+"% · "+(depleted?"Bateri habis sebelum tiba":playing?"Simulasi sedang berjalan":progress>=1?"Selesai":"Sedia");
+  const mapAnimating=routePlanner?.onDriveProgress(progress,result)||false;
+  smart?.frame(result,{...reading,canStillDrive:!depleted},playing&&!depleted,mapAnimating);
 }
 function animate(now){
   raf=0;if(!playing)return;
   if(!startedAt)startedAt=now;
-  progress=Math.min(1,(elapsed+now-startedAt)/simulationMs);
+  const maxProgress=Math.min(1,Math.max(0,result?.stopAtKm/result?.km||0));
+  progress=Math.min(maxProgress,(elapsed+now-startedAt)/simulationMs);
   updateAnimation();
-  if(progress>=1){playing=false;elapsed=simulationMs;$("play").textContent="↻ Mainkan semula";return;}
+  if(progress>=maxProgress-1e-7){
+    playing=false;elapsed=simulationMs;
+    $("play").textContent=maxProgress<1?"↻ Ulang · perlu cas":"↻ Mainkan semula";
+    smart?.frame(result,{...sampleJourney(result,progress),canStillDrive:maxProgress>=1},false,routePlanner?.hasActualRoute||false);
+    return;
+  }
   raf=requestAnimationFrame(animate);
 }
 function invalid(message){
@@ -76,6 +94,8 @@ function invalid(message){
   $("battery-fill").style.width="0%";
   $("progress-fill").style.width="0%";
   routePlanner?.onEstimate(null);
+  routePlanner?.onDriveProgress(0,null);
+  smart?.render(null);
 }
 function refresh(){
   stopSimulation();
@@ -83,7 +103,7 @@ function refresh(){
   if(!Number.isFinite(raw.distance)||raw.distance<1||raw.distance>1000){invalid("Masukkan jarak 1 hingga 1,000 km.");return;}
   if(!Number.isFinite(raw.speed)||raw.speed<25||raw.speed>130){invalid("Masukkan purata kelajuan antara 25 hingga 130 km/j.");return;}
   if(!Number.isFinite(raw.tariff)||raw.tariff<0||raw.tariff>5){invalid("Masukkan kadar elektrik antara RM0 hingga RM5/kWh.");return;}
-  result=estimate(raw);
+  result=calculateJourney(raw,selectedScenario);
   $("play").disabled=false;
   $("variant-prime").classList.toggle("active",variant==="prime");
   $("variant-premium").classList.toggle("active",variant==="premium");
@@ -94,7 +114,9 @@ function refresh(){
   $("soc-out").textContent=result.startSoc+"%";
   $("people-out").textContent=result.people+" orang";
   $("cargo-out").textContent=result.cargoKg+" kg";
-  $("m-arrival").textContent=fmt(result.arrivalSoc,1)+"%";
+  $("m-arrival").textContent=result.reachAtAll?fmt(result.arrivalSoc,1)+"%":"0%*";
+  const socMetric=$("m-arrival").closest?.(".metric");
+  if(socMetric)socMetric.dataset.state=!result.reachAtAll?"bad":!result.reachWithReserve?"warn":"safe";
   $("m-range").textContent=fmt(result.rangeAtArrival,0);
   const dial=$("metric-dial");
   if(dial)dial.style.setProperty("--soc-angle",Math.max(0,Math.min(360,result.arrivalSoc*3.6))+"deg");
@@ -110,12 +132,12 @@ function refresh(){
   $("scenario-normal").textContent=fmt(result.arrivalSoc,0)+"%";
   $("scenario-worst").textContent=fmt(result.arrivalLow,0)+"%";
   const status=$("trip-status");
-  if(result.startSoc<=10){
+  if(!result.reachAtAll){
+    status.className="status bad";
+    status.textContent="BATERI TIDAK CUKUP: anggaran kereta berhenti pada km "+fmt(result.stopAtKm,1)+" daripada "+fmt(result.km,1)+" km. Kos/tenaga di atas ialah keperluan untuk melengkapkan seluruh perjalanan, bukan tenaga yang tersedia sekarang.";
+  }else if(result.startSoc<=10){
     status.className="status warn";
     status.textContent="Bateri awal hampir pada had simpanan 10%. Cas dahulu sebelum memulakan perjalanan untuk margin keselamatan.";
-  }else if(!result.reachAtAll){
-    status.className="status bad";
-    status.textContent="Tenaga permulaan tidak mencukupi mengikut anggaran. Rancang pengecasan sepanjang perjalanan.";
   }else if(!result.reachWithReserve){
     status.className="status warn";
     status.textContent="Baki di destinasi di bawah 10% SOC. Pertimbangkan tambahan sekitar "+fmt(result.extraEnergyToReserve,1)+" kWh untuk tiba dengan simpanan.";
@@ -125,6 +147,7 @@ function refresh(){
   }
   renderIntelligence(raw);
   routePlanner?.onEstimate(result);
+  smart?.render(result);
   updateAnimation();
 }
 function syncRoute(focus=true){
@@ -259,20 +282,20 @@ function renderIntelligence(options){
   };
   const tripRegion=PRESETS[routeKey]?.region||regionKey;
   $("ctx-region").textContent=REGIONS[tripRegion]?.short||"Malaysia";
-  $("ctx-road").textContent=labels.roads[result.road];
-  $("ctx-surface").textContent=labels.surfaces[result.surface];
-  $("ctx-traffic").textContent=labels.traffic[result.traffic];
+  $("ctx-road").textContent=result.composite?"7 zon berbeza":labels.roads[result.road];
+  $("ctx-surface").textContent=result.composite?"Ikut zon":labels.surfaces[result.surface];
+  $("ctx-traffic").textContent=result.composite?"Ikut zon":labels.traffic[result.traffic];
   $("ctx-mode").textContent=labels.mode[result.mode];
-  $("ctx-weather").textContent=result.rain?"Hujan (andaian)":"Kering (andaian)";
+  $("ctx-weather").textContent=result.composite?"Campuran 7 zon":result.rain?"Hujan (andaian)":"Kering (andaian)";
   $("hud-region").textContent=(REGIONS[tripRegion]?.short||"Malaysia").toUpperCase();
-  $("hud-road").textContent=labels.roads[result.road].toUpperCase();
+  $("hud-road").textContent=result.composite?"7 ZON":labels.roads[result.road].toUpperCase();
   const strip=$("verdict-strip");
   const isLow=result.startSoc<=10;
   const state=isLow||!result.reachWithReserve?(result.reachAtAll?"warn":"bad"):"safe";
   strip.dataset.state=state;
   let verdict=state==="safe"?"BOLEH SAMPAI":state==="bad"?"PERLU CAS":"AMARAN BATERI";
   let subtitle=state==="safe"?"Anggaran baki ≥10%":"Sediakan pengecasan tambahan";
-  if(isLow){verdict="CAS DAHULU";subtitle="SOC mula ≤10%";}
+  if(isLow&&result.reachAtAll){verdict="CAS DAHULU";subtitle="SOC mula ≤10%";}
   $("verdict-title").textContent=verdict;
   $("verdict-subtitle").textContent=subtitle;
   $("verdict-soc").textContent=fmt(result.arrivalSoc,0)+"%";
@@ -284,7 +307,7 @@ function renderIntelligence(options){
     head.textContent="Tidak perlu top-up mengikut anggaran";
     detail.textContent="Anggaran baki "+fmt(result.arrivalSoc,1)+"% SOC dan buffer "+fmt(result.rangeAtArrival,0)+" km hingga 10%. Semak bateri, suhu dan lokasi pengecas sebenar.";
   }
-  const compare={prime:estimate({...options,variant:"prime"}),premium:estimate({...options,variant:"premium"})};
+  const compare={prime:calculateJourney({...options,variant:"prime"},selectedScenario),premium:calculateJourney({...options,variant:"premium"},selectedScenario)};
   for(const key of ["prime","premium"]){
     const item=compare[key];
     $("cmp-"+key+"-soc").textContent=fmt(item.arrivalSoc,1)+"%";
@@ -319,12 +342,17 @@ $("variant-prime").addEventListener("click",()=>chooseVariant("prime"));
 $("variant-premium").addEventListener("click",()=>chooseVariant("premium"));
 $("route").addEventListener("change",()=>{const preset=PRESETS[$("route").value];if(preset)regionKey=preset.region||"malaysia";syncRoute(true);});
 for(const id of ["distance","speed","soc","people","cargo","road","mode","traffic","surface","ac","rain","tariff"]){
-  $(id).addEventListener("input",refresh);
+  $(id).addEventListener("input",()=>{
+    if(selectedScenario!=="all"&&selectedScenario!=="manual"){
+      selectedScenario="manual";smart?.setActive("manual");
+    }
+    refresh();
+  });
   if(["distance","speed","tariff"].includes(id))$(id).addEventListener("change",refresh);
 }
 $("play").addEventListener("click",()=>{
   if(!result)return;
-  if(progress>=1){stopSimulation();updateAnimation();}
+  if(progress>=1||progress>=Math.min(1,result.stopAtKm/result.km)-1e-7){stopSimulation();updateAnimation();}
   if(playing){
     playing=false;if(startedAt)elapsed=Math.min(simulationMs,elapsed+performance.now()-startedAt);
     startedAt=0;if(raf)cancelAnimationFrame(raf);raf=0;
@@ -336,7 +364,7 @@ $("play").addEventListener("click",()=>{
   $("play").textContent="Ⅱ Jeda simulasi";
   raf=requestAnimationFrame(animate);
 });
-$("reset").addEventListener("click",()=>{stopSimulation();updateAnimation()});
+$("reset").addEventListener("click",()=>{stopSimulation();updateAnimation();smart?.resetFrame();});
 $("copy").addEventListener("click",async()=>{
   if(!result)return;
   const route=PRESETS[routeKey];
@@ -349,7 +377,10 @@ $("copy").addEventListener("click",async()=>{
     "Purata kelajuan andaian: "+result.speed+" km/j",
     "Penggunaan tenaga: "+fmt(result.kwh100,1)+" kWh/100 km",
     "Tenaga diperlukan: "+fmt(result.needed,2)+" kWh",
-    "Bateri destinasi: "+fmt(result.arrivalSoc,1)+"%",
+    "Bateri destinasi: "+(result.reachAtAll?fmt(result.arrivalSoc,1)+"%":"TIDAK SAMPAI, habis sekitar km "+fmt(result.stopAtKm,1)),
+    "Senario: "+result.scenarioName,
+    "Kesihatan bateri (andaian): "+result.batteryHealth+"%",
+    "Tenaga tambah ke 10%: "+fmt(result.extraEnergyToReserve,2)+" kWh",
     "Kos elektrik berdasarkan tarif input: RM"+fmt(result.estimatedCost,2),
     "Status simpanan 10%: "+(result.reachWithReserve?"Anggaran cukup":"Rancang pengecasan"),
     "Wilayah: "+REGIONS[PRESETS[routeKey]?.region||regionKey].label,
@@ -357,14 +388,70 @@ $("copy").addEventListener("click",async()=>{
     "Permukaan jalan (andaian): "+$("surface").selectedOptions[0].text,
     "Trafik (andaian): "+$("traffic").selectedOptions[0].text,
     "Jumlah tenaga tambahan untuk tiba pada 10%: "+fmt(result.extraEnergyToReserve,2)+" kWh",
-    "Prime SOC tiba: "+fmt(estimate({...getInputs(),variant:"prime"}).arrivalSoc,1)+"%",
-    "Premium SOC tiba: "+fmt(estimate({...getInputs(),variant:"premium"}).arrivalSoc,1)+"%",
+    "Prime SOC tiba (senario sama): "+fmt(calculateJourney({...getInputs(),variant:"prime"},selectedScenario).arrivalSoc,1)+"%",
+    "Premium SOC tiba (senario sama): "+fmt(calculateJourney({...getInputs(),variant:"premium"},selectedScenario).arrivalSoc,1)+"%",
     "Nota: Ini anggaran simulasi; bukan data bateri/traffic sebenar."
   ];
+  if(result.composite){
+    lines.push("PECAHAN 7 ZON (SEMUA KEADAAN SINTETIK):");
+    for(const part of result.segments){
+      lines.push("- "+part.name+": "+fmt(part.km,1)+" km / "+fmt(part.kwh,1)+" kWh / "+fmt(part.speed,0)+" km/j");
+    }
+  }
   try{
     await navigator.clipboard.writeText(lines.join("\n"));
     $("copy-status").textContent="Ringkasan berjaya disalin.";
   }catch(error){$("copy-status").textContent="Salinan automatik tidak tersedia. Sila salin nilai daripada skrin.";}
+});
+const scenarioDefaults={
+  speed:75,road:"mixed",traffic:"light",surface:"smooth",mode:"normal",
+  people:2,cargo:15,rain:false,ac:true,batteryHealth:100,
+  temperature:"mild",wind:"calm",slope:"flat",tire:"normal",
+  hvac:"normal",regen:"normal",night:false,aggressive:false
+};
+function applyScenarioInputs(id,settings){
+  selectedScenario=id;
+  // The master journey owns speed, road, rain and traffic on each segment.
+  // Those global fields are unavailable while the 7-zone model is active.
+  const perZone=["speed","road","mode","traffic","surface","ac","rain","temperature","wind","slope","hvac","regen"];
+  for(const field of perZone){const el=$(field);if(el)el.disabled=id==="all";}
+  $("smart-advanced").open=id==="worst"||id==="battery";
+  if(id==="all"){
+    // Each zone has its own speed, road, rain and gradient. Reset the inherited
+    // route parameters so the master result does not depend on which preset
+    // happened to be clicked immediately beforehand. Preserve SOC, SOH, load.
+    const zoneDefaults={...scenarioDefaults};
+    for(const keep of ["people","cargo","batteryHealth"])delete zoneDefaults[keep];
+    for(const [field,value] of Object.entries(zoneDefaults)){
+      const el=$(field);if(!el)continue;
+      if(typeof value==="boolean")el.checked=value;else el.value=String(value);
+    }
+  }else{
+    // Scenario settings reset previous optional stress factors. Keep the user's
+    // distance, initial SOC and tariff untouched.
+    for(const [field,value] of Object.entries({...scenarioDefaults,...settings})){
+      const inputId=field==="batteryHealth"?"battery-health":field;
+      const el=$(inputId);if(!el)continue;
+      if(typeof value==="boolean")el.checked=value;
+      else el.value=String(value);
+    }
+  }
+  $("battery-health-out").textContent=$("battery-health").value+"%";
+  refresh();
+}
+smart=createSmartDashboard({
+  onSelect:applyScenarioInputs,
+  onAdvancedChange:()=>{
+    // Editing a preset makes it user-customised, except the composite "all"
+    // mode, which deliberately keeps user SOC/load/SOH and zone assumptions.
+    if(selectedScenario!=="all"&&selectedScenario!=="manual"){
+      selectedScenario="manual";smart?.setActive("manual");
+    }
+    $("battery-health-out").textContent=$("battery-health").value+"%";
+    refresh();
+  },
+  onPlay:()=>{$("play").click();$("drive-theatre").scrollIntoView?.({block:"center",behavior:"smooth"});},
+  onReset:()=>{$("reset").click();}
 });
 routePlanner=createRoutePlanner({
   PRESETS,

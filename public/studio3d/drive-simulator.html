@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="./drive-simulator-digital.css?v=20261112b">
 <link rel="stylesheet" href="./drive-phase2.css?v=20261112c">
 <link rel="stylesheet" href="./drive-live-map.css?v=20261112d">
+<link rel="stylesheet" href="./drive-smart-digital.css?v=20261112e">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
@@ -25,17 +26,58 @@
     <a class="active" aria-current="page" href="/studio3d/drive-simulator.html">⚡ Drive Simulator</a>
   </nav>
 </header>
-<div class="live-banner"><span class="live-dot"></span> MALAYSIA · MAP FIRST · LIVE STUDIO</div>
+<div class="live-banner"><span class="live-dot"></span> MALAYSIA · SMART EV DIGITAL LAB · PHASE 03</div>
 <section class="headline" aria-labelledby="heading">
   <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
-  <h1 id="heading">Malaysia <span class="neon-heading">EV Journey Studio.</span></h1>
-  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta besar di tengah, pilih pin terus pada peta, kemudian lihat anggaran bateri Prime/Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
+  <h1 id="heading">Malaysia <span class="neon-heading">Smart EV Journey Lab.</span></h1>
+  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta Malaysia, 21 senario pemanduan, satu ujian gabungan tujuh keadaan dan simulasi digital untuk Prime serta Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
 </section>
 <section class="mast" aria-label="Ringkasan simulasi">
   <div class="metric metric--soc"><div class="metric-label"><span class="mini-led"></span> ARRIVAL BATTERY</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran SOC · bukan BMS</div><div class="metric-dial" id="metric-dial" aria-hidden="true"></div></div>
   <div class="metric"><div class="metric-label">RANGE BUFFER</div><div class="metric-number" id="m-range">—</div><div class="metric-unit">km selepas tiba · hingga 10%</div></div>
   <div class="metric"><div class="metric-label">ENERGY INDEX</div><div class="metric-number" id="m-use">—</div><div class="metric-unit">kWh / 100 km</div></div>
-  <div class="metric"><div class="metric-label">CHARGING COST</div><div class="metric-number" id="m-cost">—</div><div class="metric-unit">RM · pada tarif input</div></div>
+  <div class="metric"><div class="metric-label">PROJECTED ENERGY COST</div><div class="metric-number" id="m-cost">—</div><div class="metric-unit">RM · untuk keseluruhan jarak input</div></div>
+</section>
+
+<section class="smart-hub card" id="smart-hub" aria-labelledby="smart-title">
+ <div class="smart-title-row"><div><small class="smart-overline">◆ EV INTELLIGENCE · SCENARIO ENGINE V3</small><h2 id="smart-title">Smart Scenario <em>Lab</em></h2><p>Uji 21 senario pemanduan secara interaktif, tanpa andaian bahawa cuaca atau jalan sebenar mempunyai keadaan tersebut.</p></div><div class="smart-counter"><span id="smart-scenario-count">21</span> <small>SENARIO</small></div></div>
+ <div class="smart-master"><div><small class="smart-overline">MASTER SIMULATION · ALL CONDITIONS</small><h3>7 Zon. 1 Perjalanan.</h3><p>Bandar sesak → lebuh raya → hujan → pendakian → kampung → turun bukit → panas & angin. Setiap zon mempunyai pengiraan tenaga berasingan.</p></div><button id="scenario-all" class="smart-go" type="button" aria-pressed="false">⚡ Jalankan Semua Keadaan</button></div>
+ <div class="scenario-tabs" role="group" aria-label="Kategori simulasi"><button class="scenario-tab active" data-group="harian" type="button">Harian</button><button class="scenario-tab" data-group="jalan" type="button">Jalan & Cuaca</button><button class="scenario-tab" data-group="kereta" type="button">Kereta & Bateri</button><button class="scenario-tab" data-group="ekstrem" type="button">Ekstrem</button></div>
+ <div id="scenario-grid" class="scenario-grid" role="group" aria-label="Pilih senario"></div>
+ <details id="smart-advanced" class="smart-advanced"><summary>⚙ Tetapan Pintar Lanjutan <span>SOH · Suhu · Angin · Tayar · Kecerunan · Regeneratif</span></summary>
+  <div class="smart-advanced-grid">
+   <div class="field"><label for="battery-health">Kesihatan bateri <output id="battery-health-out">100%</output></label><input type="range" id="battery-health" min="75" max="100" value="100" step="5"><small>Anggaran SOH, bukan bacaan BMS</small></div>
+   <div class="field"><label for="temperature">Suhu (andaian)</label><select id="temperature"><option value="mild">Sederhana</option><option value="hot">Panas</option><option value="extreme">Panas ekstrem</option><option value="cool">Sejuk</option></select></div>
+   <div class="field"><label for="wind">Angin</label><select id="wind"><option value="calm">Tenang</option><option value="head">Hadapan</option><option value="cross">Lintang</option><option value="tail">Belakang</option></select></div>
+   <div class="field"><label for="slope">Kecerunan</label><select id="slope"><option value="flat">Rata</option><option value="up">Mendaki</option><option value="down">Menurun</option></select></div>
+   <div class="field"><label for="tire">Tekanan tayar</label><select id="tire"><option value="normal">Normal</option><option value="low">Rendah (risiko)</option></select></div>
+   <div class="field"><label for="hvac">Keamatan AC</label><select id="hvac"><option value="normal">Biasa</option><option value="low">Rendah</option><option value="strong">Kuat</option></select></div>
+   <div class="field"><label for="regen">Regeneratif</label><select id="regen"><option value="normal">Normal</option><option value="high">Tinggi</option><option value="low">Rendah</option></select></div>
+   <label class="smart-check"><input type="checkbox" id="night"> Lampu malam</label><label class="smart-check"><input type="checkbox" id="aggressive"> Pecutan agresif</label>
+  </div><p class="footnote">Faktor di sini untuk perbandingan senario sahaja. Jangan pandu dengan tekanan tayar rendah.</p>
+ </details>
+ <div class="smart-report">
+  <div class="smart-report-head"><div><small class="smart-overline">DIGITAL RANGE INTELLIGENCE</small><h3 id="smart-active-title">Tetapan Sendiri</h3><p id="smart-active-desc">Kira penggunaan tenaga daripada tetapan pilihan.</p></div><div class="smart-risk" id="smart-risk"><small>RISIKO</small><strong id="smart-risk-label">—</strong></div></div>
+  <div class="smart-stats"><div><small>SOC TIBA</small><strong id="smart-arrival">—</strong></div><div><small>SOH</small><strong id="smart-soh">100%</strong></div><div><small>PERLU CAS</small><strong id="smart-topup">—</strong></div><div><small>TENAGA</small><strong id="smart-energy">—</strong></div></div>
+  <canvas id="smart-energy-graph" height="195" role="img" aria-label="Graf anggaran tahap bateri mengikut jarak"></canvas>
+  <div class="smart-chart-legend"><span><i></i> SOC perjalanan</span><span>⋯ Had simpanan 10%</span><span id="smart-graph-note">Anggaran</span></div>
+  <div class="smart-stages-head"><strong id="smart-stages-heading">Pecahan tenaga</strong><small id="smart-stages-description">Satu profil</small></div>
+  <div id="smart-stage-list" class="smart-stage-list"></div>
+  <div id="smart-shortfall" class="smart-shortfall" hidden><strong>⚠ BATERI TIDAK CUKUP</strong><span id="smart-shortfall-text">Perlu mengecas sebelum tiba.</span></div>
+ </div>
+ <p class="footnote">Senario Semua Keadaan ialah 7 zon sintetik pada jarak yang dipilih, bukan pengukuran trafik, cerun, permukaan, hujan atau suhu laluan sebenar.</p>
+</section>
+<section class="drive-theatre card" id="drive-theatre" aria-labelledby="drive-theatre-title">
+ <div class="smart-report-head"><div><small class="smart-overline">PHASE 03 · DRIVE MOTION SIMULATION</small><h2 id="drive-theatre-title">Digital Drive <em>Playback</em></h2><p>Meter dan animasi kenderaan berasaskan senario. Di peta, penanda bergerak hanya apabila laluan jalan OSRM berjaya diterima.</p></div><span id="drive-route-status" class="drive-route-label">SIMULASI</span></div>
+ <div id="drive-screen" class="drive-screen" data-condition="normal">
+  <div class="drive-grid"></div><div class="drive-road"><div class="drive-road-dash"></div></div>
+  <div class="drive-car" id="drive-vehicle" aria-hidden="true"><svg viewBox="0 0 180 100" width="180" height="100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="90" cy="88" rx="73" ry="7" fill="#000" opacity=".35"/><path d="M20 64L40 56 62 27Q72 20 104 23L126 35 143 55 157 61V72H23Z" fill="#eeb6c8" stroke="#fff0f6" stroke-width="2"/><path d="M65 29L53 53H139L123 35 104 29Z" fill="#193a4c" stroke="#7cbbd4"/><circle cx="50" cy="74" r="14" fill="#0d1b28" stroke="#516379" stroke-width="3"/><circle cx="130" cy="74" r="14" fill="#0d1b28" stroke="#516379" stroke-width="3"/><path d="M150 59l12 4v7h-9Z" fill="#ffefd9"/></svg></div>
+  <div class="drive-top-hud"><span id="drive-current-zone">Tetapan Sendiri</span><span id="drive-conditions">NORMAL</span></div>
+  <div class="drive-bottom-hud"><div><small>SPEED</small><strong id="drive-speed">0</strong><em>km/j</em></div><div><small>BATTERY SOC</small><strong id="drive-soc">—</strong><em>anggaran</em></div><div><small>JARAK</small><strong id="drive-km">0.0</strong><em>km</em></div></div>
+  <div id="drive-warning" class="drive-warning" hidden>⚠ Bateri kosong sebelum destinasi. Simulasi kenderaan dihentikan.</div>
+ </div>
+ <div class="drive-controls"><span id="drive-playback-status">Tekan mula untuk melihat animasi.</span><button type="button" id="drive-play-now">▶ Mula Playback</button><button type="button" id="drive-reset-now">↻ Reset</button></div>
+ <p class="footnote">Model kereta ialah ilustrasi vektor, bukan geometri sebenar e.MAS 5. Jalan animasi bukan rakaman jalan. Penanda pada peta bergerak di atas jalan hanya selepas routing OSRM sah, bukan pada garis lurus rujukan.</p>
 </section>
 <div class="main-layout">
   <div class="col">
@@ -157,7 +199,7 @@
         <button class="primary" type="button" id="play">▶ Jalankan simulasi 12 saat</button>
         <button class="secondary" type="button" id="reset">↻ Ulang</button>
       </div>
-      <p class="footnote">Tempoh kira-kira 12 saat hanya visualisasi kiraan bateri. Animasi kereta mengikuti jalan sebenar dirancang untuk fasa kemudian.</p>
+      <p class="footnote">12 saat ialah perjalanan simulasi dipercepat, bukan rakaman sebenar. Penanda di peta bergerak hanya jika OSRM memulangkan geometri jalan yang sah.</p>
     </section>
     <section class="card" aria-labelledby="read-heading">
       <div class="card-head"><h2 id="read-heading">Bagaimana anggaran dikira?</h2><span class="sub">Andaian telus</span></div>
