@@ -9,7 +9,7 @@ const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,max
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
-  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1;
+  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false;
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
   let lastScan=0,lastVerify=0;
   const write=(id,str)=>{$(id).textContent=str;};
@@ -63,7 +63,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   function reset(){
     rev++;controller?.abort();verifyController?.abort();controller=null;verifyController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
-    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;
+    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
@@ -198,7 +198,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   function replan(){
     if(!route)return;
     const result=getResult();
-    plan=result?planCharging(result,stations):null;
+    plan=result&&chargerDataVerified?planCharging(result,stations):null;
     verified=null;
     message("Laluan masuk ke pengecas belum disahkan. Tekan semak setelah memilih hentian.");
     renderPlan();
@@ -237,6 +237,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       if(!data){lastScan=now;data=await fetchRouteContext(route,{signal:controller.signal});}
       if(mine!==rev)return;
       elevations=data.elevations;stations=data.stations;
+      chargerDataVerified=!data.stationError;
       profile=buildRouteSituations(route,elevations);
       roadData=roadGeo();
       if(!data.stationError&&!data.elevationError)cache.set(key,data);
