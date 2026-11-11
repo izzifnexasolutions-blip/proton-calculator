@@ -362,12 +362,23 @@ routePlanner=createRoutePlanner({
   onRouteApplied:route=>{
     // Real OSRM distance takes precedence over an illustrative route preset.
     routeKey="custom";
+    // Zone from the destination is a coordinate-based orientation only,
+    // not an authoritative state boundary or geocoder result.
+    const xy=route.endCoords||[];
+    const [longitude,latitude]=xy;
+    if(longitude>=114)regionKey="sabah";
+    else if(longitude>=109)regionKey="sarawak";
+    else if(longitude>=102.7&&latitude>=2.5||longitude>=102&&latitude>=5.3)regionKey="east";
+    else if(latitude>=4.5)regionKey="north";
+    else if(latitude<=2.65)regionKey="south";
+    else regionKey="central";
     $("route").value="custom";
     $("distance").value=route.km;
     $("route-names").textContent=route.start+" → "+route.end+" · Laluan jalan OSRM";
     $("route-source").hidden=true;
     syncUrl();
     refresh();
+    renderRegions();
     updateMap("region");
     return result;
   },
