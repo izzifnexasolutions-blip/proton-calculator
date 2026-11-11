@@ -7,6 +7,7 @@
 <title>FARIS e.MAS 5 Drive Simulator | Battery & Range Lab</title>
 <meta name="description" content="Simulator Proton e.MAS 5 Prime dan Premium: anggaran bateri, jarak dan kos perjalanan menggunakan peta percuma.">
 <link rel="stylesheet" href="./drive-simulator.css?v=20261112a">
+<link rel="stylesheet" href="./drive-simulator-digital.css?v=20261112b">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
@@ -23,20 +24,32 @@
   </nav>
 </header>
 <section class="headline" aria-labelledby="heading">
-  <div class="eyebrow">PHASE 01 · BATTERY &amp; RANGE LAB</div>
-  <h1 id="heading">Rancang perjalanan. Faham bateri.</h1>
-  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta percuma tanpa API berbayar. Semua angka ialah <strong>anggaran perancangan</strong>, bukan bacaan bateri sebenar atau jaminan jarak.</p>
+  <div class="eyebrow">MALAYSIA · EV JOURNEY INTELLIGENCE · PHASE 01</div>
+  <h1 id="heading">Malaysia <span class="neon-heading">EV Journey Lab.</span></h1>
+  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta Malaysia percuma, paparan digital dan perbandingan Prime/Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
 </section>
 <section class="mast" aria-label="Ringkasan simulasi">
-  <div class="metric"><div class="metric-label">Bateri pada destinasi</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran % SOC</div></div>
-  <div class="metric"><div class="metric-label">Penggunaan tenaga</div><div class="metric-number" id="m-use">—</div><div class="metric-unit">kWh / 100 km</div></div>
-  <div class="metric"><div class="metric-label">Jarak perjalanan</div><div class="metric-number" id="m-distance">—</div><div class="metric-unit">km · jarak input</div></div>
-  <div class="metric"><div class="metric-label">Anggaran kos elektrik</div><div class="metric-number" id="m-cost">—</div><div class="metric-unit">RM · pada tarif input</div></div>
+  <div class="metric metric--soc"><div class="metric-label"><span class="mini-led"></span> ARRIVAL BATTERY</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran SOC · bukan BMS</div><div class="metric-dial" id="metric-dial" aria-hidden="true"></div></div>
+  <div class="metric"><div class="metric-label">RANGE BUFFER</div><div class="metric-number" id="m-range">—</div><div class="metric-unit">km selepas tiba · hingga 10%</div></div>
+  <div class="metric"><div class="metric-label">ENERGY INDEX</div><div class="metric-number" id="m-use">—</div><div class="metric-unit">kWh / 100 km</div></div>
+  <div class="metric"><div class="metric-label">CHARGING COST</div><div class="metric-number" id="m-cost">—</div><div class="metric-unit">RM · pada tarif input</div></div>
 </section>
 <div class="main-layout">
   <div class="col">
     <section class="card" aria-labelledby="route-heading">
-      <div class="card-head"><h2 id="route-heading">01 · Pilih perjalanan</h2><span class="tag">PETA PERCUMA</span></div>
+      <div class="card-head"><h2 id="route-heading">01 · Peta Perjalanan Malaysia</h2><span class="tag">FREE · NO API KEY</span></div>
+      <div class="location-rail"><span><span class="location-pulse"></span> MALAYSIA JOURNEY NETWORK</span><span id="region-detail">Semenanjung · Sabah · Sarawak</span></div>
+      <div class="region-strip" id="region-strip" role="group" aria-label="Pilih wilayah Malaysia">
+        <button class="region-chip active" type="button" data-region="malaysia" aria-pressed="true">🇲🇾 Malaysia</button>
+        <button class="region-chip" type="button" data-region="central" aria-pressed="false">Tengah</button>
+        <button class="region-chip" type="button" data-region="north" aria-pressed="false">Utara</button>
+        <button class="region-chip" type="button" data-region="south" aria-pressed="false">Selatan</button>
+        <button class="region-chip" type="button" data-region="east" aria-pressed="false">Pantai Timur</button>
+        <button class="region-chip" type="button" data-region="sabah" aria-pressed="false">Sabah</button>
+        <button class="region-chip" type="button" data-region="sarawak" aria-pressed="false">Sarawak</button>
+      </div>
+      <div class="quick-label"><span>LALUAN CONTOH / PRESET</span><span id="region-name">Seluruh Malaysia</span></div>
+      <div class="quick-routes" id="quick-routes" role="group" aria-label="Laluan contoh"></div>
       <div class="field">
         <label for="route">Laluan contoh di Malaysia</label>
         <select id="route">
@@ -45,6 +58,10 @@
           <option value="melaka">Kuala Lumpur → Melaka</option>
           <option value="ipoh">Kuala Lumpur → Ipoh</option>
           <option value="penang">Kuala Lumpur → George Town, Penang</option>
+          <option value="johormelaka">Johor Bahru → Melaka</option>
+          <option value="kuantanterengganu">Kuantan → Kuala Terengganu</option>
+          <option value="kundasang">Kota Kinabalu → Kundasang</option>
+          <option value="serian">Kuching → Serian</option>
           <option value="custom">Masukkan jarak sendiri</option>
         </select>
       </div>
@@ -53,15 +70,37 @@
         <div class="field"><label for="distance">Jarak anggaran (km)</label><input id="distance" inputmode="decimal" type="number" min="1" max="1000" step="0.1" value="31.7"></div>
         <div class="field"><label for="speed">Purata kelajuan (km/j)</label><input id="speed" inputmode="decimal" type="number" min="25" max="130" step="5" value="65"></div>
       </div>
-      <div class="map-wrap">
+      <div class="map-wrap digital-map-wrap">
+        <div class="map-topline"><span class="map-status"><span class="location-pulse"></span> MALAYSIA · MAP ONLINE</span><span class="map-source">OSM + OPENFREEMAP</span></div>
+        <div class="map-controls">
+          <button type="button" id="map-reset" aria-label="Tunjuk seluruh Malaysia">⌖ Seluruh Malaysia</button>
+          <button type="button" id="map-style" aria-label="Tukar gaya peta digital">☾ Digital Dark</button>
+        </div>
         <div id="map" aria-label="Peta OpenStreetMap interaktif menunjukkan tempat mula dan destinasi rujukan"></div>
-        <div id="map-fallback" role="status">Sedang memuatkan peta percuma…</div>
+        <div id="map-fallback" role="status">Memuatkan peta Malaysia percuma…</div>
       </div>
-      <p class="map-caption"><strong>Nota:</strong> Garis putus-putus ialah penanda lokasi secara terus, <strong>bukan laluan jalan sebenar</strong>. Jarak di atas ialah nilai rujukan yang boleh diubah, bukan routing langsung. Trafik, kecerunan dan keadaan jalan sebenar belum dipautkan.</p>
+      <p class="map-caption"><strong>Nota peta penting:</strong> Garis putus-putus menghubungkan dua lokasi, <strong>bukan laluan jalan sebenar</strong>. Jarak di atas ialah nilai rujukan yang boleh diubah, bukan routing langsung. Trafik, kecerunan dan keadaan jalan sebenar belum dipautkan.</p>
+      <div class="route-context-hud">
+        <div><small>TRIP DISTANCE</small><strong id="m-distance">—</strong><span>km</span></div>
+        <div><small>REGION</small><strong id="hud-region">MALAYSIA</strong></div>
+        <div><small>ROAD MODEL</small><strong id="hud-road">CAMPURAN</strong></div>
+      </div>
       <a id="route-source" class="source-link" target="_blank" rel="noopener noreferrer" href="https://www.rome2rio.com/s/Klcc-Kuala-Lumpur-Malaysia/Putrajaya-Sentral">Lihat sumber jarak contoh ↗</a>
     </section>
+    <section class="card context-card" aria-labelledby="context-heading">
+      <div class="card-head"><h2 id="context-heading">02 · Trip Intelligence</h2><span class="tag tag-blue">SCENARIO DATA</span></div>
+      <div class="intelligence-grid">
+        <div class="intelligence-tile"><span>📍</span><small>Kawasan</small><b id="ctx-region">Malaysia</b></div>
+        <div class="intelligence-tile"><span>🛣</span><small>Jenis jalan</small><b id="ctx-road">Campuran</b></div>
+        <div class="intelligence-tile"><span>◌</span><small>Permukaan</small><b id="ctx-surface">Lancar / rata</b></div>
+        <div class="intelligence-tile"><span>▥</span><small>Trafik</small><b id="ctx-traffic">Lancar</b></div>
+        <div class="intelligence-tile"><span>☁</span><small>Cuaca</small><b id="ctx-weather">Kering (andaian)</b></div>
+        <div class="intelligence-tile"><span>⚡</span><small>Drive mode</small><b id="ctx-mode">Normal</b></div>
+      </div>
+      <p class="footnote">Jenis jalan, permukaan, trafik dan cuaca boleh disimulasikan. Ia <strong>bukan pemerhatian sebenar</strong> di lokasi tersebut; tukar andaian untuk lihat kesannya terhadap bateri.</p>
+    </section>
     <section class="card" aria-labelledby="sim-heading">
-      <div class="card-head"><h2 id="sim-heading">02 · Animasi penggunaan bateri</h2><span class="sub">Simulasi dipercepat, bukan pemanduan sebenar</span></div>
+      <div class="card-head"><h2 id="sim-heading">03 · Live Battery Simulation</h2><span class="sub">Simulasi dipercepat, bukan pemanduan sebenar</span></div>
       <div class="range-hero">
         <div class="range-head"><span id="battery-label">Bateri selepas 0.0 km</span><strong id="battery-live">80%</strong></div>
         <div class="battery-track" aria-label="Tahap bateri"><div id="battery-fill"></div></div>
@@ -90,7 +129,7 @@
   </div>
   <aside class="col" aria-label="Tetapan dan keputusan">
     <section class="card">
-      <div class="card-head"><h2>03 · Tetapan e.MAS 5</h2><span class="sub">Prime · Premium</span></div>
+      <div class="card-head"><h2>04 · Digital EV Controls</h2><span class="sub">Prime · Premium</span></div>
       <div class="selection" role="group" aria-label="Pilih varian">
         <button id="variant-prime" type="button" aria-pressed="false">Prime EV</button>
         <button id="variant-premium" class="active" type="button" aria-pressed="true">Premium EV</button>
@@ -109,16 +148,25 @@
         <input id="cargo" type="range" min="0" max="200" value="15" step="5">
       </div>
       <div class="two-cols" style="margin-top:13px">
-        <div class="field"><label for="road">Jenis jalan (andaian)</label><select id="road"><option value="city">Bandar / berhenti kerap</option><option value="mixed" selected>Campuran</option><option value="highway">Lebuh raya</option><option value="hilly">Berbukit</option></select></div>
+        <div class="field"><label for="road">Jenis jalan (andaian)</label><select id="road"><option value="city">Bandar / berhenti kerap</option><option value="mixed" selected>Campuran</option><option value="highway">Lebuh raya</option><option value="hilly">Berbukit</option><option value="rural">Jalan kampung</option></select></div>
         <div class="field"><label for="mode">Mod pemanduan</label><select id="mode"><option value="eco">Eco</option><option value="normal" selected>Normal</option><option value="sport">Sport</option></select></div>
+      </div>
+      <div class="two-cols" style="margin-top:11px">
+        <div class="field"><label for="surface">Keadaan permukaan (andaian)</label><select id="surface"><option value="smooth">Rata / baik</option><option value="rough">Kasar</option><option value="uneven">Tidak rata</option></select></div>
+        <div class="field"><label for="traffic">Trafik (andaian)</label><select id="traffic"><option value="light">Lancar</option><option value="moderate">Sederhana</option><option value="heavy">Sesak / stop-go</option></select></div>
       </div>
       <div class="switch-line"><label for="ac" style="margin:0">Penyaman udara aktif</label><input id="ac" type="checkbox" checked></div>
       <div class="switch-line"><label for="rain" style="margin:0">Hujan / jalan basah (andaian)</label><input id="rain" type="checkbox"></div>
       <div class="field" style="margin-top:17px"><label for="tariff">Harga elektrik anggaran (RM/kWh)</label><input id="tariff" inputmode="decimal" type="number" min="0" max="5" step="0.01" value="0.50"></div>
-      <p class="footnote">Masukkan tarif sendiri. Anggaran kos tidak termasuk caj masa/parkir dan kehilangan tenaga ketika pengecasan.</p>
+      <p class="footnote">Trafik dan permukaan adalah pilihan senario, bukan bacaan langsung. Masukkan tarif sendiri. Anggaran kos tidak termasuk caj masa/parkir dan kehilangan tenaga ketika pengecasan.</p>
     </section>
     <section class="card">
-      <div class="card-head"><h2>04 · Keputusan perjalanan</h2><span class="sub">Bukan jaminan jarak sebenar</span></div>
+      <div class="card-head"><h2>05 · Journey Result Intelligence</h2><span class="sub">Bukan jaminan jarak sebenar</span></div>
+      <div class="verdict-strip" id="verdict-strip" data-state="safe">
+        <span class="verdict-lamp"></span>
+        <div><small>CAN I MAKE IT?</small><strong id="verdict-title">CALCULATING</strong><span id="verdict-subtitle">Jarak keselamatan 10% SOC</span></div>
+        <strong class="verdict-number" id="verdict-soc">—</strong>
+      </div>
       <div id="trip-status" class="status" role="status" aria-live="polite">Mengira anggaran…</div>
       <div class="result-grid" style="margin-top:14px">
         <div class="result-tile"><small>Tenaga perjalanan</small><b id="r-energy">—</b><em>kWh</em></div>
@@ -127,8 +175,27 @@
         <div class="result-tile"><small>Tenaga tambahan ke 10%</small><b id="r-topup">—</b><em>kWh jika perlu</em></div>
       </div>
       <p class="footnote">Kesihatan bateri, suhu sebenar, angin, trafik langsung, kecerunan tepat dan kecekapan pengecasan tidak diukur. Semak pengecas sebelum perjalanan jauh.</p>
+      <div class="charging-advice" id="charging-advice">
+        <div class="charge-icon">⚡</div>
+        <div><small>CHARGING INTELLIGENCE</small><strong id="charging-head">Mengira cadangan pengecasan…</strong><p id="charging-detail">Anggaran sahaja, tiada data pengecas langsung.</p></div>
+      </div>
       <div class="buttons" style="margin-top:13px"><button id="copy" type="button" class="secondary" style="flex:1">⧉ Salin ringkasan pelanggan</button></div>
       <p class="footnote" id="copy-status" aria-live="polite"></p>
+    </section>
+    <section class="card compare-card" aria-labelledby="compare-heading">
+      <div class="card-head"><h2 id="compare-heading">06 · Prime vs Premium</h2><span class="tag tag-blue">SAME JOURNEY</span></div>
+      <p class="footnote">Kedua-dua varian menggunakan jarak dan tetapan pemanduan yang sama. Pengiraan menggunakan kapasiti bateri dan jarak piawai masing-masing.</p>
+      <div class="compare-line">
+        <div class="compare-caption"><span>PRIME · 30.12 kWh</span><strong id="cmp-prime-soc">—</strong></div>
+        <div class="compare-track"><div id="cmp-prime-bar"></div></div>
+        <small id="cmp-prime-note">—</small>
+      </div>
+      <div class="compare-line">
+        <div class="compare-caption"><span>PREMIUM · 40.16 kWh</span><strong id="cmp-premium-soc">—</strong></div>
+        <div class="compare-track"><div id="cmp-premium-bar"></div></div>
+        <small id="cmp-premium-note">—</small>
+      </div>
+      <div class="compare-summary" id="compare-summary">Perbandingan anggaran untuk perjalanan yang sama.</div>
     </section>
   </aside>
 </div>
