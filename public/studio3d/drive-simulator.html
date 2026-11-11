@@ -8,6 +8,7 @@
 <meta name="description" content="Simulator Proton e.MAS 5 Prime dan Premium: anggaran bateri, jarak dan kos perjalanan menggunakan peta percuma.">
 <link rel="stylesheet" href="./drive-simulator.css?v=20261112a">
 <link rel="stylesheet" href="./drive-simulator-digital.css?v=20261112b">
+<link rel="stylesheet" href="./drive-phase2.css?v=20261112c">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
@@ -24,7 +25,7 @@
   </nav>
 </header>
 <section class="headline" aria-labelledby="heading">
-  <div class="eyebrow">MALAYSIA · EV JOURNEY INTELLIGENCE · PHASE 01</div>
+  <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
   <h1 id="heading">Malaysia <span class="neon-heading">EV Journey Lab.</span></h1>
   <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta Malaysia percuma, paparan digital dan perbandingan Prime/Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
 </section>
@@ -66,6 +67,29 @@
         </select>
       </div>
       <p class="inline-name" id="route-names">KLCC, Kuala Lumpur → Putrajaya Sentral</p>
+      <div class="route2-panel" aria-labelledby="route2-heading">
+        <div class="route2-head">
+          <div><span class="route2-kicker">PHASE 02 / ROAD NETWORK</span><h3 id="route2-heading">Real Journey Planner <span class="phase2-beta">BETA</span></h3></div>
+          <span class="route2-provider">OSRM · OpenStreetMap</span>
+        </div>
+        <p class="route2-intro">Pilih dua bandar atau tandakan sendiri lokasi pada peta, kemudian tekan <strong>Kira Laluan Jalan</strong>. Sistem hanya menghubungi pelayan percuma apabila diminta. Laluan sebenar akan dipaparkan warna cyan jika pelayan berjaya memulangkan data.</p>
+        <div class="route2-select-grid">
+          <div class="field"><label for="route2-from">📍 Lokasi mula</label><select id="route2-from"></select><small id="route2-start-title">KLCC, Kuala Lumpur</small><button type="button" id="route2-pick-from" class="route2-pick" aria-pressed="false">⌖ Pilih titik mula di peta</button></div>
+          <div class="field"><label for="route2-to">🏁 Destinasi</label><select id="route2-to"></select><small id="route2-end-title">Putrajaya Sentral</small><button type="button" id="route2-pick-to" class="route2-pick" aria-pressed="false">⌖ Pilih titik tamat di peta</button></div>
+        </div>
+        <div class="route2-actions">
+          <button type="button" class="route2-go" id="route2-calc">⚡ Kira Laluan Jalan Sebenar</button>
+          <button type="button" class="route2-reset" id="route2-clear">↻ Reset</button>
+        </div>
+        <div id="route2-status" class="route2-status" role="status" aria-live="polite">Sedia untuk laluan. Perkhidmatan komuniti tidak mempunyai jaminan ketersediaan.</div>
+        <div class="route2-results">
+          <div><small>DISTANCE · VERIFIED ROUTE</small><strong id="route2-measured">Belum dikira</strong></div>
+          <div><small>ROUTER ESTIMATE · NO LIVE TRAFFIC</small><strong id="route2-time">—</strong></div>
+        </div>
+        <div class="route2-energy"><span>⚡</span><p id="route2-charge-point">Kira laluan untuk lihat anggaran lokasi had bateri 10%. Bukan lokasi pengecas.</p></div>
+        <details class="route2-turns"><summary>Petunjuk arah jalan (jika tersedia)</summary><div id="route2-steps"></div></details>
+        <p class="route2-policy">Routing beta berasaskan pelayan komuniti FOSSGIS/OSRM yang mengehadkan penggunaan. Tiada carian automatik, maksimum satu permintaan manual setiap beberapa saat pada peranti ini. <a target="_blank" rel="noopener noreferrer" href="https://routing.openstreetmap.de/about.html">Dasar penggunaan OSRM</a>. Koordinat yang dipilih dihantar kepada pelayan tersebut. Tiada trafik, ketersediaan pengecas atau profil ketinggian langsung.</p>
+      </div>
       <div class="two-cols" style="margin-top:12px">
         <div class="field"><label for="distance">Jarak anggaran (km)</label><input id="distance" inputmode="decimal" type="number" min="1" max="1000" step="0.1" value="31.7"></div>
         <div class="field"><label for="speed">Purata kelajuan (km/j)</label><input id="speed" inputmode="decimal" type="number" min="25" max="130" step="5" value="65"></div>
@@ -79,7 +103,7 @@
         <div id="map" aria-label="Peta OpenStreetMap interaktif menunjukkan tempat mula dan destinasi rujukan"></div>
         <div id="map-fallback" role="status">Memuatkan peta Malaysia percuma…</div>
       </div>
-      <p class="map-caption"><strong>Nota peta penting:</strong> Garis putus-putus menghubungkan dua lokasi, <strong>bukan laluan jalan sebenar</strong>. Jarak di atas ialah nilai rujukan yang boleh diubah, bukan routing langsung. Trafik, kecerunan dan keadaan jalan sebenar belum dipautkan.</p>
+      <p class="map-caption"><strong>Legenda peta:</strong> Garis merah putus-putus = sambungan dua bandar sebagai rujukan, <strong>bukan jalan sebenar</strong>. Garis cyan berterusan = geometri jalan yang dipulangkan OSRM selepas anda tekan Kira Laluan Jalan. Titik oren = anggaran bateri 10%, <strong>bukan lokasi stesen pengecas</strong>. Trafik, kecerunan dan keadaan jalan sebenar belum disahkan.</p>
       <div class="route-context-hud">
         <div><small>TRIP DISTANCE</small><strong id="m-distance">—</strong><span>km</span></div>
         <div><small>REGION</small><strong id="hud-region">MALAYSIA</strong></div>
@@ -174,7 +198,7 @@
         <div class="result-tile"><small>Jarak sehingga 10% SOC</small><b id="r-range">—</b><em>km dari mula</em></div>
         <div class="result-tile"><small>Tenaga tambahan ke 10%</small><b id="r-topup">—</b><em>kWh jika perlu</em></div>
       </div>
-      <p class="footnote">Kesihatan bateri, suhu sebenar, angin, trafik langsung, kecerunan tepat dan kecekapan pengecasan tidak diukur. Semak pengecas sebelum perjalanan jauh.</p>
+      <p class="footnote">Kesihatan bateri, suhu sebenar, angin, trafik langsung, kecerunan tepat dan kecekapan pengecasan tidak diukur. Semak pengecas sebelum perjalanan jauh. Cari pengecas melalui <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">OpenStreetMap</a>; lokasi/ketersediaannya tidak disahkan oleh simulator.</p>
       <div class="charging-advice" id="charging-advice">
         <div class="charge-icon">⚡</div>
         <div><small>CHARGING INTELLIGENCE</small><strong id="charging-head">Mengira cadangan pengecasan…</strong><p id="charging-detail">Anggaran sahaja, tiada data pengecas langsung.</p></div>
