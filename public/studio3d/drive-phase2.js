@@ -244,7 +244,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
       $("route2-time").textContent=Math.floor(data.minutes/60)+"j "+(data.minutes%60)+"m (tanpa trafik)";
       status("Laluan jalan berjaya diperoleh daripada OSRM. Anggaran masa bukan masa trafik langsung.","success");
       stepsUI(data.steps);
-      const modelResult=onRouteApplied({km:data.km,minutes:data.minutes,start:label(start),end:label(end)});
+      const modelResult=onRouteApplied({km:data.km,minutes:data.minutes,start:label(start),end:label(end),startCoords:start.coords.slice(),endCoords:end.coords.slice()});
       installLayers();onEstimate(modelResult);
     }catch(error){
       if(mine!==seq)return;
