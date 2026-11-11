@@ -156,7 +156,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     if(applied){
       const bounds=new window.maplibregl.LngLatBounds();
       for(const xy of applied.coordinates)bounds.extend(xy);
-      map.fitBounds(bounds,{padding:Math.max(45,Math.min(100,map.getCanvas()?.clientWidth*.08||50)),maxZoom:14,duration:650});
+      map.fitBounds(bounds,{padding:Math.max(45,Math.min(100,(map.getCanvas?.()?.clientWidth||600)*.08)),maxZoom:14,duration:650});
     }
   }
   function findDistanceFractionPoint(points,fraction){
