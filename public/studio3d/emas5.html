@@ -80,7 +80,7 @@
 </head>
 <body>
   <main class="layout">
-    <header class="top"><div class="brand"><span class="logo">P</span><div><small>FARIS PROTON · 3D STUDIO</small><div><b>e.MAS 5</b></div></div></div><a class="back" href="/calculator.html">← Kembali ke kalkulator</a></header>
+    <header class="top"><div class="brand"><span class="logo">P</span><div><small>FARIS PROTON · 3D STUDIO</small><div><b>e.MAS 5</b></div></div></div><nav style="display:flex;align-items:center;flex-wrap:wrap;gap:8px" aria-label="Navigasi FARIS Studio"><a class="back" href="/calculator.html">← Kalkulator</a><a class="back" href="/studio3d/drive-simulator.html?variant=premium&route=putrajaya" id="simulator-link" style="background:linear-gradient(150deg,#ed4d6f,#ac213c);border-color:#ff9aae">⚡ Drive Simulator</a></nav></header>
     <div class="intro"><div class="eyebrow">INTERACTIVE COLOUR STUDIO</div><h1>Explore e.MAS 5 in 3D.</h1><p>Pilih varian, cuba enam pilihan warna dan jelajah ruang dalaman daripada tempat duduk pemandu, penumpang depan atau belakang. Warna pada skrin ialah anggaran visual.</p></div>
     <div class="workspace">
       <section class="card" aria-label="Model kereta 3D">
@@ -203,6 +203,7 @@
       $("color-title").textContent=selectedColor.name;
     }
     function variantUI(){
+      const simulatorLink=$("simulator-link");if(simulatorLink)simulatorLink.href="/studio3d/drive-simulator.html?variant="+variant+"&route=putrajaya";
       $("var-prime").classList.toggle("active",variant==="prime");$("var-premium").classList.toggle("active",variant==="premium");
       $("var-prime").setAttribute("aria-pressed",String(variant==="prime"));$("var-premium").setAttribute("aria-pressed",String(variant==="premium"));
       $("stage-title").textContent="PROTON e.MAS 5 · "+variant.toUpperCase()+" EV";
