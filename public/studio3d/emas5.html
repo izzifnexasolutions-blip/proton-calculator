@@ -94,7 +94,7 @@
     const q=new URLSearchParams(location.search);
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
-    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null;
+    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null,pendingSource=null;
     let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true;
     function queueFrame(){if(renderer&&scene&&!animation&&!document.hidden&&stageInView)animation=requestAnimationFrame(drawFrame)}
     function drawFrame(){animation=0;if(document.hidden||!stageInView)return;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);if(autoRotate)queueFrame()}
@@ -110,7 +110,7 @@
         materials.forEach(m=>m.dispose());
         root=null;
       }
-      loadedSource=null;originals=[];paintMaterialNames=[];
+      loadedSource=null;pendingSource=null;originals=[];paintMaterialNames=[];
       $("reset-camera").disabled=true;$("turntable").disabled=true;
       autoRotate=false;$("turntable").textContent="▶ Auto rotate";
       if(platform)platform.visible=false;
@@ -216,12 +216,12 @@
     }
     function loadGLB(url,fromFile=false){
       if(!init3D())return;
-      const token=++loadToken;loading.textContent="Memuatkan model 3D…";loading.style.display="block";empty.hidden=true;clearModel();
+      const token=++loadToken;loading.textContent="Memuatkan model 3D…";loading.style.display="block";empty.hidden=true;clearModel();pendingSource=url;
       const draco=new DRACOLoader();draco.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
       const loader=new GLTFLoader();loader.setDRACOLoader(draco);
       loader.load(url,g=>{
         draco.dispose();if(token!==loadToken){if(fromFile)URL.revokeObjectURL(url);return;}
-        root=g.scene;loadedSource=url;scene.add(root);
+        root=g.scene;loadedSource=url;pendingSource=null;scene.add(root);
         const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3());
         if(bounds.isEmpty()||size.length()<.0001){clearModel();showEmpty("GLB kosong","Fail tiada geometri yang boleh dipaparkan.");status("GLB tidak mengandungi mesh yang sah.","error");return;}
         const c=bounds.getCenter(new THREE.Vector3()),max=Math.max(size.x,size.y,size.z);
@@ -238,13 +238,13 @@
         if(token!==loadToken)return;
         if(ev.lengthComputable&&ev.total>0)loading.textContent="Memuatkan model 3D "+Math.round(ev.loaded/ev.total*100)+"%…";
       },e=>{
-        draco.dispose();if(token!==loadToken)return;
+        draco.dispose();if(token!==loadToken)return;pendingSource=null;
         const msg=fromFile?"GLB tidak dapat dibuka. Pastikan fail glTF Binary sebenar, bukan .blend.":"Fail "+variant.toUpperCase()+" belum diterbitkan pada pelayan.";
         showEmpty("Model 3D belum tersedia",msg);
         status(msg,fromFile?"error":"");if(fromFile)URL.revokeObjectURL(url);
       });
     }
-    function loadVariant(){variantUI();if(root&&loadedSource===modelPaths[variant]){status(variant==="prime"?"Pratonton warna badan Prime menggunakan model rujukan Premium. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dan rim 16 inci aktif. Pilih warna untuk melihat cat badan berubah.","ok");return;}showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
+    function loadVariant(){variantUI();if(root&&loadedSource===modelPaths[variant]){status(variant==="prime"?"Pratonton warna badan Prime menggunakan model rujukan Premium. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dan rim 16 inci aktif. Pilih warna untuk melihat cat badan berubah.","ok");return;}if(!root&&pendingSource===modelPaths[variant])return;showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
     $("var-prime").addEventListener("click",()=>{if(variant==="prime")return;variant="prime";loadVariant();});
     $("var-premium").addEventListener("click",()=>{if(variant==="premium")return;variant="premium";loadVariant();});
     $("glb-file").addEventListener("change",e=>{
