@@ -2,12 +2,12 @@
 <html lang="ms">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Fariz Proton Cacu Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faris Proton | Kalkulator Kereta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -1001,7 +1001,7 @@ function calc(){
 function fmt2(n){return Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function fmtI(n){return Math.round(n).toLocaleString("en-US")}
 
-var currentSrc="", prevMonthly=null;
+var currentSrc="", prevMonthly=null, _lastRenderedRebateKey=null;
 
 /* ── Supabase media storage ── */
 var _sb=null;          // supabase client
@@ -2482,7 +2482,11 @@ function render(){
   if(car3DBtn){car3DBtn.hidden=(state.modelId!=='emas5');car3DBtn.setAttribute('aria-label','Lihat model 3D '+m.variants[state.variantIdx].name);}
   if(specOpen)_updateSpecPanel();
   /* rebate — load per model+variant */
-  document.getElementById("input-rebate").value=_getRebate()||'';
+  var currentRebateKey=_rebateKey();
+  if(_lastRenderedRebateKey!==currentRebateKey){
+    document.getElementById("input-rebate").value=_getRebate()||'';
+    _lastRenderedRebateKey=currentRebateKey;
+  }
   /* custom row */
   document.getElementById("custom-row").classList.toggle("visible",state.depositSel==="custom");
   /* tabs */
@@ -2497,9 +2501,17 @@ function render(){
   document.getElementById("out-loan").textContent=fmtI(r.loan);
   /* monthly */
   var mEl=document.getElementById("monthly-value");
-  if(prevMonthly!==null&&Math.abs(prevMonthly-r.monthly)>0.01){mEl.classList.remove("pop");void mEl.offsetWidth;mEl.classList.add("pop")}
+  var monthlyText=fmt2(r.monthly);
+  if(mEl.textContent!==monthlyText){
+    mEl.textContent=monthlyText;
+    if(prevMonthly!==null&&Math.abs(prevMonthly-r.monthly)>0.01&&
+       !window.matchMedia("(prefers-reduced-motion: reduce)").matches&&mEl.animate){
+      mEl.getAnimations().forEach(function(a){a.cancel()});
+      mEl.animate([{opacity:.82,transform:"translateY(4px)"},{opacity:1,transform:"translateY(0)"}],
+                  {duration:180,easing:"ease-out"});
+    }
+  }
   prevMonthly=r.monthly;
-  mEl.textContent=fmt2(r.monthly);
   document.getElementById("monthly-bulan").textContent=(state.loanYears*12)+" BULAN";
 }
 
@@ -2638,11 +2650,15 @@ function init(){
 }
 
 function start(){
+  // Harga tersedia serta-merta; galeri Supabase dimuatkan secara berasingan.
+  init();
   _initSupabase().then(function(){
-    init();
-  }).catch(function(){
-    init();
-  });
+    if(_sbReady){
+      _ss.builtFor=null;
+      _ssLoad();
+      if(settingsOpen)spRebuild();
+    }
+  }).catch(function(){/* kalkulator kekal berfungsi walaupun galeri gagal dimuatkan */});
 }
 
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",start)}else{start()}
