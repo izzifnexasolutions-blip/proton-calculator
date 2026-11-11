@@ -120,3 +120,8 @@
 /* Moving vehicle icon appears ONLY on a server-returned, validated OSRM road geometry. */
 .ev-travel-dot{display:grid;place-items:center;width:40px;height:40px;font-size:23px;line-height:1;border-radius:50%;border:2px solid #9af2ff;background:linear-gradient(145deg,#22465a,#10263a);box-shadow:0 0 0 5px #4cd7f42d,0 3px 17px #052135c9;pointer-events:none}
 .ev-travel-dot::after{content:"";position:absolute;inset:-5px;border:1px solid #81eeff44;border-radius:50%}
+
+.metric--soc[data-state="bad"]{border-color:#d45b7c;background:linear-gradient(135deg,#583044,#281d2f)}
+.metric--soc[data-state="bad"] .metric-number{color:#ffc3d0;text-shadow:0 0 20px #ff6a8a39}
+.metric--soc[data-state="warn"]{border-color:#ad8d53;background:linear-gradient(135deg,#4a3c2b,#252538)}
+.metric--soc[data-state="warn"] .metric-number{color:#ffe4a1}
