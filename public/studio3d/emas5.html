@@ -49,6 +49,29 @@
     #status{border-radius:10px;background:#0c1725;border:1px solid #304257;padding:12px 13px;color:#c3d4e5;font-size:11px;line-height:1.6;margin-top:12px;min-height:54px}
     #status.error{border-color:#a54859;color:#ffd1d9}#status.ok{border-color:#3e7d78;color:#cbf5ec}
     .disclaimer{font-size:10px;line-height:1.7;color:#8e9fb2;max-width:1060px;margin:20px 0 0}
+
+    /* 3D showroom exploration – compact mobile-first controls */
+    .explore-section{background:linear-gradient(160deg,rgba(46,71,104,.22),rgba(10,20,33,0) 68%);margin:-5px -6px 17px;padding:10px 6px 18px;border-radius:12px}
+    .feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .feature-btn{display:flex;align-items:center;gap:8px;justify-content:flex-start;text-align:left;min-height:57px;border:1px solid #33465c;background:#1a293d;color:#f5f9ff;padding:9px 10px;border-radius:11px;transition:border .15s,background .15s}
+    .feature-btn .x-icon{font-size:19px;line-height:1;flex:0 0 23px;text-align:center}
+    .feature-btn .x-title{font-size:10px;font-weight:900;line-height:1.4;display:block}
+    .feature-btn .x-action{font-size:9px;color:#9fb5cb;display:block;margin-top:3px}
+    .feature-btn.active{border-color:#ff6478;background:linear-gradient(135deg,#6d2237,#392337)}
+    .feature-btn.active .x-action{color:#ffd4dd}
+    .feature-btn:disabled{opacity:.38;cursor:not-allowed}
+    .feature-btn:not(:disabled):hover{border-color:#fa647e}
+    .view-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+    .view-btn{padding:11px 5px;border:1px solid #354b65;border-radius:10px;background:#0e1b2e;color:#bdcce0;font-size:10px;line-height:1.35;font-weight:900;min-height:51px}
+    .view-btn.active{color:#fff;border-color:#fd5268;background:#9c2239}
+    .view-btn:disabled{opacity:.38;cursor:not-allowed}
+    .explore-head{display:flex;justify-content:space-between;align-items:center;gap:5px;margin-bottom:12px}
+    .explore-head h2{margin:0}
+    .explore-counter{font-size:9px;color:#9facbf;font-weight:850;text-align:right}
+    .feature-note{margin:10px 0 0;font-size:10px;color:#aebfd2;line-height:1.6;min-height:32px}
+    .feature-note[data-kind="warn"]{color:#ffd092}
+    .close-all{margin-top:9px;width:100%;background:transparent;border:1px solid #40526b;color:#d5dfea;border-radius:9px;padding:10px;font-size:10px;font-weight:900}
+    .close-all:disabled{opacity:.36;cursor:not-allowed}
     @media(max-width:780px){.layout{padding:14px 10px 28px}.top{margin-bottom:17px}.workspace{grid-template-columns:1fr;gap:12px}.intro{padding:0 5px}.stage-top{padding:12px}.editor{padding:15px}.stage-foot{padding:10px 12px}#stage{height:45vh;min-height:315px}.colors{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:375px){.brand b{font-size:15px}.colors{gap:6px}.color-option span:last-child{font-size:9px}.back{font-size:10px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
@@ -70,7 +93,28 @@
       <aside class="card editor">
         <div class="section"><h2>01 · PILIH VARIAN</h2><div class="seg" role="group" aria-label="Varian e.MAS 5"><button id="var-prime" type="button" aria-pressed="false">PRIME EV</button><button id="var-premium" type="button" aria-pressed="true">PREMIUM EV</button></div><p class="sub" id="variant-note">Paparan mengikut fail GLB Premium yang dimasukkan. Tiada geometri varian lain yang direka secara automatik.</p></div>
         <div class="section"><h2>02 · PILIH WARNA KERETA</h2><div id="colors" class="colors" role="group" aria-label="Warna luaran"></div><div class="picked" id="color-title" aria-live="polite">Marble Cream</div><div class="hint">Recolor pada material cat badan, bukan rim, tayar, kaca atau lampu.</div></div>
-        <div class="section"><h2>03 · ASET 3D</h2><label class="upload">◈ Import model GLB pada peranti<input id="glb-file" type="file" accept=".glb,model/gltf-binary" aria-label="Import fail GLB 3D"></label><p class="sub">Fail <b>.blend</b> tidak boleh terus dibuka dalam pelayar. Export dari Blender sebagai <b>.glb</b> dahulu. Import di sini hanya untuk sesi semasa; untuk semua pelanggan, fail perlu diterbitkan pada pelayan.</p><div id="status" role="status" aria-live="polite">Mencari fail model varian yang tersedia…</div></div>
+
+        <div class="section explore-section" aria-label="Buka pintu dan bonet 3D">
+          <div class="explore-head"><h2>03 · BUKA &amp; TEROKA KERETA</h2><span class="explore-counter" id="x-count">Menunggu model…</span></div>
+          <div class="feature-grid">
+            <button class="feature-btn" id="x-door-fr" type="button" disabled aria-pressed="false"><span class="x-icon">🚪</span><span><span class="x-title">Pintu Depan Kanan</span><span class="x-action">Buka</span></span></button>
+            <button class="feature-btn" id="x-door-fl" type="button" disabled aria-pressed="false"><span class="x-icon">🚪</span><span><span class="x-title">Pintu Depan Kiri</span><span class="x-action">Buka</span></span></button>
+            <button class="feature-btn" id="x-door-rr" type="button" disabled aria-pressed="false"><span class="x-icon">🚪</span><span><span class="x-title">Pintu Belakang Kanan</span><span class="x-action">Buka</span></span></button>
+            <button class="feature-btn" id="x-door-rl" type="button" disabled aria-pressed="false"><span class="x-icon">🚪</span><span><span class="x-title">Pintu Belakang Kiri</span><span class="x-action">Buka</span></span></button>
+            <button class="feature-btn" id="x-hood" type="button" disabled aria-pressed="false"><span class="x-icon">⌃</span><span><span class="x-title">Bonet Depan</span><span class="x-action">Buka</span></span></button>
+            <button class="feature-btn" id="x-trunk" type="button" disabled aria-pressed="false"><span class="x-icon">▤</span><span><span class="x-title">Bonet Belakang</span><span class="x-action">Buka</span></span></button>
+          </div>
+          <button class="close-all" type="button" id="x-close-all" disabled>↻ Tutup Semua Pintu &amp; Bonet</button>
+          <div class="section-heading" style="font-size:11px;font-weight:900;margin-top:19px">04 · PANDANGAN DALAM KABIN</div>
+          <div class="view-grid" role="group" aria-label="Sudut kamera 3D">
+            <button class="view-btn active" type="button" id="view-exterior" aria-pressed="true">◉<br>Luar 360°</button>
+            <button class="view-btn" type="button" id="view-driver" aria-pressed="false" disabled>◈<br>POV Pemandu</button>
+            <button class="view-btn" type="button" id="view-rear" aria-pressed="false" disabled>▧<br>Kerusi Belakang</button>
+          </div>
+          <p class="feature-note" id="feature-note" role="status" aria-live="polite">Buka model 3D untuk mengaktifkan komponen yang tersedia. Pemandangan kabin bergantung pada aset sebenar.</p>
+          <p class="sub">Dalam mod kabin, seret untuk melihat sekeliling. Kamera menggunakan kedudukan stereng/tempat duduk dalam model, bukan foto panorama rekaan.</p>
+        </div>
+        <div class="section"><h2>05 · ASET 3D</h2><label class="upload">◈ Import model GLB pada peranti<input id="glb-file" type="file" accept=".glb,model/gltf-binary" aria-label="Import fail GLB 3D"></label><p class="sub">Fail <b>.blend</b> tidak boleh terus dibuka dalam pelayar. Export dari Blender sebagai <b>.glb</b> dahulu. Import di sini hanya untuk sesi semasa; untuk semua pelanggan, fail perlu diterbitkan pada pelayan.</p><div id="status" role="status" aria-live="polite">Mencari fail model varian yang tersedia…</div></div>
         <div class="section" id="paint-mapping" hidden><label for="material-selector" class="field-label">Pilih material cat badan (jika belum dapat dikenal pasti)</label><select class="select" id="material-selector"></select><p class="sub">Hanya material dipilih akan bertukar warna. Eksport menggunakan material bernama <b>EMAS5_BodyPaint</b> untuk pemilihan automatik.</p></div>
       </aside>
     </div>
@@ -81,6 +125,7 @@
     import {OrbitControls} from "three/addons/controls/OrbitControls.js";
     import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
     import {DRACOLoader} from "three/addons/loaders/DRACOLoader.js";
+    import {createExplorer} from "./emas5-explore.js";
     const $=id=>document.getElementById(id);
     const colors=[
       {name:"Moonstone White",hex:"#eeeae4"},
@@ -95,13 +140,14 @@
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
     let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null,pendingSource=null;
-    let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true;
+    let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true,explorer=null;
     function queueFrame(){if(renderer&&scene&&!animation&&!document.hidden&&stageInView)animation=requestAnimationFrame(drawFrame)}
-    function drawFrame(){animation=0;if(document.hidden||!stageInView)return;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);if(autoRotate)queueFrame()}
+    function drawFrame(){animation=0;if(document.hidden||!stageInView)return;const moving=explorer?.tick(performance.now())||false;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);if(autoRotate||moving)queueFrame()}
     const stage=$("stage"),empty=$("empty-state"),loading=$("loading");
     function status(s,kind=""){const el=$("status");el.textContent=s;el.className=kind;}
     function showEmpty(title,subtitle){empty.hidden=false;empty.querySelector("h2").textContent=title;empty.querySelector("p").textContent=subtitle;loading.style.display="none";}
     function clearModel(){
+      if(explorer){explorer.destroy();explorer=null;}
       if(root){
         scene.remove(root);
         const geometries=new Set(),materials=new Set();
@@ -231,7 +277,12 @@
         const dist=Math.max(3.3,max*1.18);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
         camera.position.set(dist*.62,Math.max(1.65,size.y*.7),dist*.95);camera.updateProjectionMatrix();
         controls.minDistance=Math.max(.8,max*.58);controls.maxDistance=Math.max(12,max*6);
-        controls.update();configurePaint();loading.style.display="none";queueFrame();
+        controls.update();configurePaint();
+        explorer=createExplorer({
+          THREE,root,camera,controls,stage,requestRender:queueFrame,
+          onInterior:()=>{autoRotate=false;$("turntable").textContent="▶ Auto rotate";queueFrame();}
+        });
+        loading.style.display="none";queueFrame();
         $("reset-camera").disabled=false;$("turntable").disabled=false;
         if(fromFile)URL.revokeObjectURL(url);
       },ev=>{
@@ -253,7 +304,7 @@
       status("Import "+f.name+"…");loadGLB(URL.createObjectURL(f),true);e.target.value="";
     });
     $("material-selector").addEventListener("change",e=>{pickedMaterial=e.target.value;repaint();if(pickedMaterial)status("Material '"+pickedMaterial+"' dipilih sebagai cat badan. Semak secara visual sebelum kongsi.","ok");});
-    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
+    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;if(explorer?.mode!=="exterior"){explorer.setView("exterior");return;}const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
     $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";queueFrame();});
     colorUI();loadVariant();
   </script>
