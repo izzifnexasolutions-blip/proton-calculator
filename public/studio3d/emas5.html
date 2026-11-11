@@ -180,8 +180,8 @@
         root.position.x-=c.x;root.position.z-=c.z;root.position.y-=bounds.min.y;
         platform.position.y=-.035;platform.scale.setScalar(Math.max(1,max/4));platform.visible=true;
         controls.target.set(0,Math.max(.65,size.y*.45),0);
-        const dist=Math.max(3.5,max*1.65);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
-        camera.position.set(dist*.8,Math.max(1.8,size.y*.7),dist);camera.updateProjectionMatrix();
+        const dist=Math.max(3.3,max*1.18);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
+        camera.position.set(dist*.62,Math.max(1.65,size.y*.7),dist*.95);camera.updateProjectionMatrix();
         controls.minDistance=Math.max(.8,max*.58);controls.maxDistance=Math.max(12,max*6);
         controls.update();configurePaint();loading.style.display="none";
         $("reset-camera").disabled=false;$("turntable").disabled=false;
@@ -202,7 +202,7 @@
       status("Import "+f.name+"…");loadGLB(URL.createObjectURL(f),true);e.target.value="";
     });
     $("material-selector").addEventListener("change",e=>{pickedMaterial=e.target.value;repaint();if(pickedMaterial)status("Material '"+pickedMaterial+"' dipilih sebagai cat badan. Semak secara visual sebelum kongsi.","ok");});
-    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.5,Math.max(s.x,s.y,s.z)*1.65);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.8,Math.max(1.8,s.y*.7),d);controls.update();});
+    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
     $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";});
     colorUI();loadVariant();
   </script>
