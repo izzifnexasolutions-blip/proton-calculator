@@ -77,10 +77,22 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     $("route2-to").value=end.id||"custom";
     $("route2-start-title").textContent=label(start);
     $("route2-end-title").textContent=label(end);
+    $("pin-current-from").textContent=label(start);
+    $("pin-current-to").textContent=label(end);
+    const instruction=$("route2-map-instruction");
+    instruction.hidden=!picking;
+    instruction.textContent=picking==="from"?"📍 PILIH TITIK MULA — tekan tempat pada peta":
+      picking==="to"?"🏁 PILIH DESTINASI — tekan tempat pada peta":"";
+    document.body?.classList?.toggle("is-picking",!!picking);
+    const canvas=mapProvider()?.getCanvas?.();
+    if(canvas?.style)canvas.style.cursor=picking?"crosshair":"";
     for(const key of ["from","to"]){
-      const button=$("route2-pick-"+key);
-      const active=picking===key;button.classList.toggle("active",active);
-      button.setAttribute("aria-pressed",String(active));
+      const active=picking===key;
+      for(const id of ["route2-pick-"+key,"route2-map-"+key]){
+        const button=$(id);
+        button.classList.toggle("active",active);
+        button.setAttribute("aria-pressed",String(active));
+      }
     }
   }
   function clearVisual(){
@@ -98,32 +110,51 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   function invalidate(affectBattery=true){
     seq++;controller?.abort();controller=null;applied=null;lastResolved=0;
     clearVisual();
-    status("Lokasi berubah. Tekan ‘Kira laluan jalan’ untuk bacaan baharu. Tiada panggilan automatik.");
+    status("Lokasi berubah. Tekan ‘Kira Laluan Jalan’ selepas memilih dua titik. Tiada panggilan automatik.");
     if(affectBattery)onRouteInvalidated();
     syncUI();
+    // Keep both selected pins VISIBLE even before OSRM has returned a route.
+    draw();
   }
   function setWaypoints(preset){
-    if(!preset)return;
+    if(!preset){invalidate(false);return;}
     const byPosition=pos=>points.find(p=>p.coords[0]===pos[0]&&p.coords[1]===pos[1])||
       {id:"custom",name:"Pin peta",coords:pos.slice()};
     start=byPosition(preset.from);end=byPosition(preset.to);
     picking=null;invalidate(false);
   }
-  function setPoint(which,p){
-    if(!p||!isMalaysiaArea(p.coords)){status("Pilih lokasi dalam kawasan Malaysia yang disokong.", "error");return;}
+  function setPoint(which,p,fromMap=false){
+    if(!p||!isMalaysiaArea(p.coords)){
+      status("Titik ini di luar liputan beta. Pilih lokasi di Malaysia.", "error");return;
+    }
     if(which==="from")start=p;else end=p;
-    picking=null;invalidate(true);
+    // Map capture is a guided two-tap flow: start pin, then destination.
+    picking=fromMap&&which==="from"?"to":null;
+    invalidate(true);
+    if(picking){
+      status("✓ Titik mula ditanda. Sekarang sentuh DESTINASI pada peta.","success");
+    }else if(fromMap){
+      status("✓ Dua titik dipilih. Tekan ‘Kira Laluan Jalan Sebenar’ untuk dapatkan jarak.","success");
+      $("route2-calc").scrollIntoView?.({block:"center",behavior:"smooth"});
+    }else{
+      status("✓ Lokasi dikemas kini. Tekan ‘Kira Laluan Jalan Sebenar’ untuk jarak jalan.","success");
+    }
   }
   function pick(which){
     picking=picking===which?null:which;
     syncUI();
-    status(picking?"Sentuh atau klik lokasi "+(picking==="from"?"mula":"destinasi")+" di peta Malaysia.":"Mod pilih pin dihentikan.");
+    status(picking?"Mod pin aktif: sentuh kawasan "+(picking==="from"?"MULA":"DESTINASI")+" pada peta besar di atas.":"Mod pin dimatikan.");
+    if(picking){
+      $("map").scrollIntoView?.({block:"center",behavior:"smooth"});
+      const map=mapProvider();
+      if(map?.resize)map.resize();
+    }
   }
   function handleMapClick(lngLat){
     if(!picking)return false;
     const p={id:"custom",name:"Pin peta ("+Number(lngLat.lat).toFixed(4)+", "+Number(lngLat.lng).toFixed(4)+")",
       coords:[Number(lngLat.lng),Number(lngLat.lat)]};
-    setPoint(picking,p);
+    setPoint(picking,p,true);
     return true;
   }
   function geoLine(){
@@ -256,10 +287,18 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
       if(mine===seq){controller=null;$("route2-calc").disabled=false;}
     }
   }
-  $("route2-from").addEventListener("change",()=>setPoint("from",lookup($("route2-from").value,start)));
-  $("route2-to").addEventListener("change",()=>setPoint("to",lookup($("route2-to").value,end)));
+  $("route2-from").addEventListener("change",()=>{
+    if($("route2-from").value==="custom"){pick("from");return;}
+    setPoint("from",lookup($("route2-from").value,start));
+  });
+  $("route2-to").addEventListener("change",()=>{
+    if($("route2-to").value==="custom"){pick("to");return;}
+    setPoint("to",lookup($("route2-to").value,end));
+  });
   $("route2-pick-from").addEventListener("click",()=>pick("from"));
   $("route2-pick-to").addEventListener("click",()=>pick("to"));
+  $("route2-map-from").addEventListener("click",()=>pick("from"));
+  $("route2-map-to").addEventListener("click",()=>pick("to"));
   $("route2-calc").addEventListener("click",calculate);
   $("route2-clear").addEventListener("click",()=>{applied=null;invalidate(true)});
   const first=Object.values(PRESETS)[0];setWaypoints(first);
