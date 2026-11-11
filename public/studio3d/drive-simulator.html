@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="./drive-phase2.css?v=20261112c">
 <link rel="stylesheet" href="./drive-live-map.css?v=20261112d">
 <link rel="stylesheet" href="./drive-smart-digital.css?v=20261112e">
+<link rel="stylesheet" href="./drive-phase4.css?v=20261112a">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
@@ -26,7 +28,7 @@
     <a class="active" aria-current="page" href="/studio3d/drive-simulator.html">⚡ Drive Simulator</a>
   </nav>
 </header>
-<div class="live-banner"><span class="live-dot"></span> MALAYSIA · SMART EV DIGITAL LAB · PHASE 03</div>
+<div class="live-banner"><span class="live-dot"></span> MALAYSIA · SMART EV 3D DRIVE LAB · PHASE 04</div>
 <section class="headline" aria-labelledby="heading">
   <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
   <h1 id="heading">Malaysia <span class="neon-heading">Smart EV Journey Lab.</span></h1>
@@ -68,16 +70,40 @@
  <p class="footnote">Senario Semua Keadaan ialah 7 zon sintetik pada jarak yang dipilih, bukan pengukuran trafik, cerun, permukaan, hujan atau suhu laluan sebenar.</p>
 </section>
 <section class="drive-theatre card" id="drive-theatre" aria-labelledby="drive-theatre-title">
- <div class="smart-report-head"><div><small class="smart-overline">PHASE 03 · DRIVE MOTION SIMULATION</small><h2 id="drive-theatre-title">Digital Drive <em>Playback</em></h2><p>Meter dan animasi kenderaan berasaskan senario. Di peta, penanda bergerak hanya apabila laluan jalan OSRM berjaya diterima.</p></div><span id="drive-route-status" class="drive-route-label">SIMULASI</span></div>
+ <div class="smart-report-head"><div><small class="smart-overline">PHASE 04 · INTERACTIVE 3D DRIVE CINEMA</small><h2 id="drive-theatre-title">Smart 3D Drive <em>Simulator</em></h2><p>Pemanduan 3D menggunakan model e.MAS 5 daripada Studio 3D, dengan sudut kamera, cuaca sintetik, meter bateri dan kawalan masa. Penanda peta hanya mengikut jalan yang sudah disahkan OSRM.</p></div><span id="drive-route-status" class="drive-route-label">SIMULASI</span></div>
+ <div class="drive-viewer-options">
+   <div class="drive-mode-tabs" role="group" aria-label="Mod paparan perjalanan">
+     <button type="button" id="drive-view-2d" class="active" aria-pressed="true">◈ 2D Ringan</button>
+     <button type="button" id="drive-view-3d" aria-pressed="false">◉ 3D Premium</button>
+   </div>
+   <div class="drive-camera-tabs" id="drive-camera-tabs" role="group" aria-label="Sudut kamera 3D" hidden>
+     <button type="button" data-camera="chase" class="active" aria-pressed="true">Belakang</button>
+     <button type="button" data-camera="front" aria-pressed="false">Depan</button>
+     <button type="button" data-camera="side" aria-pressed="false">Sisi</button>
+     <button type="button" data-camera="top" aria-pressed="false">Atas</button>
+   </div>
+ </div>
+ <div id="drive-3d-status" class="drive-3d-status" role="status" aria-live="polite">2D dipilih supaya ringan untuk telefon. Tekan 3D Premium untuk memuatkan model kereta.</div>
  <div id="drive-screen" class="drive-screen" data-condition="normal">
+  <div class="drive-3d-layer" id="drive-3d-layer" hidden aria-label="Pemanduan kereta 3D menggunakan model e.MAS 5"></div>
   <div class="drive-grid"></div><div class="drive-road"><div class="drive-road-dash"></div></div>
   <div class="drive-car" id="drive-vehicle" aria-hidden="true"><svg viewBox="0 0 180 100" width="180" height="100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="90" cy="88" rx="73" ry="7" fill="#000" opacity=".35"/><path d="M20 64L40 56 62 27Q72 20 104 23L126 35 143 55 157 61V72H23Z" fill="#eeb6c8" stroke="#fff0f6" stroke-width="2"/><path d="M65 29L53 53H139L123 35 104 29Z" fill="#193a4c" stroke="#7cbbd4"/><circle cx="50" cy="74" r="14" fill="#0d1b28" stroke="#516379" stroke-width="3"/><circle cx="130" cy="74" r="14" fill="#0d1b28" stroke="#516379" stroke-width="3"/><path d="M150 59l12 4v7h-9Z" fill="#ffefd9"/></svg></div>
   <div class="drive-top-hud"><span id="drive-current-zone">Tetapan Sendiri</span><span id="drive-conditions">NORMAL</span></div>
   <div class="drive-bottom-hud"><div><small>SPEED</small><strong id="drive-speed">0</strong><em>km/j</em></div><div><small>BATTERY SOC</small><strong id="drive-soc">—</strong><em>anggaran</em></div><div><small>JARAK</small><strong id="drive-km">0.0</strong><em>km</em></div></div>
   <div id="drive-warning" class="drive-warning" hidden>⚠ Bateri kosong sebelum destinasi. Simulasi kenderaan dihentikan.</div>
  </div>
+ <div class="drive-phase4-timeline">
+   <div class="drive-timeline-label"><span>⏱ PELARAS PERJALANAN</span><strong id="drive-seek-value">0% · 0.0 km</strong></div>
+   <input type="range" id="drive-seek" min="0" max="1000" value="0" step="1" aria-label="Laraskan kemajuan perjalanan dalam simulasi" />
+   <div class="drive-timeline-bottom"><span id="drive-seek-start">MULA</span><span id="drive-seek-limit">Had tenaga · belum dikira</span><span id="drive-seek-end">DESTINASI</span></div>
+   <div class="drive-rate-control" role="group" aria-label="Kelajuan main balik"><span>KELAJUAN SIMULASI</span>
+     <button type="button" data-rate="0.5" aria-pressed="false">0.5×</button>
+     <button type="button" data-rate="1" aria-pressed="true" class="active">1×</button>
+     <button type="button" data-rate="2" aria-pressed="false">2×</button>
+   </div>
+ </div>
  <div class="drive-controls"><span id="drive-playback-status">Tekan mula untuk melihat animasi.</span><button type="button" id="drive-play-now">▶ Mula Playback</button><button type="button" id="drive-reset-now">↻ Reset</button></div>
- <p class="footnote">Model kereta ialah ilustrasi vektor, bukan geometri sebenar e.MAS 5. Jalan animasi bukan rakaman jalan. Penanda pada peta bergerak di atas jalan hanya selepas routing OSRM sah, bukan pada garis lurus rujukan.</p>
+ <p class="footnote">Mod 3D menggunakan model GLB rujukan Premium daripada Studio 3D. <strong>Prime masih menggunakan geometri Premium sebagai pratonton</strong>, bukan pengesahan trim Prime. Jalan, bukit, hujan dan pergerakan objek 3D ialah visual simulasi — bukan geometri sebenar jalan, data cerun, cuaca langsung atau simulasi fizik suspensi. Penanda di peta mengikut jalan sebenar hanya apabila OSRM berjaya.</p>
 </section>
 <div class="main-layout">
   <div class="col">
