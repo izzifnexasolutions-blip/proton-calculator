@@ -87,7 +87,7 @@
       {name:"Quartz Rose",hex:"#c99da8"},
       {name:"Jade Green",hex:"#6f998b"}
     ];
-    const modelPaths={prime:"/studio3d/models/emas5-prime.glb",premium:"/studio3d/models/emas5-premium.glb"};
+    const modelPaths={prime:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb",premium:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb"};
     const q=new URLSearchParams(location.search);
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
