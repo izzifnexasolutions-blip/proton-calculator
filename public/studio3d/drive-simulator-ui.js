@@ -388,10 +388,16 @@ $("copy").addEventListener("click",async()=>{
     "Permukaan jalan (andaian): "+$("surface").selectedOptions[0].text,
     "Trafik (andaian): "+$("traffic").selectedOptions[0].text,
     "Jumlah tenaga tambahan untuk tiba pada 10%: "+fmt(result.extraEnergyToReserve,2)+" kWh",
-    "Prime SOC tiba: "+fmt(estimate({...getInputs(),variant:"prime"}).arrivalSoc,1)+"%",
-    "Premium SOC tiba: "+fmt(estimate({...getInputs(),variant:"premium"}).arrivalSoc,1)+"%",
+    "Prime SOC tiba (senario sama): "+fmt(calculateJourney({...getInputs(),variant:"prime"},selectedScenario).arrivalSoc,1)+"%",
+    "Premium SOC tiba (senario sama): "+fmt(calculateJourney({...getInputs(),variant:"premium"},selectedScenario).arrivalSoc,1)+"%",
     "Nota: Ini anggaran simulasi; bukan data bateri/traffic sebenar."
   ];
+  if(result.composite){
+    lines.push("PECAHAN 7 ZON (SEMUA KEADAAN SINTETIK):");
+    for(const part of result.segments){
+      lines.push("- "+part.name+": "+fmt(part.km,1)+" km / "+fmt(part.kwh,1)+" kWh / "+fmt(part.speed,0)+" km/j");
+    }
+  }
   try{
     await navigator.clipboard.writeText(lines.join("\n"));
     $("copy-status").textContent="Ringkasan berjaya disalin.";
