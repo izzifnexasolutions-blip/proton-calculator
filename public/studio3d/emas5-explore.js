@@ -16,7 +16,7 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
     hood:/(?:^|[_\s.-])(?:hood|bonnet)(?:[_\s.-]|$)/i,
     trunk:/(?:^|[_\s.-])(?:trunk|tailgate|boot)(?:[_\s.-]|$)/i
   };
-  const buttons={exterior:$("view-exterior"),driver:$("view-driver"),rear:$("view-rear")};
+  const buttons={exterior:$("view-exterior"),driver:$("view-driver"),passenger:$("view-passenger"),rear_left:$("view-rear-left"),rear:$("view-rear"),rear_right:$("view-rear-right")};
   const note=$("feature-note"),listeners=[],rigs=new Map();
   const up=new THREE.Vector3(0,1,0),bounds=new THREE.Box3().setFromObject(root);
   const bodySize=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
@@ -118,66 +118,125 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
 
   function seatAndCabin(){
     if(!right)return {};
+    // Blender source names include Front seat above_R / below_R,
+    // Rear seats_A / B, and Steering wheel_L.
     const wheel=findNodes(/steering[_\s.-]*wheel/i);
     const frontSeats=findNodes(/(?:^|[_\s.-])front[_\s.-]*seat(?:[_\s.-]|$)/i);
-    const rearSeats=findNodes(/(?:^|[_\s.-])rear[_\s.-]*seat(?:[_\s.-]|$)/i);
+    const rearSeats=findNodes(/(?:^|[_\s.-])rear[_\s.-]*seats?(?:[_\s.-]|$)/i);
     const meter=findNodes(/(?:^|[_\s.-])(?:instrument|cluster|meter|speedometer|gauge|driver[_\s.-]*display)(?:[_\s.-]|$)/i);
     const dash=findNodes(/(?:^|[_\s.-])(?:dashboard|cockpit|ip)(?:[_\s.-]|$)/i);
     const result={};
-    let steeringCenter=wheel.length?extent(wheel).getCenter(new THREE.Vector3()):null;
-    let cushion=frontSeats.filter(o=>/(?:^|[_\s.-])(?:below|bottom|cushion|base)(?:[_\s.-]|$)/i.test(o.name||""));
-    if(!cushion.length)cushion=frontSeats;
-    // Prefer actual front-seat cushion nearest the wheel, when the mesh has more than one.
-    if(cushion.length>1&&steeringCenter){
+    const nodeCenter=o=>extent([o]).getCenter(new THREE.Vector3());
+    const steeringCenter=wheel.length?extent(wheel).getCenter(new THREE.Vector3()):null;
+    // The steering side provides the actual physical RIGHT side for a RHD vehicle.
+    // This avoids relying on GLB scene axis naming to label passenger/rear seats.
+    const wheelLateral=steeringCenter?steeringCenter.clone().sub(center).dot(right):0;
+    const steeringSide=Math.abs(wheelLateral)>bodySize.length()*.04?Math.sign(wheelLateral):0;
+    const carRight=right.clone().multiplyScalar(steeringSide||1);
+    const cabinHalfWidth=projectedHalf(bounds,right);
+    const roofLimit=bounds.max.y-height*.115;
+    const forwardBearing=Math.atan2(front.x,front.z);
+    const makeForwardView=(eyes,bearing=forwardBearing,pitch=-.09,source="seat")=>{
+      const direction=new THREE.Vector3(Math.sin(bearing)*Math.cos(pitch),Math.sin(pitch),Math.cos(bearing)*Math.cos(pitch));
+      return {position:eyes,target:eyes.clone().addScaledVector(direction,3),bearing,initialPitch:pitch,source};
+    };
+    let cushions=frontSeats.filter(o=>/(?:^|[_\s.-])(?:below|bottom|cushion|base)(?:[_\s.-]|$)/i.test(o.name||""));
+    if(!cushions.length)cushions=frontSeats;
+    let driverSeats=cushions.slice();
+    if(cushions.length>1&&steeringCenter){
       const score=o=>{
-        const c=extent([o]).getCenter(new THREE.Vector3());
-        const sideDiff=Math.abs(c.clone().sub(steeringCenter).dot(right));
-        const frontDiff=Math.abs(c.clone().sub(steeringCenter).dot(front));
-        return sideDiff*2+frontDiff*.18;
+        const c=nodeCenter(o);
+        return Math.abs(c.clone().sub(steeringCenter).dot(right))*2+
+          Math.abs(c.clone().sub(steeringCenter).dot(front))*.18;
       };
-      const min=cushion.reduce((best,o)=>score(o)<score(best)?o:best,cushion[0]);
-      const minCenter=extent([min]).getCenter(new THREE.Vector3());
-      cushion=cushion.filter(o=>Math.abs(extent([o]).getCenter(new THREE.Vector3()).clone().sub(minCenter).dot(right))<bodySize.length()*.045);
+      const selected=cushions.reduce((best,o)=>score(o)<score(best)?o:best,cushions[0]);
+      const seatLat=nodeCenter(selected).clone().sub(center).dot(right);
+      driverSeats=cushions.filter(o=>Math.abs(nodeCenter(o).clone().sub(center).dot(right)-seatLat)<cabinHalfWidth*.14);
+      if(!driverSeats.length)driverSeats=[selected];
     }
-    if(cushion.length||steeringCenter){
+    if(driverSeats.length||steeringCenter){
       let eyes;
-      if(cushion.length){
-        const seat=extent(cushion),seatMid=seat.getCenter(new THREE.Vector3());
+      if(driverSeats.length){
+        const seat=extent(driverSeats),seatMid=seat.getCenter(new THREE.Vector3());
         const headrests=frontSeats.filter(o=>/(?:^|[_\s.-])(?:above|backrest|headrest)(?:[_\s.-]|$)/i.test(o.name||""));
-        const seatsNear=headrests.filter(o=>Math.abs(extent([o]).getCenter(new THREE.Vector3()).sub(seatMid).dot(right))<bodySize.length()*.06);
+        const nearby=headrests.filter(o=>Math.abs(nodeCenter(o).clone().sub(seatMid).dot(right))<cabinHalfWidth*.16);
         eyes=seatMid.clone().addScaledVector(front,length*.027);
         let eyeY=seat.max.y+height*.30;
-        if(seatsNear.length)eyeY=Math.min(eyeY,extent(seatsNear).max.y-height*.07);
-        eyes.y=clamp(eyeY,seat.max.y+height*.12,bounds.max.y-height*.115);
-        // Sit at the steering-wheel side only if it agrees with the actual seat mesh.
+        if(nearby.length)eyeY=Math.min(eyeY,extent(nearby).max.y-height*.07);
+        eyes.y=clamp(eyeY,seat.max.y+height*.12,roofLimit);
         if(steeringCenter&&Math.abs(steeringCenter.clone().sub(eyes).dot(right))<height*.45){
-          eyes.addScaledVector(right,clamp(steeringCenter.clone().sub(eyes).dot(right),-bodySize.y*.07,bodySize.y*.07));
+          eyes.addScaledVector(right,clamp(steeringCenter.clone().sub(eyes).dot(right),-height*.075,height*.075));
         }
-      }else{
+      } else {
         eyes=steeringCenter.clone().addScaledVector(front,-Math.min(length*.14,height*.49));
-        eyes.y=clamp(steeringCenter.y+height*.13,bounds.min.y+height*.38,bounds.max.y-height*.13);
+        eyes.y=clamp(steeringCenter.y+height*.13,bounds.min.y+height*.38,roofLimit);
       }
-      const face=front.clone(),facingLength=2.7;
-      // Default: looking through the windshield, angled down enough to include
-      // wheel + instrument panel without aiming straight at the windshield.
-      let bearing=Math.atan2(face.x,face.z),initialPitch=-.17;
+      let bearing=forwardBearing,pitch=-.17;
       const focus=meter.length?extent(meter).getCenter(new THREE.Vector3()):
         dash.length?extent(dash).getCenter(new THREE.Vector3()):null;
       if(focus){
-        const delta=focus.clone().sub(eyes),bearingToDash=Math.atan2(delta.x,delta.z);
-        const relative=Math.atan2(Math.sin(bearingToDash-bearing),Math.cos(bearingToDash-bearing));
+        const delta=focus.clone().sub(eyes);
+        const focusBearing=Math.atan2(delta.x,delta.z);
+        const relative=Math.atan2(Math.sin(focusBearing-bearing),Math.cos(focusBearing-bearing));
         bearing+=clamp(relative,-.12,.12);
-        initialPitch=clamp(Math.atan2(delta.y,Math.max(.7,Math.hypot(delta.x,delta.z))),-.30,-.09);
+        pitch=clamp(Math.atan2(delta.y,Math.max(.7,Math.hypot(delta.x,delta.z))),-.30,-.09);
       }
-      const target=eyes.clone().addScaledVector(new THREE.Vector3(Math.sin(bearing)*Math.cos(initialPitch),Math.sin(initialPitch),Math.cos(bearing)*Math.cos(initialPitch)),facingLength);
-      result.driver={position:eyes,target,bearing,initialPitch,source:cushion.length?"front seat":"steering fallback"};
+      result.driver=makeForwardView(eyes,bearing,pitch,driverSeats.length?"front seat":"steering fallback");
+      // Front passenger on the opposite side of the wheel. Use its cushion if
+      // separately modelled; otherwise mirror the real driver's eye position
+      // across the centreline (camera only, never clone or fabricate a seat).
+      if(steeringSide&&cabinHalfWidth>height*.20){
+        const driverLat=eyes.clone().sub(center).dot(right);
+        const seatOffset=clamp(Math.abs(driverLat)>cabinHalfWidth*.18?Math.abs(driverLat):Math.abs(wheelLateral),
+          cabinHalfWidth*.27,cabinHalfWidth*.68);
+        const passengerLat=-steeringSide*seatOffset;
+        const passengerEye=eyes.clone().addScaledVector(right,passengerLat-driverLat);
+        const candidate=cushions.filter(o=>{
+          const lat=nodeCenter(o).clone().sub(center).dot(right);
+          return lat*steeringSide<-cabinHalfWidth*.22;
+        });
+        if(candidate.length){
+          const closest=candidate.reduce((best,o)=>{
+            const goal=Math.abs(nodeCenter(o).clone().sub(center).dot(right)-passengerLat);
+            const old=Math.abs(nodeCenter(best).clone().sub(center).dot(right)-passengerLat);
+            return goal<old?o:best;
+          },candidate[0]);
+          const pSeat=extent([closest]),pCenter=pSeat.getCenter(new THREE.Vector3());
+          passengerEye.addScaledVector(right,pCenter.clone().sub(passengerEye).dot(right));
+          passengerEye.addScaledVector(front,pCenter.clone().sub(passengerEye).dot(front)*.55);
+          passengerEye.y=clamp(pSeat.max.y+height*.24,bounds.min.y+height*.42,roofLimit);
+        }
+        // Initial view also includes the centre display/dashboard, not just the window.
+        const inward=carRight.clone().multiplyScalar(.22*length);
+        const passengerTarget=passengerEye.clone().addScaledVector(front,3).add(inward);
+        passengerTarget.y=passengerEye.y-.28;
+        const v=passengerTarget.clone().sub(passengerEye).normalize();
+        const passengerBearing=Math.atan2(v.x,v.z),passengerPitch=Math.asin(clamp(v.y,-1,1));
+        result.passenger=makeForwardView(passengerEye,passengerBearing,passengerPitch,
+          candidate.length?"passenger seat":"mirrored driver seat");
+      }
     }
     if(rearSeats.length){
-      const rear=extent(rearSeats),p=rear.getCenter(new THREE.Vector3()).addScaledVector(front,length*.017);
-      p.y=clamp(rear.max.y+height*.19,bounds.min.y+height*.35,bounds.max.y-height*.12);
-      const bearing=Math.atan2(front.x,front.z),initialPitch=-.08;
-      const dir=new THREE.Vector3(Math.sin(bearing),Math.sin(initialPitch),Math.cos(bearing));
-      result.rear={position:p,target:p.clone().addScaledVector(dir,3),bearing,initialPitch};
+      const rear=extent(rearSeats),rearMid=rear.getCenter(new THREE.Vector3());
+      // Rear seats_A/B are upholstery pieces, not guaranteed left/right seats.
+      // Use their combined actual bench bounds and place eye points across it.
+      const rearLateral=rearMid.clone().sub(center).dot(right);
+      const rearCenter=rearMid.clone().addScaledVector(right,-rearLateral);
+      rearCenter.addScaledVector(front,length*.017);
+      const frontEyeY=result.driver?.position.y;
+      const computedY=Number.isFinite(frontEyeY)?frontEyeY-height*.055:rear.min.y+height*.59;
+      rearCenter.y=clamp(computedY,rear.min.y+height*.23,roofLimit);
+      result.rear=makeForwardView(rearCenter.clone(),forwardBearing,-.08,"rear bench centre");
+      const benchHalfWidth=projectedHalf(rear,right);
+      // Two side seats need an actual wide rear-bench mesh; don't put the
+      // camera into a door when only a narrow armrest is present.
+      if(steeringSide&&benchHalfWidth>cabinHalfWidth*.36){
+        const spread=Math.min(benchHalfWidth*.55,cabinHalfWidth*.57);
+        const leftEye=rearCenter.clone().addScaledVector(carRight,-spread);
+        const rightEye=rearCenter.clone().addScaledVector(carRight,spread);
+        result.rear_left=makeForwardView(leftEye,forwardBearing,-.07,"rear left seat");
+        result.rear_right=makeForwardView(rightEye,forwardBearing,-.07,"rear right seat");
+      }
     }
     return result;
   }
@@ -237,8 +296,11 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
       fromNear:camera.near,toNear:next==="exterior"?baseNear:Math.min(baseNear,.025),
       start:stamp,duration:820,next};
     view=next;drag=null;tap=null;eyeAnchor=null;updateUI();requestRender();
-    if(next==="driver")message("Kamera pada kerusi pemandu. Seret jari untuk toleh kiri, kanan, atas dan bawah.");
-    else if(next==="rear")message("Kamera pada kerusi belakang. Seret untuk melihat sekeliling kabin.");
+    const viewLabels={
+      driver:"POV Pemandu",passenger:"POV Penumpang Depan",
+      rear_left:"Belakang Kiri",rear:"Belakang Tengah",rear_right:"Belakang Kanan"
+    };
+    if(viewLabels[next])message(viewLabels[next]+": anda duduk di tempat duduk ini. Seret jari kiri/kanan/atas/bawah untuk menoleh.");
     else message("Kembali ke pandangan luar kereta 360°.");
   }
   function tick(now){
@@ -319,7 +381,7 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
   updateUI();
   if(!right)message("GLB ini tidak mempunyai bonet depan/belakang yang boleh menentukan arah kereta. Engsel dinyahaktifkan.",true);
   else if(!rigs.size)message("Komponen pintu tidak dapat dipisahkan dengan selamat daripada model GLB semasa.",true);
-  else message("Pintu membuka keluar. Tekan POV Pemandu untuk duduk di kerusi dan menoleh 360°.");
+  else message("Pintu membuka keluar. Pilih Pemandu, Penumpang Depan atau tempat duduk Belakang untuk POV boleh menoleh 360°.");
   return {
     tick,setView,
     get mode(){return view},
@@ -329,7 +391,7 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
       for(const rig of rigs.values()){rig.pivot.quaternion.identity();rig.pivot.updateMatrixWorld(true);}
       rigs.clear();controls.enabled=true;camera.fov=baseFov;camera.near=baseNear;camera.updateProjectionMatrix();
       for(const id of Object.values(ids))$(id).disabled=true;
-      $("x-close-all").disabled=true;for(const name of ["view-driver","view-rear"])$(name).disabled=true;
+      $("x-close-all").disabled=true;for(const name of ["view-driver","view-passenger","view-rear-left","view-rear","view-rear-right"])$(name).disabled=true;
       $("turntable").disabled=false;
     }
   };
