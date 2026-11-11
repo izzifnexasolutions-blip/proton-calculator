@@ -128,10 +128,10 @@
     function init3D(){
       if(renderer)return true;
       try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance",preserveDrawingBuffer:false});}catch(e){status("Peranti tidak menyokong WebGL: "+e.message,"error");showEmpty("WebGL tidak tersedia","Gunakan pelayar yang menyokong grafik 3D.");return false;}
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<780?1.1:1.4));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.42;
-      renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      renderer.shadowMap.enabled=window.innerWidth>=780;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(38,1,.03,500);
       camera.position.set(5,2.6,7);
       scene.add(new THREE.HemisphereLight(0xd9ebff,0x34455b,2.45));
