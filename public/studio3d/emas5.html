@@ -87,11 +87,11 @@
       {name:"Quartz Rose",hex:"#c99da8"},
       {name:"Jade Green",hex:"#6f998b"}
     ];
-    const modelPaths={prime:"/studio3d/models/emas5-prime.glb",premium:"/studio3d/models/emas5-premium.glb"};
+    const modelPaths={prime:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb",premium:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb"};
     const q=new URLSearchParams(location.search);
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
-    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0;
+    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null;
     let originals=[],paintMaterialNames=[],pickedMaterial="";
     const stage=$("stage"),empty=$("empty-state"),loading=$("loading");
     function status(s,kind=""){const el=$("status");el.textContent=s;el.className=kind;}
@@ -102,7 +102,7 @@
       const isTarget=n=>paintMaterialNames.includes(n)||(pickedMaterial&&n===pickedMaterial);
       for(const x of originals){
         if(!x.material?.color)continue;
-        if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);if("metalness" in x.material)x.material.metalness=0.24;if("roughness" in x.material)x.material.roughness=0.33;x.material.needsUpdate=true;}
+        if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);x.material.needsUpdate=true;}
         else{x.material.color.copy(x.color);if("metalness" in x.material)x.material.metalness=x.metal;if("roughness" in x.material)x.material.roughness=x.rough;x.material.needsUpdate=true;}
       }
     }
@@ -122,16 +122,16 @@
       $("var-prime").classList.toggle("active",variant==="prime");$("var-premium").classList.toggle("active",variant==="premium");
       $("var-prime").setAttribute("aria-pressed",String(variant==="prime"));$("var-premium").setAttribute("aria-pressed",String(variant==="premium"));
       $("stage-title").textContent="PROTON e.MAS 5 · "+variant.toUpperCase()+" EV";
-      $("variant-note").textContent=variant==="prime"?"Prime memerlukan GLB tersendiri untuk rim dan ciri varian yang tepat.":"Premium menggunakan aset GLB Premium; bentuk badan tidak diubah oleh pilihan warna.";
+      $("variant-note").textContent=variant==="prime"?"Paparan warna badan menggunakan MODEL PREMIUM sebagai rujukan sementara. Rim dan kelengkapan Prime belum disahkan; ini bukan model Prime sebenar.":"Model Premium RHD menggunakan rim 16 inci daripada fail Blender asal. Pilih warna untuk menukar cat badan dalam 3D.";document.querySelector(".stage-badge").textContent=variant==="prime"?"WARNA BADAN SAHAJA":"PREMIUM 3D";
       history.replaceState(null,"","?variant="+variant+"&color="+encodeURIComponent(selectedColor.name));
     }
     function init3D(){
       if(renderer)return true;
       try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance",preserveDrawingBuffer:false});}catch(e){status("Peranti tidak menyokong WebGL: "+e.message,"error");showEmpty("WebGL tidak tersedia","Gunakan pelayar yang menyokong grafik 3D.");return false;}
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<780?1.1:1.4));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.42;
-      renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      renderer.shadowMap.enabled=window.innerWidth>=780;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(38,1,.03,500);
       camera.position.set(5,2.6,7);
       scene.add(new THREE.HemisphereLight(0xd9ebff,0x34455b,2.45));
@@ -163,7 +163,7 @@
       const hasAuto=paintMaterialNames.length>0;
       $("paint-mapping").hidden=hasAuto;
       if(!hasAuto){pickedMaterial="";status("GLB berjaya dimuatkan, tetapi material cat badan belum dapat dikenal pasti. Pilih material pada kotak 'Cat badan' supaya rim/kaca tidak berubah.","error");}
-      else{pickedMaterial="";status("Model "+variant.toUpperCase()+" berjaya dimuatkan. Pilihan warna kini menukar material cat badan sahaja.","ok");}
+      else{pickedMaterial="";status(variant==="prime"?"Model rujukan Premium telah dimuatkan untuk pilihan warna badan Prime. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dengan rim 16 inci berjaya dimuatkan. Pilih warna untuk menukar cat badan kereta 3D.","ok");}
       repaint();
     }
     function loadGLB(url,fromFile=false){
@@ -173,15 +173,15 @@
       const loader=new GLTFLoader();loader.setDRACOLoader(draco);
       loader.load(url,g=>{
         draco.dispose();if(token!==loadToken){if(fromFile)URL.revokeObjectURL(url);return;}
-        root=g.scene;scene.add(root);
+        root=g.scene;loadedSource=url;scene.add(root);
         const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3());
         if(bounds.isEmpty()||size.length()<.0001){clearModel();showEmpty("GLB kosong","Fail tiada geometri yang boleh dipaparkan.");status("GLB tidak mengandungi mesh yang sah.","error");return;}
         const c=bounds.getCenter(new THREE.Vector3()),max=Math.max(size.x,size.y,size.z);
         root.position.x-=c.x;root.position.z-=c.z;root.position.y-=bounds.min.y;
         platform.position.y=-.035;platform.scale.setScalar(Math.max(1,max/4));platform.visible=true;
         controls.target.set(0,Math.max(.65,size.y*.45),0);
-        const dist=Math.max(3.5,max*1.65);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
-        camera.position.set(dist*.8,Math.max(1.8,size.y*.7),dist);camera.updateProjectionMatrix();
+        const dist=Math.max(3.3,max*1.18);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
+        camera.position.set(dist*.62,Math.max(1.65,size.y*.7),dist*.95);camera.updateProjectionMatrix();
         controls.minDistance=Math.max(.8,max*.58);controls.maxDistance=Math.max(12,max*6);
         controls.update();configurePaint();loading.style.display="none";
         $("reset-camera").disabled=false;$("turntable").disabled=false;
@@ -193,7 +193,7 @@
         status(msg,fromFile?"error":"");if(fromFile)URL.revokeObjectURL(url);
       });
     }
-    function loadVariant(){variantUI();showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
+    function loadVariant(){variantUI();if(root&&loadedSource===modelPaths[variant]){status(variant==="prime"?"Pratonton warna badan Prime menggunakan model rujukan Premium. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dan rim 16 inci aktif. Pilih warna untuk melihat cat badan berubah.","ok");return;}showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
     $("var-prime").addEventListener("click",()=>{if(variant==="prime")return;variant="prime";loadVariant();});
     $("var-premium").addEventListener("click",()=>{if(variant==="premium")return;variant="premium";loadVariant();});
     $("glb-file").addEventListener("change",e=>{
@@ -202,7 +202,7 @@
       status("Import "+f.name+"…");loadGLB(URL.createObjectURL(f),true);e.target.value="";
     });
     $("material-selector").addEventListener("change",e=>{pickedMaterial=e.target.value;repaint();if(pickedMaterial)status("Material '"+pickedMaterial+"' dipilih sebagai cat badan. Semak secara visual sebelum kongsi.","ok");});
-    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.5,Math.max(s.x,s.y,s.z)*1.65);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.8,Math.max(1.8,s.y*.7),d);controls.update();});
+    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
     $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";});
     colorUI();loadVariant();
   </script>
