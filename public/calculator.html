@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script id="supabase-sdk" async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -2686,15 +2686,20 @@ function init(){
 }
 
 function start(){
-  // Harga tersedia serta-merta; galeri Supabase dimuatkan secara berasingan.
+  // Jadual harga berfungsi serta-merta, tanpa menunggu CDN atau pangkalan data.
   init();
-  _initSupabase().then(function(){
-    if(_sbReady){
-      _ss.builtFor=null;
-      _ssLoad();
-      if(settingsOpen)spRebuild();
-    }
-  }).catch(function(){/* kalkulator kekal berfungsi walaupun galeri gagal dimuatkan */});
+  var sdk=document.getElementById("supabase-sdk");
+  function loadMedia(){
+    if(!window.supabase||!window.supabase.createClient)return;
+    _initSupabase().then(function(){
+      if(_sbReady){
+        _ss.builtFor=null;_ssLoad();
+        if(settingsOpen)spRebuild();
+      }
+    }).catch(function(){/* pengiraan kekal tersedia jika media tidak dapat diambil */});
+  }
+  if(window.supabase&&window.supabase.createClient)loadMedia();
+  else if(sdk)sdk.addEventListener("load",loadMedia,{once:true});
 }
 
 if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",start)}else{start()}
