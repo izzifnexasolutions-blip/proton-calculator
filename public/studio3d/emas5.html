@@ -122,7 +122,7 @@
       $("var-prime").classList.toggle("active",variant==="prime");$("var-premium").classList.toggle("active",variant==="premium");
       $("var-prime").setAttribute("aria-pressed",String(variant==="prime"));$("var-premium").setAttribute("aria-pressed",String(variant==="premium"));
       $("stage-title").textContent="PROTON e.MAS 5 · "+variant.toUpperCase()+" EV";
-      $("variant-note").textContent=variant==="prime"?"Prime memerlukan GLB tersendiri untuk rim dan ciri varian yang tepat.":"Premium menggunakan aset GLB Premium; bentuk badan tidak diubah oleh pilihan warna.";
+      $("variant-note").textContent=variant==="prime"?"Paparan warna badan menggunakan MODEL PREMIUM sebagai rujukan sementara. Rim dan kelengkapan Prime belum disahkan; ini bukan model Prime sebenar.":"Model Premium RHD menggunakan rim 16 inci daripada fail Blender asal. Pilih warna untuk menukar cat badan dalam 3D.";document.querySelector(".stage-badge").textContent=variant==="prime"?"WARNA BADAN SAHAJA":"PREMIUM 3D";
       history.replaceState(null,"","?variant="+variant+"&color="+encodeURIComponent(selectedColor.name));
     }
     function init3D(){
