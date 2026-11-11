@@ -408,7 +408,17 @@ function applyScenarioInputs(id,settings){
   const perZone=["speed","road","mode","traffic","surface","ac","rain","temperature","wind","slope","hvac","regen"];
   for(const field of perZone){const el=$(field);if(el)el.disabled=id==="all";}
   $("smart-advanced").open=id==="worst"||id==="battery";
-  if(id!=="all"){
+  if(id==="all"){
+    // Each zone has its own speed, road, rain and gradient. Reset the inherited
+    // route parameters so the master result does not depend on which preset
+    // happened to be clicked immediately beforehand. Preserve SOC, SOH, load.
+    const zoneDefaults={...scenarioDefaults};
+    for(const keep of ["people","cargo","batteryHealth"])delete zoneDefaults[keep];
+    for(const [field,value] of Object.entries(zoneDefaults)){
+      const el=$(field);if(!el)continue;
+      if(typeof value==="boolean")el.checked=value;else el.value=String(value);
+    }
+  }else{
     // Scenario settings reset previous optional stress factors. Keep the user's
     // distance, initial SOC and tariff untouched.
     for(const [field,value] of Object.entries({...scenarioDefaults,...settings})){
