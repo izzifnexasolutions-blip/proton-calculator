@@ -81,7 +81,7 @@
 <body>
   <main class="layout">
     <header class="top"><div class="brand"><span class="logo">P</span><div><small>FARIS PROTON · 3D STUDIO</small><div><b>e.MAS 5</b></div></div></div><a class="back" href="/calculator.html">← Kembali ke kalkulator</a></header>
-    <div class="intro"><div class="eyebrow">INTERACTIVE COLOUR STUDIO</div><h1>Explore e.MAS 5 in 3D.</h1><p>Pilih Prime atau Premium, putar model 360° dan cuba enam pilihan warna luaran. Warna pada skrin ialah anggaran visual dan mungkin berbeza daripada cat sebenar.</p></div>
+    <div class="intro"><div class="eyebrow">INTERACTIVE COLOUR STUDIO</div><h1>Explore e.MAS 5 in 3D.</h1><p>Pilih varian, cuba enam pilihan warna dan jelajah ruang dalaman daripada tempat duduk pemandu, penumpang depan atau belakang. Warna pada skrin ialah anggaran visual.</p></div>
     <div class="workspace">
       <section class="card" aria-label="Model kereta 3D">
         <div class="stage-top"><div><strong id="stage-title">PROTON e.MAS 5 · PREMIUM EV</strong><div><small>Drag to rotate · Scroll or pinch to zoom</small></div></div><span class="stage-badge">3D CONCEPT</span></div>
@@ -107,13 +107,16 @@
           </div>
           <button class="close-all" type="button" id="x-close-all" disabled>↻ Tutup Semua Pintu &amp; Bonet</button>
           <div class="section-heading" style="font-size:11px;font-weight:900;margin-top:19px">04 · PANDANGAN DALAM KABIN</div>
-          <div class="view-grid" role="group" aria-label="Sudut kamera 3D">
-            <button class="view-btn active" type="button" id="view-exterior" aria-pressed="true">◉<br>Luar 360°</button>
-            <button class="view-btn" type="button" id="view-driver" aria-pressed="false" disabled>◈<br>POV Pemandu</button>
-            <button class="view-btn" type="button" id="view-rear" aria-pressed="false" disabled>▧<br>Kerusi Belakang</button>
+          <div class="view-grid" role="group" aria-label="Pilih tempat duduk dan sudut kamera 3D">
+            <button class="view-btn active" type="button" id="view-exterior" aria-pressed="true" aria-label="Pandangan luar kereta 360 darjah">◉<br>Luar 360°</button>
+            <button class="view-btn" type="button" id="view-driver" aria-pressed="false" disabled aria-label="Duduk di kerusi pemandu">◈<br>Pemandu</button>
+            <button class="view-btn" type="button" id="view-passenger" aria-pressed="false" disabled aria-label="Duduk di kerusi penumpang depan">◉<br>Penumpang Depan</button>
+            <button class="view-btn" type="button" id="view-rear-left" aria-pressed="false" disabled aria-label="Duduk di kerusi belakang kiri">◂<br>Belakang Kiri</button>
+            <button class="view-btn" type="button" id="view-rear" aria-pressed="false" disabled aria-label="Duduk di kerusi belakang tengah">▧<br>Belakang Tengah</button>
+            <button class="view-btn" type="button" id="view-rear-right" aria-pressed="false" disabled aria-label="Duduk di kerusi belakang kanan">▸<br>Belakang Kanan</button>
           </div>
           <p class="feature-note" id="feature-note" role="status" aria-live="polite">Buka model 3D untuk mengaktifkan komponen yang tersedia. Pemandangan kabin bergantung pada aset sebenar.</p>
-          <p class="sub">POV Pemandu: kamera duduk pada paras mata di kerusi pemandu. Seret jari kiri/kanan/atas/bawah untuk menoleh kepala, tanpa bergerak dari kerusi. Kawasan meter dan papan pemuka ikut model 3D sebenar.</p>
+          <p class="sub">Pilih tempat duduk pemandu, penumpang depan atau belakang. Kamera kekal pada paras mata penumpang dan boleh menoleh kiri, kanan, atas serta bawah dengan jari. Jika kerusi tertentu tiada dalam model GLB, pilihannya tidak diaktifkan.</p>
         </div>
         <div class="section"><h2>05 · ASET 3D</h2><label class="upload">◈ Import model GLB pada peranti<input id="glb-file" type="file" accept=".glb,model/gltf-binary" aria-label="Import fail GLB 3D"></label><p class="sub">Fail <b>.blend</b> tidak boleh terus dibuka dalam pelayar. Export dari Blender sebagai <b>.glb</b> dahulu. Import di sini hanya untuk sesi semasa; untuk semua pelanggan, fail perlu diterbitkan pada pelayan.</p><div id="status" role="status" aria-live="polite">Mencari fail model varian yang tersedia…</div></div>
         <div class="section" id="paint-mapping" hidden><label for="material-selector" class="field-label">Pilih material cat badan (jika belum dapat dikenal pasti)</label><select class="select" id="material-selector"></select><p class="sub">Hanya material dipilih akan bertukar warna. Eksport menggunakan material bernama <b>EMAS5_BodyPaint</b> untuk pemilihan automatik.</p></div>
