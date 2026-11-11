@@ -88,7 +88,7 @@
           <div id="empty-state"><svg class="car-svg" viewBox="0 0 160 85" fill="none" stroke="#9db5cd" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 53h125l-11-20-20-8H45L25 39z"/><path d="M49 26 39 53m67-27 16 27"/><circle cx="41" cy="57" r="11" fill="#182a3f"/><circle cx="122" cy="57" r="11" fill="#182a3f"/></svg><h2>Model 3D belum diterbitkan</h2><p>Fail Blender perlu dieksport ke GLB terlebih dahulu. Anda boleh import GLB untuk pratonton di sini.</p></div>
           <div id="loading" role="status">Memuatkan model 3D…</div>
         </div>
-        <div class="stage-foot"><span>360° orbit · Premium lighting · RHD concept</span><div class="stage-actions"><button class="tool" id="reset-camera" type="button" disabled>↻ Reset view</button><button class="tool" id="turntable" type="button" disabled>▶ Auto rotate</button></div></div>
+        <div class="stage-foot"><span>Luar: putar 360° · Kabin: toleh kepala dengan jari</span><div class="stage-actions"><button class="tool" id="reset-camera" type="button" disabled>↻ Reset view</button><button class="tool" id="turntable" type="button" disabled>▶ Auto rotate</button></div></div>
       </section>
       <aside class="card editor">
         <div class="section"><h2>01 · PILIH VARIAN</h2><div class="seg" role="group" aria-label="Varian e.MAS 5"><button id="var-prime" type="button" aria-pressed="false">PRIME EV</button><button id="var-premium" type="button" aria-pressed="true">PREMIUM EV</button></div><p class="sub" id="variant-note">Paparan mengikut fail GLB Premium yang dimasukkan. Tiada geometri varian lain yang direka secara automatik.</p></div>
@@ -112,7 +112,7 @@
             <button class="view-btn" type="button" id="view-rear" aria-pressed="false" disabled>▧<br>Kerusi Belakang</button>
           </div>
           <p class="feature-note" id="feature-note" role="status" aria-live="polite">Buka model 3D untuk mengaktifkan komponen yang tersedia. Pemandangan kabin bergantung pada aset sebenar.</p>
-          <p class="sub">Dalam mod kabin, seret untuk melihat sekeliling. Kamera menggunakan kedudukan stereng/tempat duduk dalam model, bukan foto panorama rekaan.</p>
+          <p class="sub">POV Pemandu: kamera duduk pada paras mata di kerusi pemandu. Seret jari kiri/kanan/atas/bawah untuk menoleh kepala, tanpa bergerak dari kerusi. Kawasan meter dan papan pemuka ikut model 3D sebenar.</p>
         </div>
         <div class="section"><h2>05 · ASET 3D</h2><label class="upload">◈ Import model GLB pada peranti<input id="glb-file" type="file" accept=".glb,model/gltf-binary" aria-label="Import fail GLB 3D"></label><p class="sub">Fail <b>.blend</b> tidak boleh terus dibuka dalam pelayar. Export dari Blender sebagai <b>.glb</b> dahulu. Import di sini hanya untuk sesi semasa; untuk semua pelanggan, fail perlu diterbitkan pada pelayan.</p><div id="status" role="status" aria-live="polite">Mencari fail model varian yang tersedia…</div></div>
         <div class="section" id="paint-mapping" hidden><label for="material-selector" class="field-label">Pilih material cat badan (jika belum dapat dikenal pasti)</label><select class="select" id="material-selector"></select><p class="sub">Hanya material dipilih akan bertukar warna. Eksport menggunakan material bernama <b>EMAS5_BodyPaint</b> untuk pemilihan automatik.</p></div>
@@ -142,7 +142,15 @@
     let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null,pendingSource=null;
     let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true,explorer=null;
     function queueFrame(){if(renderer&&scene&&!animation&&!document.hidden&&stageInView)animation=requestAnimationFrame(drawFrame)}
-    function drawFrame(){animation=0;if(document.hidden||!stageInView)return;const moving=explorer?.tick(performance.now())||false;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);if(autoRotate||moving)queueFrame()}
+    function drawFrame(){animation=0;if(document.hidden||!stageInView)return;
+      const moving=explorer?.tick(performance.now())||false;
+      const inCabin=!!explorer&&(explorer.mode!=="exterior"||explorer.transitioning);
+      // OrbitControls must NEVER update the camera during first-person head-look.
+      controls.autoRotate=!inCabin&&autoRotate;
+      if(!inCabin)controls.update();
+      renderer.render(scene,camera);
+      if((autoRotate&&!inCabin)||moving)queueFrame();
+    }
     const stage=$("stage"),empty=$("empty-state"),loading=$("loading");
     function status(s,kind=""){const el=$("status");el.textContent=s;el.className=kind;}
     function showEmpty(title,subtitle){empty.hidden=false;empty.querySelector("h2").textContent=title;empty.querySelector("p").textContent=subtitle;loading.style.display="none";}
