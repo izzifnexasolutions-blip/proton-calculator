@@ -130,12 +130,12 @@ function refresh(){
   $("scenario-normal").textContent=fmt(result.arrivalSoc,0)+"%";
   $("scenario-worst").textContent=fmt(result.arrivalLow,0)+"%";
   const status=$("trip-status");
-  if(result.startSoc<=10){
-    status.className="status warn";
-    status.textContent="Bateri awal hampir pada had simpanan 10%. Cas dahulu sebelum memulakan perjalanan untuk margin keselamatan.";
-  }else if(!result.reachAtAll){
+  if(!result.reachAtAll){
     status.className="status bad";
     status.textContent="BATERI TIDAK CUKUP: anggaran kereta berhenti pada km "+fmt(result.stopAtKm,1)+" daripada "+fmt(result.km,1)+" km. Kos/tenaga di atas ialah keperluan untuk melengkapkan seluruh perjalanan, bukan tenaga yang tersedia sekarang.";
+  }else if(result.startSoc<=10){
+    status.className="status warn";
+    status.textContent="Bateri awal hampir pada had simpanan 10%. Cas dahulu sebelum memulakan perjalanan untuk margin keselamatan.";
   }else if(!result.reachWithReserve){
     status.className="status warn";
     status.textContent="Baki di destinasi di bawah 10% SOC. Pertimbangkan tambahan sekitar "+fmt(result.extraEnergyToReserve,1)+" kWh untuk tiba dengan simpanan.";
@@ -293,7 +293,7 @@ function renderIntelligence(options){
   strip.dataset.state=state;
   let verdict=state==="safe"?"BOLEH SAMPAI":state==="bad"?"PERLU CAS":"AMARAN BATERI";
   let subtitle=state==="safe"?"Anggaran baki ≥10%":"Sediakan pengecasan tambahan";
-  if(isLow){verdict="CAS DAHULU";subtitle="SOC mula ≤10%";}
+  if(isLow&&result.reachAtAll){verdict="CAS DAHULU";subtitle="SOC mula ≤10%";}
   $("verdict-title").textContent=verdict;
   $("verdict-subtitle").textContent=subtitle;
   $("verdict-soc").textContent=fmt(result.arrivalSoc,0)+"%";
