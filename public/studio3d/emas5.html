@@ -157,7 +157,7 @@
         }
       });
       const names=[...matches.keys()];
-      paintMaterialNames=names.filter(n=>/EMAS5[_ -]?BodyPaint|Body.?Paint|Car.?Paint|Exterior.?Paint|Paint.?Body/i.test(n));
+      paintMaterialNames=names.filter(n=>/EMAS5[_ -]?BodyPaint|Body.?Paint|Car.?Paint|Exterior.?Paint|Paint.?Body|Proton Marble Cream|Marble Cream with/i.test(n));
       const chooser=$("material-selector");chooser.replaceChildren(new Option("Pilih material cat badan",""));
       for(const name of names)chooser.add(new Option(name,name));
       const hasAuto=paintMaterialNames.length>0;
