@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="./drive-simulator.css?v=20261112a">
 <link rel="stylesheet" href="./drive-simulator-digital.css?v=20261112b">
 <link rel="stylesheet" href="./drive-phase2.css?v=20261112c">
+<link rel="stylesheet" href="./drive-live-map.css?v=20261112d">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 </head>
@@ -24,10 +25,11 @@
     <a class="active" aria-current="page" href="/studio3d/drive-simulator.html">⚡ Drive Simulator</a>
   </nav>
 </header>
+<div class="live-banner"><span class="live-dot"></span> MALAYSIA · MAP FIRST · LIVE STUDIO</div>
 <section class="headline" aria-labelledby="heading">
   <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
-  <h1 id="heading">Malaysia <span class="neon-heading">EV Journey Lab.</span></h1>
-  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta Malaysia percuma, paparan digital dan perbandingan Prime/Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
+  <h1 id="heading">Malaysia <span class="neon-heading">EV Journey Studio.</span></h1>
+  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta besar di tengah, pilih pin terus pada peta, kemudian lihat anggaran bateri Prime/Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
 </section>
 <section class="mast" aria-label="Ringkasan simulasi">
   <div class="metric metric--soc"><div class="metric-label"><span class="mini-led"></span> ARRIVAL BATTERY</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran SOC · bukan BMS</div><div class="metric-dial" id="metric-dial" aria-hidden="true"></div></div>
@@ -49,8 +51,11 @@
         <button class="region-chip" type="button" data-region="sabah" aria-pressed="false">Sabah</button>
         <button class="region-chip" type="button" data-region="sarawak" aria-pressed="false">Sarawak</button>
       </div>
-      <div class="quick-label"><span>LALUAN CONTOH / PRESET</span><span id="region-name">Seluruh Malaysia</span></div>
-      <div class="quick-routes" id="quick-routes" role="group" aria-label="Laluan contoh"></div>
+      <details class="more-routes" id="routes-more">
+        <summary>▸ Laluan contoh pantas (pilihan)</summary>
+        <div class="quick-label"><span>LALUAN CONTOH / PRESET</span><span id="region-name">Seluruh Malaysia</span></div>
+        <div class="quick-routes" id="quick-routes" role="group" aria-label="Laluan contoh"></div>
+      </details>
       <div class="field">
         <label for="route">Laluan contoh di Malaysia</label>
         <select id="route">
@@ -72,10 +77,10 @@
           <div><span class="route2-kicker">PHASE 02 / ROAD NETWORK</span><h3 id="route2-heading">Real Journey Planner <span class="phase2-beta">BETA</span></h3></div>
           <span class="route2-provider">OSRM · OpenStreetMap</span>
         </div>
-        <p class="route2-intro">Pilih dua bandar atau tandakan sendiri lokasi pada peta, kemudian tekan <strong>Kira Laluan Jalan</strong>. Sistem hanya menghubungi pelayan percuma apabila diminta. Laluan sebenar akan dipaparkan warna cyan jika pelayan berjaya memulangkan data.</p>
+        <p class="route2-intro">Pilih bandar di bawah atau tekan <strong>pilih titik mula/tamat di atas peta</strong>. Tekan <strong>Kira Laluan Jalan</strong> selepas kedua-duanya dipilih. Garis cyan dipaparkan hanya apabila routing sebenar berjaya.</p>
         <div class="route2-select-grid">
-          <div class="field"><label for="route2-from">📍 Lokasi mula</label><select id="route2-from"></select><small id="route2-start-title">KLCC, Kuala Lumpur</small><button type="button" id="route2-pick-from" class="route2-pick" aria-pressed="false">⌖ Pilih titik mula di peta</button></div>
-          <div class="field"><label for="route2-to">🏁 Destinasi</label><select id="route2-to"></select><small id="route2-end-title">Putrajaya Sentral</small><button type="button" id="route2-pick-to" class="route2-pick" aria-pressed="false">⌖ Pilih titik tamat di peta</button></div>
+          <div class="field"><label for="route2-from">📍 Lokasi mula</label><select id="route2-from"></select><small id="route2-start-title">KLCC, Kuala Lumpur</small><button type="button" id="route2-pick-from" class="route2-pick" aria-pressed="false">⌖ Pilih pada peta (mula)</button></div>
+          <div class="field"><label for="route2-to">🏁 Destinasi</label><select id="route2-to"></select><small id="route2-end-title">Putrajaya Sentral</small><button type="button" id="route2-pick-to" class="route2-pick" aria-pressed="false">⌖ Pilih pada peta (tamat)</button></div>
         </div>
         <div class="route2-actions">
           <button type="button" class="route2-go" id="route2-calc">⚡ Kira Laluan Jalan Sebenar</button>
@@ -95,7 +100,18 @@
         <div class="field"><label for="distance">Jarak anggaran (km)</label><input id="distance" inputmode="decimal" type="number" min="1" max="1000" step="0.1" value="31.7"></div>
         <div class="field"><label for="speed">Purata kelajuan (km/j)</label><input id="speed" inputmode="decimal" type="number" min="25" max="130" step="5" value="65"></div>
       </div>
-      <div class="map-wrap digital-map-wrap">
+      <div class="pin-toolbar" id="pin-toolbar" role="group" aria-label="Letakkan dua pin pada peta">
+        <button class="pin-card" id="route2-map-from" type="button" aria-pressed="false">
+          <span class="pin-step">01 · PILIH LOKASI MULA</span>
+          <strong id="pin-current-from">Titik mula</strong><small>Tekan & kemudian sentuh peta</small>
+        </button>
+        <button class="pin-card pin-card--end" id="route2-map-to" type="button" aria-pressed="false">
+          <span class="pin-step">02 · PILIH DESTINASI</span>
+          <strong id="pin-current-to">Titik destinasi</strong><small>Tekan & kemudian sentuh peta</small>
+        </button>
+      </div>
+      <div class="pin-hint" id="map-howto"><b>Senang untuk LIVE:</b> tekan butang Mula → sentuh peta → tekan Tamat → sentuh peta → kira laluan jalan.</div>
+      <div class="map-wrap digital-map-wrap map-hero-wrap">
         <div class="map-topline"><span class="map-status"><span class="location-pulse"></span> MALAYSIA · MAP ONLINE</span><span class="map-source">OSM + OPENFREEMAP</span></div>
         <div class="map-controls">
           <button type="button" id="map-reset" aria-label="Tunjuk seluruh Malaysia">⌖ Seluruh Malaysia</button>
@@ -103,8 +119,10 @@
         </div>
         <div id="map" aria-label="Peta OpenStreetMap interaktif menunjukkan tempat mula dan destinasi rujukan"></div>
         <div id="map-fallback" role="status">Memuatkan peta Malaysia percuma…</div>
+        <div id="route2-map-instruction" class="pin-map-message" role="status" hidden>Sentuh peta untuk menanda lokasi</div>
       </div>
-      <p class="map-caption"><strong>Legenda peta:</strong> Garis merah putus-putus = sambungan dua bandar sebagai rujukan, <strong>bukan jalan sebenar</strong>. Garis cyan berterusan = geometri jalan yang dipulangkan OSRM selepas anda tekan Kira Laluan Jalan. Titik oren = anggaran bateri 10%, <strong>bukan lokasi stesen pengecas</strong>. Trafik, kecerunan dan keadaan jalan sebenar belum disahkan.</p>
+      <div class="map-protocol"><span><b>1</b> Tetapkan mula</span><span><b>2</b> Tetapkan destinasi</span><span><b>3</b> Kira laluan</span></div>
+      <p class="map-caption map-legend-slim"><strong>Legenda peta:</strong> Garis merah putus-putus = sambungan dua bandar sebagai rujukan, <strong>bukan jalan sebenar</strong>. Garis cyan berterusan = geometri jalan yang dipulangkan OSRM selepas anda tekan Kira Laluan Jalan. Titik oren = anggaran bateri 10%, <strong>bukan lokasi stesen pengecas</strong>. Trafik, kecerunan dan keadaan jalan sebenar belum disahkan.</p>
       <div class="route-context-hud">
         <div><small>TRIP DISTANCE</small><strong id="m-distance">—</strong><span>km</span></div>
         <div><small>REGION</small><strong id="hud-region">MALAYSIA</strong></div>
