@@ -1,4 +1,5 @@
 import {VEHICLES,PRESETS,REGIONS,estimate} from "./drive-sim-core.js";
+import {createRoutePlanner} from "./drive-phase2.js";
 const $=id=>document.getElementById(id);
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const params=new URLSearchParams(location.search);
@@ -6,7 +7,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[];
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null;
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 const simulationMs=12000;
 function stopSimulation(){
@@ -49,6 +50,20 @@ function animate(now){
 function invalid(message){
   result=null;stopSimulation();$("play").disabled=true;
   $("trip-status").textContent=message;$("trip-status").className="status bad";
+  for(const id of ["m-arrival","m-range","m-use","m-distance","m-cost","r-energy","r-duration",
+    "r-range","r-topup","scenario-best","scenario-normal","scenario-worst",
+    "cmp-prime-soc","cmp-premium-soc","verdict-soc"]){
+    $(id).textContent="—";
+  }
+  $("verdict-title").textContent="BELUM DIKIRA";
+  $("verdict-subtitle").textContent="Pilih laluan / jarak dan tekan Kira";
+  $("charging-head").textContent="Laluan belum dikira";
+  $("charging-detail").textContent="Dapatkan jarak jalan daripada OSRM atau masukkan jarak secara manual.";
+  $("compare-summary").textContent="Keputusan memerlukan jarak perjalanan yang sah.";
+  $("battery-live").textContent="—";
+  $("battery-fill").style.width="0%";
+  $("progress-fill").style.width="0%";
+  routePlanner?.onEstimate(null);
 }
 function refresh(){
   stopSimulation();
@@ -97,6 +112,7 @@ function refresh(){
     status.textContent="Anggaran boleh tiba dengan sekurang-kurangnya 10% SOC. Semak juga keadaan sebenar dan pengecasan pada laluan.";
   }
   renderIntelligence(raw);
+  routePlanner?.onEstimate(result);
   updateAnimation();
 }
 function syncRoute(focus=true){
@@ -114,6 +130,7 @@ function syncRoute(focus=true){
     $("route-source").hidden=true;
   }
   syncUrl();
+  routePlanner?.onPresetChanged(preset);
   refresh();updateMap(focus==="region"?"region":focus?"route":"overview");renderRegions();
 }
 function updateMap(focus="route"){
@@ -148,6 +165,7 @@ function installMapGuide(){
     paint:{"line-color":"#ff6d95","line-width":3.5,"line-opacity":.96,"line-dasharray":[1.6,2]}});
   mapReady=true;$("map-fallback").hidden=true;
   updateMap(mapInitialized?"region":"overview");
+  routePlanner?.onMapReady();
   mapInitialized=true;
 }
 function initMap(){
@@ -163,6 +181,7 @@ function initMap(){
       cooperativeGestures:true,attributionControl:true,renderWorldCopies:false
     });
     map.addControl(new window.maplibregl.NavigationControl({showCompass:false}),"top-right");
+    map.on("click",e=>routePlanner?.onMapClick(e.lngLat));
     map.on("load",installMapGuide);
     map.on("style.load",installMapGuide);
     map.on("error",()=>{
@@ -334,6 +353,34 @@ $("copy").addEventListener("click",async()=>{
     await navigator.clipboard.writeText(lines.join("\n"));
     $("copy-status").textContent="Ringkasan berjaya disalin.";
   }catch(error){$("copy-status").textContent="Salinan automatik tidak tersedia. Sila salin nilai daripada skrin.";}
+});
+routePlanner=createRoutePlanner({
+  PRESETS,
+  mapProvider:()=>map,
+  mapReadyProvider:()=>mapReady,
+  format:fmt,
+  onRouteApplied:route=>{
+    // Real OSRM distance takes precedence over an illustrative route preset.
+    routeKey="custom";
+    $("route").value="custom";
+    $("distance").value=route.km;
+    $("route-names").textContent=route.start+" → "+route.end+" · Laluan jalan OSRM";
+    $("route-source").hidden=true;
+    syncUrl();
+    refresh();
+    updateMap("region");
+    return result;
+  },
+  onRouteInvalidated:()=>{
+    // Invalidate the old route's battery output rather than leaving stale SOC.
+    routeKey="custom";
+    $("route").value="custom";
+    $("distance").value="";
+    $("route-names").textContent="Titik mula/destinasi baru · jarak jalan belum dikira.";
+    $("route-source").hidden=true;
+    syncUrl();
+    refresh();
+  }
 });
 $("route").value=routeKey;
 syncRoute(false);
