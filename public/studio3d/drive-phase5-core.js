@@ -158,7 +158,7 @@ export function buildRouteSituations(route,elevations=null){
     for(const step of steps){walked+=step.km;if(walked>=stepPoint){name=step.name||"";ref=step.ref||"";break;}}
     const roadway=categorizeRoad(name,ref);
     const terrain=terrainAt(elevations,centerKm,km);
-    const kind=terrain.type==="up"||terrain.type==="down"?"hilly":
+    const kind=["up","down","highland"].includes(terrain.type)?"hilly":
       roadway.type==="highway"?"highway":
       roadway.type==="rural"?"rural":
       roadway.type==="road"?"road":"unknown";
