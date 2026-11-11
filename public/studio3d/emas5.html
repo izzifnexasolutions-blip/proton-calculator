@@ -76,6 +76,7 @@
     @media(max-width:375px){.brand b{font-size:15px}.colors{gap:6px}.color-option span:last-child{font-size:9px}.back{font-size:10px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
+  <link rel="stylesheet" href="./emas5-ios.css?v=20261112a">
 </head>
 <body>
   <main class="layout">
@@ -92,7 +93,7 @@
       </section>
       <aside class="card editor">
         <div class="section"><h2>01 · PILIH VARIAN</h2><div class="seg" role="group" aria-label="Varian e.MAS 5"><button id="var-prime" type="button" aria-pressed="false">PRIME EV</button><button id="var-premium" type="button" aria-pressed="true">PREMIUM EV</button></div><p class="sub" id="variant-note">Paparan mengikut fail GLB Premium yang dimasukkan. Tiada geometri varian lain yang direka secara automatik.</p></div>
-        <div class="section"><h2>02 · PILIH WARNA KERETA</h2><div id="colors" class="colors" role="group" aria-label="Warna luaran"></div><div class="picked" id="color-title" aria-live="polite">Marble Cream</div><div class="hint">Recolor pada material cat badan, bukan rim, tayar, kaca atau lampu.</div></div>
+        <div class="section"><h2>02 · PILIH WARNA KERETA</h2><div id="colors" class="colors" role="group" aria-label="Warna luaran"></div><div class="picked" id="color-title" aria-live="polite">Marble Cream</div><div class="hint">Seluruh badan satu tona cat. Bumbung hitam, cermin, lampu, tayar dan rim kekal asal.</div></div>
 
         <div class="section explore-section" aria-label="Buka pintu dan bonet 3D">
           <div class="explore-head"><h2>03 · BUKA &amp; TEROKA KERETA</h2><span class="explore-counter" id="x-count">Menunggu model…</span></div>
@@ -126,13 +127,14 @@
     import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
     import {DRACOLoader} from "three/addons/loaders/DRACOLoader.js";
     import {createExplorer} from "./emas5-explore.js";
+    import {createUnifiedBodyPaint} from "./emas5-paint.js";
     const $=id=>document.getElementById(id);
     const colors=[
       {name:"Moonstone White",hex:"#eeeae4"},
       {name:"Graphite Silver",hex:"#828c94"},
       {name:"Slate Grey",hex:"#48535d"},
       {name:"Marble Cream",hex:"#cbb69e"},
-      {name:"Quartz Rose",hex:"#c99da8"},
+      {name:"Quartz Rose",hex:"#e6b5c4"},
       {name:"Jade Green",hex:"#6f998b"}
     ];
     const modelPaths={prime:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb",premium:"https://d2ol7oe51mr4n9.cloudfront.net/user_2wyjxahmz9PtKeHoIbEemDKyafc/5a2c3542-6892-491c-b33d-9a25f6e404dd.glb"};
@@ -140,7 +142,7 @@
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
     let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null,pendingSource=null;
-    let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true,explorer=null;
+    let paintController=null,pickedMaterial="",stageInView=true,explorer=null;
     function queueFrame(){if(renderer&&scene&&!animation&&!document.hidden&&stageInView)animation=requestAnimationFrame(drawFrame)}
     function drawFrame(){animation=0;if(document.hidden||!stageInView)return;
       const moving=explorer?.tick(performance.now())||false;
@@ -156,6 +158,7 @@
     function showEmpty(title,subtitle){empty.hidden=false;empty.querySelector("h2").textContent=title;empty.querySelector("p").textContent=subtitle;loading.style.display="none";}
     function clearModel(){
       if(explorer){explorer.destroy();explorer=null;}
+      if(paintController){paintController.restore();paintController=null;}
       if(root){
         scene.remove(root);
         const geometries=new Set(),materials=new Set();
@@ -164,21 +167,15 @@
         materials.forEach(m=>m.dispose());
         root=null;
       }
-      loadedSource=null;pendingSource=null;originals=[];paintMaterialNames=[];
+      loadedSource=null;pendingSource=null;pickedMaterial="";
       $("reset-camera").disabled=true;$("turntable").disabled=true;
       autoRotate=false;$("turntable").textContent="▶ Auto rotate";
       if(platform)platform.visible=false;
       queueFrame();
     }
     function repaint(){
-      if(!root)return;
-      const isTarget=n=>paintMaterialNames.includes(n)||(pickedMaterial&&n===pickedMaterial);
-      for(const x of originals){
-        if(!x.material?.color)continue;
-        if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);x.material.needsUpdate=true;}
-        else{x.material.color.copy(x.color);if("metalness" in x.material)x.material.metalness=x.metal;if("roughness" in x.material)x.material.roughness=x.rough;x.material.needsUpdate=true;}
-      }
-      queueFrame();
+      if(!root||!paintController)return;
+      paintController.setColor(selectedColor.hex);queueFrame();
     }
     function colorUI(){
       const holder=$("colors");
@@ -246,26 +243,29 @@
       addEventListener("resize",resize);resize();queueFrame();
       return true;
     }
+    // Center the car and frame it to the 3D viewport aspect ratio.
+    function fitExteriorCamera(){
+      if(!root||!camera||!controls)return;
+      const b=new THREE.Box3().setFromObject(root),size=b.getSize(new THREE.Vector3());
+      const max=Math.max(size.x,size.y,size.z);
+      const aspect=Math.max(.62,stage.clientWidth/Math.max(1,stage.clientHeight));
+      const distance=max*(aspect<.9?1.38:aspect<1.15?1.13:.93);
+      camera.fov=38;
+      controls.target.set(0,Math.max(.56,size.y*.51),0);
+      camera.position.set(distance*.57,Math.max(1.35,size.y*.88),distance*.92);
+      camera.updateProjectionMatrix();controls.update();queueFrame();
+    }
     function configurePaint(){
-      const matches=new Map();
-      const uniqueMaterials=new Set();
-      root.traverse(o=>{if(!o.isMesh)return;o.castShadow=renderer.shadowMap.enabled;
-        const mats=Array.isArray(o.material)?o.material:[o.material];
-        for(const m of mats){
-          if(!m||uniqueMaterials.has(m))continue;
-          uniqueMaterials.add(m);
-          const name=m.name||"Unnamed";matches.set(name,(matches.get(name)||0)+1);
-          if(m.color)originals.push({material:m,color:m.color.clone(),metal:m.metalness,rough:m.roughness});
-        }
-      });
-      const names=[...matches.keys()];
-      paintMaterialNames=names.filter(n=>/EMAS5[_ -]?BodyPaint|Body.?Paint|Car.?Paint|Exterior.?Paint|Paint.?Body|Proton Marble Cream|Marble Cream with/i.test(n));
-      const chooser=$("material-selector");chooser.replaceChildren(new Option("Pilih material cat badan",""));
-      for(const name of names)chooser.add(new Option(name,name));
-      const hasAuto=paintMaterialNames.length>0;
-      $("paint-mapping").hidden=hasAuto;
-      if(!hasAuto){pickedMaterial="";status("GLB berjaya dimuatkan, tetapi material cat badan belum dapat dikenal pasti. Pilih material pada kotak 'Cat badan' supaya rim/kaca tidak berubah.","error");}
-      else{pickedMaterial="";status(variant==="prime"?"Model rujukan Premium telah dimuatkan untuk pilihan warna badan Prime. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dengan rim 16 inci berjaya dimuatkan. Pilih warna untuk menukar cat badan kereta 3D.","ok");}
+      paintController=createUnifiedBodyPaint({THREE,root,initialColor:selectedColor.hex});
+      $("paint-mapping").hidden=true;
+      pickedMaterial="";
+      const count=paintController.matchedMeshCount;
+      if(!count){
+        status("Material cat badan tidak dikenal pasti dalam GLB ini. Bumbung dan trim dikekalkan; gunakan fail asal e.MAS 5.","error");
+      }else{
+        const info=count+" panel cat luar diseragamkan kepada satu tona. Bumbung hitam, cermin, tayar, lampu dan rim dikekalkan.";
+        status(variant==="prime"?"Prime masih menggunakan model rujukan Premium. "+info:info,"ok");
+      }
       repaint();
     }
     function loadGLB(url,fromFile=false){
@@ -282,10 +282,9 @@
         root.position.x-=c.x;root.position.z-=c.z;root.position.y-=bounds.min.y;
         platform.position.y=-.035;platform.scale.setScalar(Math.max(1,max/4));platform.visible=true;
         controls.target.set(0,Math.max(.65,size.y*.45),0);
-        const dist=Math.max(3.3,max*1.18);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
-        camera.position.set(dist*.62,Math.max(1.65,size.y*.7),dist*.95);camera.updateProjectionMatrix();
-        controls.minDistance=Math.max(.8,max*.58);controls.maxDistance=Math.max(12,max*6);
-        controls.update();configurePaint();
+        camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
+        controls.minDistance=Math.max(.8,max*.55);controls.maxDistance=Math.max(12,max*6);
+        fitExteriorCamera();configurePaint();
         explorer=createExplorer({
           THREE,root,camera,controls,stage,requestRender:queueFrame,
           onInterior:()=>{autoRotate=false;$("turntable").textContent="▶ Auto rotate";queueFrame();}
@@ -311,8 +310,8 @@
       if(!/\.glb$/i.test(f.name)||f.size>120*1024*1024){status("Pilih fail .glb sah dengan saiz maksimum 120 MB.","error");e.target.value="";return;}
       status("Import "+f.name+"…");loadGLB(URL.createObjectURL(f),true);e.target.value="";
     });
-    $("material-selector").addEventListener("change",e=>{pickedMaterial=e.target.value;repaint();if(pickedMaterial)status("Material '"+pickedMaterial+"' dipilih sebagai cat badan. Semak secara visual sebelum kongsi.","ok");});
-    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;if(explorer?.mode!=="exterior"){explorer.setView("exterior");return;}const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
+    $("material-selector").addEventListener("change",()=>{});
+    $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;if(explorer?.mode!=="exterior"){explorer.setView("exterior");return;}fitExteriorCamera();});
     $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";queueFrame();});
     colorUI();loadVariant();
   </script>
