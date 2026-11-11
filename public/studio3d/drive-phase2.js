@@ -183,11 +183,13 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     }
     const kmTo10=Math.min(applied.km,Math.max(0,result.rangeWithReserve));
     if(result.reachWithReserve){
+      $("route2-charger-link").href="https://www.openstreetmap.org/#map=13/"+end.coords[1].toFixed(5)+"/"+end.coords[0].toFixed(5);
       $("route2-charge-point").textContent="Anggaran sampai dengan simpanan ≥10% bateri. Stesen cas sebenar belum disemak.";
       if(src)src.setData({type:"FeatureCollection",features:[]});
       return;
     }
     const coord=findDistanceFractionPoint(applied.coordinates,kmTo10/applied.km);
+    if(coord)$("route2-charger-link").href="https://www.openstreetmap.org/#map=13/"+coord[1].toFixed(5)+"/"+coord[0].toFixed(5);
     $("route2-charge-point").textContent="Anggaran capai 10% bateri selepas ±"+format(kmTo10,0)+
       " km dari mula. Penanda oren pada laluan ialah peringatan bateri, BUKAN lokasi stesen pengecas.";
     if(src&&coord)src.setData({type:"FeatureCollection",features:[{
