@@ -163,8 +163,8 @@ export function buildRouteSituations(route,elevations=null){
       roadway.type==="rural"?"rural":
       roadway.type==="road"?"road":"unknown";
     const type=terrain.type==="up"?"uphill":terrain.type==="down"?"downhill":
-      roadway.type==="highway"?"highway":roadway.type==="rural"?"rural":
-      terrain.type==="highland"?"highland":roadway.type==="road"?"road":"unknown";
+      terrain.type==="highland"?"highland":roadway.type==="highway"?"highway":
+      roadway.type==="rural"?"rural":roadway.type==="road"?"road":"unknown";
     const label=type==="uphill"?"Mendaki":type==="downhill"?"Menurun":
       type==="highland"?"Tanah tinggi":roadway.label;
     const source=type==="uphill"||type==="downhill"||type==="highland"?
