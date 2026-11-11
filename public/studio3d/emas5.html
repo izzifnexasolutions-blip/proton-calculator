@@ -102,7 +102,7 @@
       const isTarget=n=>paintMaterialNames.includes(n)||(pickedMaterial&&n===pickedMaterial);
       for(const x of originals){
         if(!x.material?.color)continue;
-        if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);if("metalness" in x.material)x.material.metalness=0.24;if("roughness" in x.material)x.material.roughness=0.33;x.material.needsUpdate=true;}
+        if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);x.material.needsUpdate=true;}
         else{x.material.color.copy(x.color);if("metalness" in x.material)x.material.metalness=x.metal;if("roughness" in x.material)x.material.roughness=x.rough;x.material.needsUpdate=true;}
       }
     }
