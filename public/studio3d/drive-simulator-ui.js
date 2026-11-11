@@ -115,6 +115,8 @@ function refresh(){
   $("people-out").textContent=result.people+" orang";
   $("cargo-out").textContent=result.cargoKg+" kg";
   $("m-arrival").textContent=result.reachAtAll?fmt(result.arrivalSoc,1)+"%":"0%*";
+  const socMetric=$("m-arrival").closest?.(".metric");
+  if(socMetric)socMetric.dataset.state=!result.reachAtAll?"bad":!result.reachWithReserve?"warn":"safe";
   $("m-range").textContent=fmt(result.rangeAtArrival,0);
   const dial=$("metric-dial");
   if(dial)dial.style.setProperty("--soc-angle",Math.max(0,Math.min(360,result.arrivalSoc*3.6))+"deg");
