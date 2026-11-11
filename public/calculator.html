@@ -600,6 +600,12 @@ body{
 }
 .variant-spec-btn:hover{background:#fff;box-shadow:0 2px 7px rgba(121,11,25,.22)}
 .variant-spec-btn:active{transform:scale(.92)}
+/* e.MAS 5 3D shortcut: isolated from pricing / spec actions */
+.variant-3d-btn{width:30px;height:29px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;border:1px solid #495363;border-radius:8px;background:linear-gradient(160deg,#243349,#0e1827);color:#fff;cursor:pointer;padding:3px;box-shadow:0 2px 5px #0004}
+.variant-3d-btn svg{display:block;width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.variant-3d-btn:hover{background:linear-gradient(160deg,#e7374f,#a50c23);border-color:#ff8998}
+.variant-3d-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.variant-3d-btn[hidden]{display:none!important}
 .spec-return-btn{font-size:14px!important;padding-left:8px!important;padding-right:8px!important}
 
 #spec-panel{
@@ -693,6 +699,7 @@ body{
           <option value="2">1.5 Premium</option>
         </select>
       </div>
+      <button id="variant-3d-btn" class="variant-3d-btn" type="button" hidden aria-label="Buka 3D e.MAS 5" title="Lihat warna kereta 3D"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 14 2.5-6h13L21 14v5h-2v-2H5v2H3z"/><path d="M5.5 8 7 5h10l1.5 3M3 14h18"/><circle cx="7" cy="15" r="1"/><circle cx="17" cy="15" r="1"/></svg></button>
       <button id="variant-spec-btn" class="variant-spec-btn" type="button" aria-label="Buka spesifikasi variant" title="Spesifikasi">ⓘ</button>
     </div>
   </div>
@@ -2471,6 +2478,8 @@ function render(){
     specBtn.setAttribute('aria-label','Buka spesifikasi '+m.variants[state.variantIdx].name);
     specBtn.title=m.variants[state.variantIdx].name+' · Spesifikasi';
   }
+  var car3DBtn=document.getElementById('variant-3d-btn');
+  if(car3DBtn){car3DBtn.hidden=(state.modelId!=='emas5');car3DBtn.setAttribute('aria-label','Lihat model 3D '+m.variants[state.variantIdx].name);}
   if(specOpen)_updateSpecPanel();
   /* rebate — load per model+variant */
   document.getElementById("input-rebate").value=_getRebate()||'';
@@ -2608,6 +2617,8 @@ function init(){
   });
   var specBtn=document.getElementById('variant-spec-btn');
   if(specBtn)specBtn.addEventListener('click',openVariantSpec);
+  var car3DBtn=document.getElementById('variant-3d-btn');
+  if(car3DBtn)car3DBtn.addEventListener('click',function(){if(state.modelId!=='emas5')return;window.location.assign('/studio3d/emas5.html?variant='+(state.variantIdx===1?'premium':'prime'));});
   /* ncd */
   document.querySelectorAll(".ncd-btn").forEach(function(btn){
     btn.addEventListener("click",function(){state.ncdPct=Number(btn.getAttribute("data-ncd"));render()});
