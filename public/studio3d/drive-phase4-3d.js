@@ -18,7 +18,7 @@ export function createDrive3D({container,onStatus}){
   let renderer=null,scene=null,camera=null,carRig=null,model=null,rootGroup=null;
   let road=null,light=null,hemisphere=null,fog=null,resizeObserver=null,intersectionObserver=null;
   let cameraMode="chase",sceneKind="normal",roadDashes=[],scenery=[],timeOrigin=null;
-  let lastInput={km:0,speed:0,playing:false,condition:{},night:false},lastFrame=0;
+  let lastInput={km:0,speed:0,playing:false,condition:{},night:false},lastFrame=0,scrollOffset=0,cameraRaf=0;
   const updateStatus=(message,state="")=>onStatus?.(message,state);
   const resize=()=>{
     if(!renderer||!camera||!container)return;
@@ -143,10 +143,24 @@ export function createDrive3D({container,onStatus}){
     if(!VIEW_POSES[mode])return false;
     cameraMode=mode;
     if(camera){
+      if(cameraRaf){cancelAnimationFrame(cameraRaf);cameraRaf=0;}
       const pose=VIEW_POSES[mode];
-      camera.position.set(...pose.position);
-      camera.lookAt(...pose.target);
-      render();
+      const from=camera.position.clone();
+      const to=new Three.Vector3(...pose.position);
+      const target=new Three.Vector3(...pose.target);
+      const start=performance.now();
+      function ease(now){
+        cameraRaf=0;
+        const t=Math.min(1,Math.max(0,(now-start)/420));
+        const smooth=t*t*(3-2*t);
+        camera.position.lerpVectors(from,to,smooth);
+        camera.lookAt(target);
+        render();
+        if(t<1)cameraRaf=requestAnimationFrame(ease);
+      }
+      if(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches){
+        camera.position.copy(to);camera.lookAt(target);render();
+      }else cameraRaf=requestAnimationFrame(ease);
     }
     return true;
   }
@@ -155,12 +169,17 @@ export function createDrive3D({container,onStatus}){
     if(!enabled||!Three||!renderer)return;
     const km=Number(lastInput.km)||0,speed=Number(lastInput.speed)||0;
     const active=lastInput.playing===true&&speed>0;
-    const offset=((km*240)%195+195)%195;
+    // A smooth visual scroll clock. Do not translate simulation km directly
+    // into metres/frame: 200 km compressed into 12s otherwise flickers.
+    const now=performance.now();
+    const delta=lastFrame?Math.max(0,Math.min(.055,(now-lastFrame)/1000)):0;
+    lastFrame=now;
+    if(active)scrollOffset=(scrollOffset+delta*26*(speed/75))%190;
     for(let i=0;i<roadDashes.length;i++)
-      roadDashes[i].position.z=-95+((i*9+offset)%190);
+      roadDashes[i].position.z=-95+((i*9+scrollOffset)%190);
     scenery.forEach((item,i)=>{
       if(item.userData?.type==="hill")return;
-      item.position.z=-90+((item.userData.baseZ+90+offset)%183);
+      item.position.z=-90+((item.userData.baseZ+90+scrollOffset)%183);
     });
     if(carRig)carRig.position.y=active?(Math.sin(km*250)*.012):0;
     configureEnvironment(lastInput);
@@ -224,6 +243,7 @@ export function createDrive3D({container,onStatus}){
     return pending;
   }
   function cleanup(){
+    if(cameraRaf){cancelAnimationFrame(cameraRaf);cameraRaf=0;}
     resizeObserver?.disconnect();resizeObserver=null;
     intersectionObserver?.disconnect();intersectionObserver=null;
     if(scene){
@@ -241,7 +261,7 @@ export function createDrive3D({container,onStatus}){
     container.replaceChildren();
     renderer=null;scene=null;camera=null;model=null;carRig=null;
     road=null;light=null;hemisphere=null;fog=null;Three=null;
-    roadDashes=[];scenery=[];enabled=false;visible=true;
+    roadDashes=[];scenery=[];enabled=false;visible=true;lastFrame=0;scrollOffset=0;
   }
   function disable(){
     version++;
