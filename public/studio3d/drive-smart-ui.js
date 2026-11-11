@@ -206,5 +206,5 @@ export function createSmartDashboard({onSelect,onAdvancedChange,onPlay,onReset})
   }
   window.addEventListener("resize",()=>{if(latest)drawGraph(latest)},{passive:true});
   renderPicker();
-  return {selectScenario,render,frame,resetFrame,get activeScenario(){return activeScenario;}};
+  return {selectScenario,render,frame,resetFrame,setActive:id=>{if(scenarioById.has(id)){activeScenario=id;updateSelection();}},get activeScenario(){return activeScenario;}};
 }
