@@ -37,7 +37,18 @@ export function decodeRoute(json,from,to){
     road:String(step.name||"Jalan tanpa nama").slice(0,90),
     km:Math.round((Number(step.distance)||0)/100)/10
   })).filter(step=>step.km>.15).slice(0,8);
-  return {km,minutes:mins,coordinates:coords,steps,source:"OpenStreetMap / OSRM",obtainedAt:Date.now()};
+  // Keep road labels from the actual OSRM navigation instructions for
+  // Phase 5 classification. A road name alone never proves terrain/traffic.
+  const roadSteps=(r.legs||[]).flatMap(leg=>leg.steps||[]).slice(0,600)
+    .filter(x=>Number.isFinite(x.distance)&&x.distance>0)
+    .map(x=>({
+      km:x.distance/1000,
+      name:String(x.name||"").slice(0,110),
+      ref:String(x.ref||"").slice(0,70),
+      roadClassSource:"OSRM navigation step"
+    }));
+  return {km,minutes:mins,coordinates:coords,steps,roadSteps,
+    source:"OpenStreetMap / OSRM",obtainedAt:Date.now()};
 }
 export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRouteApplied,onRouteInvalidated,format}) {
   const $=id=>document.getElementById(id);
