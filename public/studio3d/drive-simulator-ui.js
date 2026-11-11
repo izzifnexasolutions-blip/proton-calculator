@@ -390,6 +390,41 @@ $("copy").addEventListener("click",async()=>{
     $("copy-status").textContent="Ringkasan berjaya disalin.";
   }catch(error){$("copy-status").textContent="Salinan automatik tidak tersedia. Sila salin nilai daripada skrin.";}
 });
+const scenarioDefaults={
+  speed:75,road:"mixed",traffic:"light",surface:"smooth",mode:"normal",
+  people:2,cargo:15,rain:false,ac:true,batteryHealth:100,
+  temperature:"mild",wind:"calm",slope:"flat",tire:"normal",
+  hvac:"normal",regen:"normal",night:false,aggressive:false
+};
+function applyScenarioInputs(id,settings){
+  selectedScenario=id;
+  if(id!=="all"){
+    // Scenario settings reset previous optional stress factors. Keep the user's
+    // distance, initial SOC and tariff untouched.
+    for(const [field,value] of Object.entries({...scenarioDefaults,...settings})){
+      const inputId=field==="batteryHealth"?"battery-health":field;
+      const el=$(inputId);if(!el)continue;
+      if(typeof value==="boolean")el.checked=value;
+      else el.value=String(value);
+    }
+  }
+  $("battery-health-out").textContent=$("battery-health").value+"%";
+  refresh();
+}
+smart=createSmartDashboard({
+  onSelect:applyScenarioInputs,
+  onAdvancedChange:()=>{
+    // Editing a preset makes it user-customised, except the composite "all"
+    // mode, which deliberately keeps user SOC/load/SOH and zone assumptions.
+    if(selectedScenario!=="all"&&selectedScenario!=="manual"){
+      selectedScenario="manual";
+    }
+    $("battery-health-out").textContent=$("battery-health").value+"%";
+    refresh();
+  },
+  onPlay:()=>{$("play").click();$("drive-theatre").scrollIntoView?.({block:"center",behavior:"smooth"});},
+  onReset:()=>{$("reset").click();}
+});
 routePlanner=createRoutePlanner({
   PRESETS,
   mapProvider:()=>map,
