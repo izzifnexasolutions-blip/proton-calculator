@@ -92,11 +92,27 @@
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
     let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null;
-    let originals=[],paintMaterialNames=[],pickedMaterial="";
+    let originals=[],paintMaterialNames=[],pickedMaterial="",stageInView=true;
+    function queueFrame(){if(renderer&&scene&&!animation&&!document.hidden&&stageInView)animation=requestAnimationFrame(drawFrame)}
+    function drawFrame(){animation=0;if(document.hidden||!stageInView)return;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);if(autoRotate)queueFrame()}
     const stage=$("stage"),empty=$("empty-state"),loading=$("loading");
     function status(s,kind=""){const el=$("status");el.textContent=s;el.className=kind;}
     function showEmpty(title,subtitle){empty.hidden=false;empty.querySelector("h2").textContent=title;empty.querySelector("p").textContent=subtitle;loading.style.display="none";}
-    function clearModel(){if(root){scene.remove(root);root.traverse(o=>{if(o.isMesh){o.geometry?.dispose();for(const m of (Array.isArray(o.material)?o.material:[o.material])){if(m){/* shared textures are retained until page reload */m.dispose();}}}});root=null;}originals=[];paintMaterialNames=[];$("reset-camera").disabled=true;$("turntable").disabled=true;if(platform)platform.visible=false;}
+    function clearModel(){
+      if(root){
+        scene.remove(root);
+        const geometries=new Set(),materials=new Set();
+        root.traverse(o=>{if(o.isMesh){if(o.geometry)geometries.add(o.geometry);for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m)materials.add(m)}});
+        geometries.forEach(g=>g.dispose());
+        materials.forEach(m=>m.dispose());
+        root=null;
+      }
+      loadedSource=null;originals=[];paintMaterialNames=[];
+      $("reset-camera").disabled=true;$("turntable").disabled=true;
+      autoRotate=false;$("turntable").textContent="▶ Auto rotate";
+      if(platform)platform.visible=false;
+      queueFrame();
+    }
     function repaint(){
       if(!root)return;
       const isTarget=n=>paintMaterialNames.includes(n)||(pickedMaterial&&n===pickedMaterial);
@@ -105,6 +121,7 @@
         if(isTarget(x.material.name)){x.material.color.set(selectedColor.hex);x.material.needsUpdate=true;}
         else{x.material.color.copy(x.color);if("metalness" in x.material)x.material.metalness=x.metal;if("roughness" in x.material)x.material.roughness=x.rough;x.material.needsUpdate=true;}
       }
+      queueFrame();
     }
     function colorUI(){
       $("colors").replaceChildren();
@@ -143,16 +160,34 @@
       stage.prepend(renderer.domElement);
       controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;controls.enablePan=false;
       controls.minPolarAngle=.18;controls.maxPolarAngle=Math.PI/2+.08;controls.autoRotateSpeed=.8;
-      function resize(){if(!renderer)return;const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-      new ResizeObserver(resize).observe(stage);addEventListener("resize",resize);resize();
-      const loop=()=>{animation=requestAnimationFrame(loop);if(document.hidden)return;controls.autoRotate=autoRotate;controls.update();renderer.render(scene,camera);};loop();
+      let lastW=0,lastH=0;
+      function resize(){
+        if(!renderer)return;
+        const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);
+        if(w===lastW&&h===lastH)return;
+        lastW=w;lastH=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();queueFrame();
+      }
+      controls.addEventListener("change",queueFrame);
+      new ResizeObserver(resize).observe(stage);
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)queueFrame()});
+      if("IntersectionObserver" in window){
+        new IntersectionObserver(entries=>{
+          stageInView=entries[0].isIntersecting;
+          if(stageInView)queueFrame();else if(animation){cancelAnimationFrame(animation);animation=0}
+        },{threshold:.01}).observe(stage);
+      }
+      addEventListener("resize",resize);resize();queueFrame();
       return true;
     }
     function configurePaint(){
       const matches=new Map();
-      root.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;
+      const uniqueMaterials=new Set();
+      root.traverse(o=>{if(!o.isMesh)return;o.castShadow=renderer.shadowMap.enabled;
         const mats=Array.isArray(o.material)?o.material:[o.material];
-        for(const m of mats){if(!m)continue;const name=m.name||"Unnamed";matches.set(name,(matches.get(name)||0)+1);
+        for(const m of mats){
+          if(!m||uniqueMaterials.has(m))continue;
+          uniqueMaterials.add(m);
+          const name=m.name||"Unnamed";matches.set(name,(matches.get(name)||0)+1);
           if(m.color)originals.push({material:m,color:m.color.clone(),metal:m.metalness,rough:m.roughness});
         }
       });
@@ -168,7 +203,7 @@
     }
     function loadGLB(url,fromFile=false){
       if(!init3D())return;
-      const token=++loadToken;loading.style.display="block";empty.hidden=true;clearModel();
+      const token=++loadToken;loading.textContent="Memuatkan model 3D…";loading.style.display="block";empty.hidden=true;clearModel();
       const draco=new DRACOLoader();draco.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
       const loader=new GLTFLoader();loader.setDRACOLoader(draco);
       loader.load(url,g=>{
@@ -183,10 +218,13 @@
         const dist=Math.max(3.3,max*1.18);camera.near=Math.max(.005,max/200);camera.far=Math.max(100,max*50);
         camera.position.set(dist*.62,Math.max(1.65,size.y*.7),dist*.95);camera.updateProjectionMatrix();
         controls.minDistance=Math.max(.8,max*.58);controls.maxDistance=Math.max(12,max*6);
-        controls.update();configurePaint();loading.style.display="none";
+        controls.update();configurePaint();loading.style.display="none";queueFrame();
         $("reset-camera").disabled=false;$("turntable").disabled=false;
         if(fromFile)URL.revokeObjectURL(url);
-      },undefined,e=>{
+      },ev=>{
+        if(token!==loadToken)return;
+        if(ev.lengthComputable&&ev.total>0)loading.textContent="Memuatkan model 3D "+Math.round(ev.loaded/ev.total*100)+"%…";
+      },e=>{
         draco.dispose();if(token!==loadToken)return;
         const msg=fromFile?"GLB tidak dapat dibuka. Pastikan fail glTF Binary sebenar, bukan .blend.":"Fail "+variant.toUpperCase()+" belum diterbitkan pada pelayan.";
         showEmpty("Model 3D belum tersedia",msg);
@@ -203,7 +241,7 @@
     });
     $("material-selector").addEventListener("change",e=>{pickedMaterial=e.target.value;repaint();if(pickedMaterial)status("Material '"+pickedMaterial+"' dipilih sebagai cat badan. Semak secara visual sebelum kongsi.","ok");});
     $("reset-camera").addEventListener("click",()=>{if(!root||!controls)return;const b=new THREE.Box3().setFromObject(root),s=b.getSize(new THREE.Vector3());const d=Math.max(3.3,Math.max(s.x,s.y,s.z)*1.18);controls.target.set(0,Math.max(.65,s.y*.45),0);camera.position.set(d*.62,Math.max(1.65,s.y*.7),d*.95);controls.update();});
-    $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";});
+    $("turntable").addEventListener("click",()=>{autoRotate=!autoRotate;$("turntable").textContent=autoRotate?"Ⅱ Stop rotate":"▶ Auto rotate";queueFrame();});
     colorUI();loadVariant();
   </script>
 </body>
