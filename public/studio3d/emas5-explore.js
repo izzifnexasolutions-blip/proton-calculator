@@ -14,12 +14,12 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     door_rr:"Pintu belakang kanan",hood:"Bonet depan",trunk:"Bonet belakang"
   };
   const partPatterns={
-    door_fl:/\bdoor[_\s.-]*fl(?:[_\s.-]|$)/i,
-    door_fr:/\bdoor[_\s.-]*fr(?:[_\s.-]|$)/i,
-    door_rl:/\bdoor[_\s.-]*rl(?:[_\s.-]|$)/i,
-    door_rr:/\bdoor[_\s.-]*rr(?:[_\s.-]|$)/i,
-    hood:/\bhood(?:[_\s.-]|$)|\bbonnet(?:[_\s.-]|$)/i,
-    trunk:/\btrunk(?:[_\s.-]|$)|\btailgate(?:[_\s.-]|$)|\bboot(?:[_\s.-]|$)/i
+    door_fl:/(?:^|[_\s.-])door[_\s.-]*fl(?:[_\s.-]|$)/i,
+    door_fr:/(?:^|[_\s.-])door[_\s.-]*fr(?:[_\s.-]|$)/i,
+    door_rl:/(?:^|[_\s.-])door[_\s.-]*rl(?:[_\s.-]|$)/i,
+    door_rr:/(?:^|[_\s.-])door[_\s.-]*rr(?:[_\s.-]|$)/i,
+    hood:/(?:^|[_\s.-])hood(?:[_\s.-]|$)|(?:^|[_\s.-])bonnet(?:[_\s.-]|$)/i,
+    trunk:/(?:^|[_\s.-])trunk(?:[_\s.-]|$)|(?:^|[_\s.-])tailgate(?:[_\s.-]|$)|(?:^|[_\s.-])boot(?:[_\s.-]|$)/i
   };
   const note=$("feature-note");
   const vbuttons={exterior:$("view-exterior"),driver:$("view-driver"),rear:$("view-rear")};
@@ -82,10 +82,10 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     if(!nodes.length)return [];
     // A door's named main shell must exist: handles/glass alone are not enough.
     if(key.startsWith("door")){
-      const meaningful=nodes.some(o=>/\b(?:body|carpaint|shell)(?:[_\s.-]|$)/i.test(o.name||""));
+      const meaningful=nodes.some(o=>/(?:^|[_\s.-])(?:body|carpaint|shell)(?:[_\s.-]|$)/i.test(o.name||""));
       if(!meaningful)return [];
     }
-    if(key==="trunk"&&!nodes.some(o=>/\b(?:parts|carpaint|panel|tailgate)(?:[_\s.-]|$)/i.test(o.name||"")))return [];
+    if(key==="trunk"&&!nodes.some(o=>/(?:^|[_\s.-])(?:parts|carpaint|panel|tailgate)(?:[_\s.-]|$)/i.test(o.name||"")))return [];
     return nodes;
   }
   function makeRig(key){
@@ -133,7 +133,7 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
 
   function attachViews(){
     const wheel=matchingNodes(/steering[_\s.-]*wheel/i);
-    const rearSeats=matchingNodes(/\brear[_\s.-]*seat/i);
+    const rearSeats=matchingNodes(/(?:^|[_\s.-])rear[_\s.-]*seat/i);
     const hood=matchingNodes(partPatterns.hood),tail=matchingNodes(partPatterns.trunk);
     const inside={};
     if(front.lengthSq()>0&&wheel.length){
@@ -197,8 +197,7 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     } else {
       $("turntable").disabled=false;
     }
-    const fromLook=camera.position.clone().add(new THREE.Vector3(0,0,-1));
-    const fromTarget=view==="exterior"?controls.target.clone():getLookTarget();
+    const fromTarget=camera.position.clone().addScaledVector(camera.getWorldDirection(new THREE.Vector3()),3);
     const target=next==="exterior"?originalTarget.clone():positions[next].target.clone();
     const destination=next==="exterior"?originalCamera.clone():positions[next].position.clone();
     controls.enabled=false;
