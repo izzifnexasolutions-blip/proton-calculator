@@ -91,7 +91,7 @@
     const q=new URLSearchParams(location.search);
     let variant=q.get("variant")==="prime"?"prime":"premium";
     let selectedColor=colors.find(c=>c.name.toLowerCase()===(q.get("color")||"").toLowerCase())||colors[3];
-    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0;
+    let scene,camera,renderer,controls,root,platform,animation=0,autoRotate=false,loadToken=0,loadedSource=null;
     let originals=[],paintMaterialNames=[],pickedMaterial="";
     const stage=$("stage"),empty=$("empty-state"),loading=$("loading");
     function status(s,kind=""){const el=$("status");el.textContent=s;el.className=kind;}
@@ -173,7 +173,7 @@
       const loader=new GLTFLoader();loader.setDRACOLoader(draco);
       loader.load(url,g=>{
         draco.dispose();if(token!==loadToken){if(fromFile)URL.revokeObjectURL(url);return;}
-        root=g.scene;scene.add(root);
+        root=g.scene;loadedSource=url;scene.add(root);
         const bounds=new THREE.Box3().setFromObject(root),size=bounds.getSize(new THREE.Vector3());
         if(bounds.isEmpty()||size.length()<.0001){clearModel();showEmpty("GLB kosong","Fail tiada geometri yang boleh dipaparkan.");status("GLB tidak mengandungi mesh yang sah.","error");return;}
         const c=bounds.getCenter(new THREE.Vector3()),max=Math.max(size.x,size.y,size.z);
@@ -193,7 +193,7 @@
         status(msg,fromFile?"error":"");if(fromFile)URL.revokeObjectURL(url);
       });
     }
-    function loadVariant(){variantUI();showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
+    function loadVariant(){variantUI();if(root&&loadedSource===modelPaths[variant]){status(variant==="prime"?"Pratonton warna badan Prime menggunakan model rujukan Premium. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dan rim 16 inci aktif. Pilih warna untuk melihat cat badan berubah.","ok");return;}showEmpty("Menunggu model 3D","Boleh import fail GLB untuk melihat dan mewarnakan kereta.");loadGLB(modelPaths[variant]);}
     $("var-prime").addEventListener("click",()=>{if(variant==="prime")return;variant="prime";loadVariant();});
     $("var-premium").addEventListener("click",()=>{if(variant==="premium")return;variant="premium";loadVariant();});
     $("glb-file").addEventListener("change",e=>{
