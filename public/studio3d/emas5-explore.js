@@ -29,7 +29,8 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
   const bodyCenter=box.getCenter(new THREE.Vector3());
   const bodySize=box.getSize(new THREE.Vector3());
   const fullLength=Math.max(bodySize.x,bodySize.z,1);
-  let destroyed=false,view="exterior",tween=null,drag=null,yaw=0,pitch=0;
+  let destroyed=false,view="exterior",tween=null,drag=null,tapStart=null,yaw=0,pitch=0;
+  const raycaster=new THREE.Raycaster();const screenPointer=new THREE.Vector2();
   let lastTime=0,animating=false;
   let front=new THREE.Vector3(0,0,1),right;
   const originalCamera=camera.position.clone();
@@ -172,14 +173,13 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     $("x-count").textContent=rigs.size+" / 6 bahagian interaktif tersedia";
     if(!right)message("Orientasi depan/belakang tidak dapat disahkan daripada model ini. Buka/tutup dinyahaktifkan untuk mengelakkan kerosakan bentuk.","warn");
     else if(!rigs.size)message("Model dimuatkan, tetapi komponen berengsel tidak dikenali sebagai mesh berasingan. Sediakan GLB dengan nama Door_FL/FR/RL/RR, hood dan Trunk.","warn");
-    else message("Tekan bahagian untuk buka/tutup. Seret kereta untuk berpusing. Pilih POV Pemandu untuk meneroka ruang kabin.");
+    else message("Tap pada pintu/bonet dalam 3D atau gunakan butang Buka. Seret kereta untuk berpusing. Pilih POV Pemandu untuk melihat interior.");
   }
 
   function toggle(key){
     const rig=rigs.get(key);if(!rig)return;
     rig.target=rig.target?0:1;
-    message(partNames[key]+(rig.target?" sedang dibuka.":" sedang ditutup."));
-    updateUI();requestRender();
+    updateUI();message(partNames[key]+(rig.target?" sedang dibuka.":" sedang ditutup."));requestRender();
   }
   function closeAll(){
     for(const rig of rigs.values())rig.target=0;
@@ -243,7 +243,11 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     return moving;
   }
   add(stage,"pointerdown",e=>{
-    if(destroyed||view==="exterior"||tween)return;
+    if(destroyed||tween)return;
+    if(view==="exterior"){
+      tapStart={id:e.pointerId,x:e.clientX,y:e.clientY};
+      return;
+    }
     drag={id:e.pointerId,x:e.clientX,y:e.clientY};
     stage.setPointerCapture?.(e.pointerId);
   });
@@ -253,8 +257,28 @@ export function createExplorer({THREE, root, camera, controls, stage, requestRen
     yaw-=dx*.0048;pitch=THREE.MathUtils.clamp(pitch-dy*.0048,-1.22,1.22);
     updateLook();
   });
-  add(stage,"pointerup",e=>{if(drag?.id===e.pointerId)drag=null;});
-  add(stage,"pointercancel",()=>{drag=null;});
+  add(stage,"pointerup",e=>{
+    if(drag?.id===e.pointerId)drag=null;
+    if(!tapStart||tapStart.id!==e.pointerId||view!=="exterior"||tween){tapStart=null;return;}
+    const t=tapStart;tapStart=null;
+    if(Math.hypot(e.clientX-t.x,e.clientY-t.y)>7||!rigs.size)return;
+    const rect=stage.getBoundingClientRect();
+    screenPointer.set((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height*2-1));
+    raycaster.setFromCamera(screenPointer,camera);
+    const hits=raycaster.intersectObject(root,true);
+    for(const hit of hits){
+      for(const rig of rigs.values()){
+        let obj=hit.object;
+        while(obj&&obj!==root){
+          if(obj===rig.pivot){toggle(rig.key);return;}
+          obj=obj.parent;
+        }
+      }
+      // Do not open hidden parts behind an opaque body mesh.
+      break;
+    }
+  });
+  add(stage,"pointercancel",()=>{drag=null;tapStart=null;});
   add(stage,"wheel",e=>{
     if(view==="exterior"||tween||destroyed)return;
     e.preventDefault();
