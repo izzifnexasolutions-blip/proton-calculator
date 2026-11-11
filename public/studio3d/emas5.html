@@ -163,7 +163,7 @@
       const hasAuto=paintMaterialNames.length>0;
       $("paint-mapping").hidden=hasAuto;
       if(!hasAuto){pickedMaterial="";status("GLB berjaya dimuatkan, tetapi material cat badan belum dapat dikenal pasti. Pilih material pada kotak 'Cat badan' supaya rim/kaca tidak berubah.","error");}
-      else{pickedMaterial="";status("Model "+variant.toUpperCase()+" berjaya dimuatkan. Pilihan warna kini menukar material cat badan sahaja.","ok");}
+      else{pickedMaterial="";status(variant==="prime"?"Model rujukan Premium telah dimuatkan untuk pilihan warna badan Prime. Rim dan kelengkapan Prime belum disahkan.":"Model Premium RHD dengan rim 16 inci berjaya dimuatkan. Pilih warna untuk menukar cat badan kereta 3D.","ok");}
       repaint();
     }
     function loadGLB(url,fromFile=false){
