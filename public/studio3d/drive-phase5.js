@@ -9,6 +9,7 @@ const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,max
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
+  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1;
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
   let lastScan=0,lastVerify=0;
   const write=(id,str)=>{$(id).textContent=str;};
@@ -38,13 +39,13 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   function mapUpdate(){
     const map=getMap();if(!map||!mapReady())return;
     const road=map.getSource("phase5Road");
-    if(road)road.setData(roadGeo());
+    if(road)road.setData(roadData);
     const station=map.getSource("phase5Stations");
     if(station)station.setData(chargerGeo());
   }
   function onMapReady(){
     const map=getMap();if(!map||!mapReady())return;
-    if(!map.getSource("phase5Road"))map.addSource("phase5Road",{type:"geojson",data:roadGeo()});
+    if(!map.getSource("phase5Road"))map.addSource("phase5Road",{type:"geojson",data:roadData});
     if(!map.getLayer("phase5RoadOverlay"))
       map.addLayer({id:"phase5RoadOverlay",type:"line",source:"phase5Road",paint:{
         "line-width":5,"line-opacity":.7,
@@ -62,6 +63,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   function reset(){
     rev++;controller?.abort();verifyController?.abort();controller=null;verifyController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
+    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
@@ -82,6 +84,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     if(!data||!Array.isArray(data.coordinates)||!data.km)return;
     route=data;line=cumulativeLine(data.coordinates);
     profile=buildRouteSituations(route,null);
+    roadData=roadGeo();
     write("phase5-route-source","OSRM · "+fmt(route.km,1)+" km");
     renderRoads();
     onMapReady();
@@ -204,6 +207,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   function onDrive(km){
     const zone=zoneAtKm(km);
     if(!zone)return null;
+    if(zone===lastRenderedZone&&Math.floor(km)===lastRenderedKm)return zone;
+    lastRenderedZone=zone;lastRenderedKm=Math.floor(km);
     write("phase5-active-zone",zone.label+" · km "+fmt(km,0)+
       " · "+zone.source+(zone.kind==="unknown"?" · visual guna senario pilihan":""));
     const idx=profile.indexOf(zone);
@@ -233,6 +238,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       if(mine!==rev)return;
       elevations=data.elevations;stations=data.stations;
       profile=buildRouteSituations(route,elevations);
+      roadData=roadGeo();
       if(!data.stationError&&!data.elevationError)cache.set(key,data);
       renderRoads();renderStations();replan();onMapReady();
       write("phase5-data-source",elevations?"SRTM 90m · anggaran":"SRTM tiada data");
