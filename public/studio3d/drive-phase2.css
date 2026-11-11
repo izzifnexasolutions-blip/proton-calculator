@@ -37,3 +37,5 @@
 .route2-policy a{text-decoration:underline;color:#b0e6f2}
 @media(max-width:760px){.route2-panel{padding:13px 11px;border-radius:15px}.route2-head h3{font-size:22px}.route2-intro{font-size:10px}.route2-provider{font-size:9px}.route2-select-grid{gap:7px}.route2-select-grid .field>small{font-size:9px}}
 @media(max-width:370px){.route2-select-grid{grid-template-columns:1fr}.route2-select-grid .field>small{min-height:0}.route2-results strong{font-size:18px}}
+
+.route2-charger-link{display:inline-flex;margin:0 0 12px;padding:8px 11px;border:1px solid #517e94;background:#18364b;border-radius:999px;color:#c8eaf5;text-decoration:none;font-size:10px;font-weight:850}.route2-charger-link:hover{background:#23536b}
