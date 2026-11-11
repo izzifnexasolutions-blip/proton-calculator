@@ -24,28 +24,32 @@ export function makeElevationURL(geometry){
 export async function fetchRouteContext(route,{signal}={}){
   const geometry=route?.coordinates;
   if(!Array.isArray(geometry)||geometry.length<2)throw Error("Kira laluan OSRM dahulu.");
-  const query=makeOverpassQuery(geometry);
-  // One POST to Overpass, one GET to OpenTopoData, both initiated manually.
-  const answers=await Promise.allSettled([
-    fetch(OSM_OVERPASS,{method:"POST",body:new URLSearchParams({data:query}),
-      signal,mode:"cors",cache:"no-store"}),
-    fetch(makeElevationURL(geometry),{signal,mode:"cors",cache:"default"})
-  ]);
-  const output={stations:[],elevations:null,stationError:null,elevationError:null};
-  if(answers[0].status==="fulfilled"&&answers[0].value.ok){
-    try{
-      output.stations=parseChargingStations(await answers[0].value.json(),
-        cumulativeLine(geometry),route.km);
-    }catch(e){output.stationError="Respons OSM tidak sah.";}
-  }else output.stationError=answers[0].status==="fulfilled"?
-    "Overpass HTTP "+answers[0].value.status:"Overpass tidak dapat dihubungi.";
-  if(answers[1].status==="fulfilled"&&answers[1].value.ok){
-    try{
-      output.elevations=parseElevations(await answers[1].value.json());
-      if(!output.elevations)output.elevationError="Sampel ketinggian tidak mencukupi.";
-    }catch{output.elevationError="Respons SRTM tidak sah.";}
-  }else output.elevationError=answers[1].status==="fulfilled"?
-    "SRTM HTTP "+answers[1].value.status:"SRTM tidak dapat dihubungi.";
+  const line=cumulativeLine(geometry);
+  if(!line?.lengthKm)throw Error("Geometri laluan tidak sah.");
+  const chargingCount=Math.max(8,Math.min(30,Math.ceil(line.lengthKm/12)+1));
+  const elevationCount=Math.max(9,Math.min(21,Math.ceil(line.lengthKm/22)+1));
+  const chargerPoints=Array.from({length:chargingCount},(_,i)=>pointAtFraction(line,i/(chargingCount-1)));
+  const elevationPoints=Array.from({length:elevationCount},(_,i)=>pointAtFraction(line,i/(elevationCount-1)));
+  // Same-origin Vercel function removes third-party CORS reliance.
+  // Never use an arbitrary user-supplied URL.
+  const resp=await fetch("/api/ev-route-context",{
+    method:"POST",mode:"same-origin",signal,cache:"no-store",
+    headers:{"Content-Type":"application/json","Accept":"application/json"},
+    body:JSON.stringify({chargerPoints,elevationPoints})
+  });
+  const raw=await resp.json().catch(()=>({}));
+  if(!resp.ok)throw Error(String(raw.error||"Data peta terbuka tidak tersedia.").slice(0,140));
+  const output={
+    stations:[],elevations:null,
+    stationError:raw.stationError||null,elevationError:raw.elevationError||null
+  };
+  if(!output.stationError){
+    output.stations=parseChargingStations({elements:raw.stations||[]},line,route.km);
+  }
+  if(!output.elevationError){
+    output.elevations=parseElevations({results:raw.elevations||[]},line);
+    if(!output.elevations)output.elevationError="Sampel ketinggian SRTM tidak mencukupi.";
+  }
   return output;
 }
 export async function verifyDrivingStops(route,stops,{signal}={}){
