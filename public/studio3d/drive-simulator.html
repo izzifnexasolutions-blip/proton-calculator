@@ -40,7 +40,7 @@
 </section>
 
 <section class="smart-hub card" id="smart-hub" aria-labelledby="smart-title">
- <div class="smart-title-row"><div><small class="smart-overline">◆ EV INTELLIGENCE · SCENARIO ENGINE V3</small><h2 id="smart-title">Smart Scenario <em>Lab</em></h2><p>Uji 21 senario pemanduan secara interaktif, tanpa andaian bahawa cuaca atau jalan sebenar mempunyai keadaan tersebut.</p></div><div class="smart-counter">21 <small>SENARIO</small></div></div>
+ <div class="smart-title-row"><div><small class="smart-overline">◆ EV INTELLIGENCE · SCENARIO ENGINE V3</small><h2 id="smart-title">Smart Scenario <em>Lab</em></h2><p>Uji 21 senario pemanduan secara interaktif, tanpa andaian bahawa cuaca atau jalan sebenar mempunyai keadaan tersebut.</p></div><div class="smart-counter"><span id="smart-scenario-count">21</span> <small>SENARIO</small></div></div>
  <div class="smart-master"><div><small class="smart-overline">MASTER SIMULATION · ALL CONDITIONS</small><h3>7 Zon. 1 Perjalanan.</h3><p>Bandar sesak → lebuh raya → hujan → pendakian → kampung → turun bukit → panas & angin. Setiap zon mempunyai pengiraan tenaga berasingan.</p></div><button id="scenario-all" class="smart-go" type="button" aria-pressed="false">⚡ Jalankan Semua Keadaan</button></div>
  <div class="scenario-tabs" role="group" aria-label="Kategori simulasi"><button class="scenario-tab active" data-group="harian" type="button">Harian</button><button class="scenario-tab" data-group="jalan" type="button">Jalan & Cuaca</button><button class="scenario-tab" data-group="kereta" type="button">Kereta & Bateri</button><button class="scenario-tab" data-group="ekstrem" type="button">Ekstrem</button></div>
  <div id="scenario-grid" class="scenario-grid" role="group" aria-label="Pilih senario"></div>
@@ -57,7 +57,7 @@
   </div><p class="footnote">Faktor di sini untuk perbandingan senario sahaja. Jangan pandu dengan tekanan tayar rendah.</p>
  </details>
  <div class="smart-report">
-  <div class="smart-report-head"><div><small class="smart-overline">DIGITAL RANGE INTELLIGENCE</small><h3 id="smart-active-title">Tetapan Sendiri</h3><p id="smart-active-desc">Kira penggunaan tenaga daripada tetapan pilihan.</p></div><div class="smart-risk"><small>RISIKO</small><strong id="smart-risk-label">—</strong></div></div>
+  <div class="smart-report-head"><div><small class="smart-overline">DIGITAL RANGE INTELLIGENCE</small><h3 id="smart-active-title">Tetapan Sendiri</h3><p id="smart-active-desc">Kira penggunaan tenaga daripada tetapan pilihan.</p></div><div class="smart-risk" id="smart-risk"><small>RISIKO</small><strong id="smart-risk-label">—</strong></div></div>
   <div class="smart-stats"><div><small>SOC TIBA</small><strong id="smart-arrival">—</strong></div><div><small>SOH</small><strong id="smart-soh">100%</strong></div><div><small>PERLU CAS</small><strong id="smart-topup">—</strong></div><div><small>TENAGA</small><strong id="smart-energy">—</strong></div></div>
   <canvas id="smart-energy-graph" height="195" role="img" aria-label="Graf anggaran tahap bateri mengikut jarak"></canvas>
   <div class="smart-chart-legend"><span><i></i> SOC perjalanan</span><span>⋯ Had simpanan 10%</span><span id="smart-graph-note">Anggaran</span></div>
