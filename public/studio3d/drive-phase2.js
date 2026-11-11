@@ -52,7 +52,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   let points=[...pointByKey.entries()].map(([id,p])=>({id,...p}));
   let start={...points[0]},end={...points[1]};
   const markers=[],cache=new Map();
-  let picking=null,controller=null,seq=0,lastRequestAt=0,applied=null,lastResolved=0;
+  let picking=null,controller=null,seq=0,lastRequestAt=0,applied=null,lastResolved=0,driveMarker=null;
   function status(msg,kind=""){
     const el=$("route2-status");el.textContent=msg;el.dataset.kind=kind;
   }
@@ -102,6 +102,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     const energy=map?.getSource?.("energyBreak");
     if(energy)energy.setData({type:"FeatureCollection",features:[]});
     while(markers.length)markers.pop().remove();
+    driveMarker?.remove();driveMarker=null;
     $("route2-steps").replaceChildren();
     $("route2-measured").textContent="Belum dikira";
     $("route2-time").textContent="—";
@@ -205,6 +206,27 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     }
     return points.at(-1);
   }
+  // Phase 3: actual car position follows validated OSRM road points only.
+  // Without real routing, no fake "drive on the road" marker is shown.
+  function onDriveProgress(frac,result){
+    if(!applied||!result||!mapReadyProvider()){
+      driveMarker?.remove();driveMarker=null;return false;
+    }
+    const map=mapProvider();if(!map||!window.maplibregl)return false;
+    const physicalFraction=Math.min(Math.max(0,Number(frac)||0),
+      Math.min(1,Math.max(0,result.stopAtKm/result.km)));
+    const location=findDistanceFractionPoint(applied.coordinates,physicalFraction);
+    if(!location)return false;
+    if(!driveMarker){
+      const el=document.createElement("div");
+      el.className="ev-travel-dot";
+      el.textContent="🚘";
+      el.setAttribute("aria-label","Anggaran lokasi kereta sepanjang jalan yang dikira");
+      driveMarker=new window.maplibregl.Marker({element:el,anchor:"center"})
+        .setLngLat(location).addTo(map);
+    }else driveMarker.setLngLat(location);
+    return true;
+  }
   function onEstimate(result){
     const map=mapProvider(),src=map?.getSource?.("energyBreak");
     if(!applied||!result){
@@ -302,6 +324,6 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   $("route2-calc").addEventListener("click",calculate);
   $("route2-clear").addEventListener("click",()=>{applied=null;invalidate(true)});
   const first=Object.values(PRESETS)[0];setWaypoints(first);
-  return {onMapReady:installLayers,onMapClick:handleMapClick,onEstimate,onPresetChanged:setWaypoints,
+  return {onMapReady:installLayers,onMapClick:handleMapClick,onEstimate,onDriveProgress,onPresetChanged:setWaypoints,
     get hasActualRoute(){return !!applied},get route(){return applied},get picking(){return picking}};
 }
