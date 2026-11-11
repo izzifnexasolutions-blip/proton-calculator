@@ -122,7 +122,7 @@ export function createExplorer({THREE,root,camera,controls,stage,requestRender,o
     // Rear seats_A / B, and Steering wheel_L.
     const wheel=findNodes(/steering[_\s.-]*wheel/i);
     const frontSeats=findNodes(/(?:^|[_\s.-])front[_\s.-]*seat(?:[_\s.-]|$)/i);
-    const rearSeats=findNodes(/(?:^|[_\s.-])rear[_\s.-]*seat(?:[_\s.-]|$)/i);
+    const rearSeats=findNodes(/(?:^|[_\s.-])rear[_\s.-]*seats?(?:[_\s.-]|$)/i);
     const meter=findNodes(/(?:^|[_\s.-])(?:instrument|cluster|meter|speedometer|gauge|driver[_\s.-]*display)(?:[_\s.-]|$)/i);
     const dash=findNodes(/(?:^|[_\s.-])(?:dashboard|cockpit|ip)(?:[_\s.-]|$)/i);
     const result={};
