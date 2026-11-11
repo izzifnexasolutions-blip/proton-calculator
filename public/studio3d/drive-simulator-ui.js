@@ -403,6 +403,10 @@ routePlanner=createRoutePlanner({
     $("route-source").hidden=true;
     syncUrl();
     refresh();
+    // Remove old dashed preset reference immediately; do not zoom the map
+    // away while the user is in the middle of dropping pins.
+    const oldGuide=map?.getSource?.("guide");
+    if(oldGuide)oldGuide.setData({type:"FeatureCollection",features:[]});
   }
 });
 $("route").value=routeKey;
