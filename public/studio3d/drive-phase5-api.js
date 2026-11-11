@@ -11,7 +11,7 @@ export function makeOverpassQuery(geometry){
   const list=Array.from({length:count},(_,i)=>pointAtFraction(line,i/(count-1)));
   const joined=list.map(([lon,lat])=>lat.toFixed(5)+","+lon.toFixed(5)).join(",");
   return '[out:json][timeout:22];nwr["amenity"="charging_station"](around:4500,'+
-    joined+');out center tags 350;';
+    joined+');out center 350;';
 }
 export function makeElevationURL(geometry){
   const line=cumulativeLine(geometry);
