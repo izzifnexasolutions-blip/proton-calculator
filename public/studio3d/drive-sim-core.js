@@ -50,6 +50,15 @@ export function estimate(options={}){
   const surface=["smooth","rough","uneven"].includes(options.surface)?options.surface:"smooth";
   const rain=options.rain===true;
   const ac=options.ac!==false;
+  const batteryHealth=clamp(asNum(options.batteryHealth,100),75,100);
+  const temperature=["mild","hot","extreme","cool"].includes(options.temperature)?options.temperature:"mild";
+  const wind=["calm","head","tail","cross"].includes(options.wind)?options.wind:"calm";
+  const slope=["flat","up","down"].includes(options.slope)?options.slope:"flat";
+  const tire=["normal","low"].includes(options.tire)?options.tire:"normal";
+  const hvac=["normal","strong","low"].includes(options.hvac)?options.hvac:"normal";
+  const regen=["normal","high","low"].includes(options.regen)?options.regen:"normal";
+  const night=options.night===true;
+  const aggressive=options.aggressive===true;
   const tariff=clamp(asNum(options.tariff,.50),0,5);
   const reserveSoc=10;
   const baseline=car.battery/car.wltp*100;
@@ -63,24 +72,41 @@ export function estimate(options={}){
   const rainFactor=rain?1.07:1;
   const acFactor=ac?1.07:1;
   const modeFactor={eco:.94,normal:1,sport:1.08}[mode];
-  const factor=speedFactor*terrainFactor*trafficFactor*surfaceFactor*loadFactor*rainFactor*acFactor*modeFactor;
+  // Optional What-If factors are intentionally illustrative only.
+  // No route elevation, wind forecast, telemetry or vehicle-specific test data.
+  const tempFactor={mild:1,hot:1.035,extreme:1.075,cool:1.04}[temperature];
+  const windFactor={calm:1,head:1.10,tail:.965,cross:1.035}[wind];
+  const slopeFactor={flat:1,up:1.15,down:.92}[slope];
+  const tireFactor=tire==="low"?1.055:1;
+  const hvacFactor=ac?{normal:1,strong:1.065,low:.98}[hvac]:1;
+  const regenFactor=regen==="high"?(road==="city"?.965:.985):regen==="low"?1.02:1;
+  const nightFactor=night?1.012:1;
+  const aggressiveFactor=aggressive?1.085:1;
+  const factor=speedFactor*terrainFactor*trafficFactor*surfaceFactor*loadFactor*
+    rainFactor*acFactor*modeFactor*tempFactor*windFactor*slopeFactor*
+    tireFactor*hvacFactor*regenFactor*nightFactor*aggressiveFactor;
   const kwh100=baseline*factor;
   const needed=km*kwh100/100;
-  const startingEnergy=car.battery*startSoc/100;
-  const rawArrivalSoc=(startingEnergy-needed)/car.battery*100;
+  const effectiveBattery=car.battery*batteryHealth/100;
+  const startingEnergy=effectiveBattery*startSoc/100;
+  const rawArrivalSoc=(startingEnergy-needed)/effectiveBattery*100;
   const arrivalSoc=clamp(rawArrivalSoc,0,100);
-  const reserveEnergy=car.battery*reserveSoc/100;
+  const reserveEnergy=effectiveBattery*reserveSoc/100;
   const travelHours=km/speed;
   const reachWithReserve=rawArrivalSoc>=reserveSoc;
   const reachAtAll=rawArrivalSoc>=0;
   const extraEnergyToReserve=Math.max(0,needed+reserveEnergy-startingEnergy);
   const rangeWithReserve=Math.max(0,(startingEnergy-reserveEnergy)/kwh100*100);
   const rangeWithoutReserve=Math.max(0,startingEnergy/kwh100*100);
-  const arrivalLow=clamp((startingEnergy-needed*1.20)/car.battery*100,0,100);
-  const arrivalHigh=clamp((startingEnergy-needed*.90)/car.battery*100,0,100);
+  const arrivalLow=clamp((startingEnergy-needed*1.20)/effectiveBattery*100,0,100);
+  const arrivalHigh=clamp((startingEnergy-needed*.90)/effectiveBattery*100,0,100);
   const rangeAtArrival=Math.max(0,(startingEnergy-needed-reserveEnergy)/kwh100*100);
+  const outOfBatteryAtKm=Math.min(km,Math.max(0,(startingEnergy/(kwh100/100))));
+  const rangeDeficitKm=Math.max(0,km-outOfBatteryAtKm);
   return {
     variant,car,km,speed,startSoc,people,cargoKg,mode,road,traffic,surface,rain,ac,tariff,reserveSoc,
+    batteryHealth,effectiveBattery,temperature,wind,slope,tire,hvac,regen,night,aggressive,
+    outOfBatteryAtKm,rangeDeficitKm,
     baseline,kwh100,needed,startingEnergy,arrivalSoc,rawArrivalSoc,
     arrivalLow,arrivalHigh,rangeWithReserve,rangeWithoutReserve,rangeAtArrival,
     travelMinutes:travelHours*60,estimatedCost:needed*tariff,
