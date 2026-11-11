@@ -660,6 +660,12 @@ body{
   .tab-btn,.ncd-btn{-webkit-tap-highlight-color:transparent}
   #app{box-shadow:none}
 }
+@supports(-webkit-touch-callout:none){
+  @media(max-width:540px){
+    /* Safari iPhone: 16px inputs prevent disruptive auto-zoom on focus. */
+    .field-select,.field-input{font-size:16px;letter-spacing:-.035em}
+  }
+}
 @media(max-width:380px){
   .row-label span{letter-spacing:0;font-size:11px}
   #monthly-value{font-size:clamp(30px,10vw,46px)}
