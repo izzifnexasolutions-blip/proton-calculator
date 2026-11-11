@@ -116,3 +116,7 @@
 }
 @media(max-width:390px){.smart-counter{font-size:24px}.smart-report{padding:11px}.smart-advanced-grid{grid-template-columns:1fr}.drive-bottom-hud strong{font-size:22px}.smart-stage-name{font-size:9px}.scenario-card p{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.drive-car,.drive-road-dash,.drive-screen::after{animation:none!important}}
+
+/* Moving vehicle icon appears ONLY on a server-returned, validated OSRM road geometry. */
+.ev-travel-dot{display:grid;place-items:center;width:40px;height:40px;font-size:23px;line-height:1;border-radius:50%;border:2px solid #9af2ff;background:linear-gradient(145deg,#22465a,#10263a);box-shadow:0 0 0 5px #4cd7f42d,0 3px 17px #052135c9;pointer-events:none}
+.ev-travel-dot::after{content:"";position:absolute;inset:-5px;border:1px solid #81eeff44;border-radius:50%}
