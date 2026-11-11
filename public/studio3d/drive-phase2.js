@@ -52,7 +52,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   let points=[...pointByKey.entries()].map(([id,p])=>({id,...p}));
   let start={...points[0]},end={...points[1]};
   const markers=[],cache=new Map();
-  let picking=null,controller=null,seq=0,lastRequestAt=0,applied=null,lastResolved=0,driveMarker=null;
+  let picking=null,controller=null,seq=0,lastRequestAt=0,applied=null,lastResolved=0,driveMarker=null,driveIndex=null;
   function status(msg,kind=""){
     const el=$("route2-status");el.textContent=msg;el.dataset.kind=kind;
   }
@@ -102,7 +102,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     const energy=map?.getSource?.("energyBreak");
     if(energy)energy.setData({type:"FeatureCollection",features:[]});
     while(markers.length)markers.pop().remove();
-    driveMarker?.remove();driveMarker=null;
+    driveMarker?.remove();driveMarker=null;driveIndex=null;
     $("route2-steps").replaceChildren();
     $("route2-measured").textContent="Belum dikira";
     $("route2-time").textContent="—";
@@ -191,6 +191,32 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
       map.fitBounds(bounds,{padding:Math.max(45,Math.min(100,(map.getCanvas?.()?.clientWidth||600)*.08)),maxZoom:14,duration:650});
     }
   }
+  function indexRouteGeometry(points){
+    if(!points||points.length<2)return null;
+    const distance=new Float64Array(points.length);
+    for(let i=1;i<points.length;i++)
+      distance[i]=distance[i-1]+crowKm(points[i-1],points[i]);
+    return {points,distance,total:distance[distance.length-1]};
+  }
+  function indexedRoutePoint(fraction){
+    const index=driveIndex;
+    if(!index||index.total<=0)return null;
+    const target=index.total*Math.max(0,Math.min(1,fraction));
+    const positions=index.distance;
+    let left=1,right=positions.length-1;
+    while(left<right){
+      const middle=(left+right)>>1;
+      if(positions[middle]<target)left=middle+1;else right=middle;
+    }
+    const start=left-1,end=left;
+    const delta=positions[end]-positions[start];
+    const mix=delta>0?(target-positions[start])/delta:0;
+    const p=index.points;
+    return [
+      p[start][0]+(p[end][0]-p[start][0])*mix,
+      p[start][1]+(p[end][1]-p[start][1])*mix
+    ];
+  }
   function findDistanceFractionPoint(points,fraction){
     if(!points||points.length<2)return null;
     const segments=[];let total=0;
@@ -215,7 +241,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     const map=mapProvider();if(!map||!window.maplibregl)return false;
     const physicalFraction=Math.min(Math.max(0,Number(frac)||0),
       Math.min(1,Math.max(0,result.stopAtKm/result.km)));
-    const location=findDistanceFractionPoint(applied.coordinates,physicalFraction);
+    const location=indexedRoutePoint(physicalFraction)||findDistanceFractionPoint(applied.coordinates,physicalFraction);
     if(!location)return false;
     if(!driveMarker){
       const el=document.createElement("div");
@@ -241,7 +267,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
       if(src)src.setData({type:"FeatureCollection",features:[]});
       return;
     }
-    const coord=findDistanceFractionPoint(applied.coordinates,kmTo10/applied.km);
+    const coord=indexedRoutePoint(kmTo10/applied.km)||findDistanceFractionPoint(applied.coordinates,kmTo10/applied.km);
     if(coord)$("route2-charger-link").href="https://www.openstreetmap.org/#map=13/"+coord[1].toFixed(5)+"/"+coord[0].toFixed(5);
     $("route2-charge-point").textContent="Anggaran capai 10% bateri selepas ±"+format(kmTo10,0)+
       " km dari mula. Penanda oren pada laluan ialah peringatan bateri, BUKAN lokasi stesen pengecas.";
@@ -292,7 +318,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
         cache.set(key,data);
       }
       if(mine!==seq)return;
-      applied=data;
+      applied=data;driveIndex=indexRouteGeometry(data.coordinates);
       $("route2-measured").textContent=format(data.km,1)+" km · laluan jalan";
       $("route2-time").textContent=Math.floor(data.minutes/60)+"j "+(data.minutes%60)+"m (tanpa trafik)";
       status("Laluan jalan berjaya diperoleh daripada OSRM. Anggaran masa bukan masa trafik langsung.","success");
@@ -301,7 +327,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
       installLayers();onEstimate(modelResult);
     }catch(error){
       if(mine!==seq)return;
-      applied=null;clearVisual();
+      applied=null;driveIndex=null;clearVisual();
       status(error.name==="AbortError"?"Pelayan lambat/tidak dapat dicapai. Guna jarak manual sementara.":
         "Tidak berjaya mengira laluan: "+error.message+" Gunakan jarak rujukan/manual.","error");
     }finally{
