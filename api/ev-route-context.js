@@ -31,7 +31,11 @@ export default async function handler(req,res){
     res.setHeader("Allow","POST");
     return result(res,405,{error:"Guna POST untuk carian laluan Malaysia."});
   }
-  const body=typeof req.body==="string"?JSON.parse(req.body):req.body;
+  if(Number(req.headers?.["content-length"]||0)>MAX_BYTES)
+    return result(res,413,{error:"Permintaan laluan terlalu besar."});
+  let body;
+  try{body=typeof req.body==="string"?JSON.parse(req.body):req.body;}
+  catch{return result(res,400,{error:"Format koordinat JSON tidak sah."});}
   if(!body||!Array.isArray(body.chargerPoints)||!Array.isArray(body.elevationPoints))
     return result(res,400,{error:"Koordinat carian tidak lengkap."});
   const charger=body.chargerPoints,elevation=body.elevationPoints;
