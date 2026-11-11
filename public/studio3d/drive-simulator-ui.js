@@ -75,7 +75,7 @@ function refresh(){
   $("m-distance").textContent=fmt(result.km,1);
   $("m-cost").textContent="RM"+fmt(result.estimatedCost,2);
   $("r-energy").textContent=fmt(result.needed,2);
-  const hours=Math.floor(result.travelMinutes/60),mins=Math.round(result.travelMinutes%60);
+  const roundedMinutes=Math.round(result.travelMinutes),hours=Math.floor(roundedMinutes/60),mins=roundedMinutes%60;
   $("r-duration").textContent=hours+"j "+mins+"m";
   $("r-range").textContent=fmt(result.rangeWithReserve,0);
   $("r-topup").textContent=fmt(result.extraEnergyToReserve,2);
@@ -114,7 +114,7 @@ function syncRoute(focus=true){
     $("route-source").hidden=true;
   }
   syncUrl();
-  refresh();updateMap(focus?"route":"overview");renderRegions();
+  refresh();updateMap(focus==="region"?"region":focus?"route":"overview");renderRegions();
 }
 function updateMap(focus="route"){
   if(!mapReady||!map)return;
@@ -132,7 +132,7 @@ function updateMap(focus="route"){
       mk("#f65c7a",preset.to,"Destinasi: "+preset.destination)
     ];
   }
-  if(focus==="overview"){map.flyTo({center:REGIONS.malaysia.center,zoom:REGIONS.malaysia.zoom,duration:550});return;}
+  if(focus==="overview"){map.flyTo({center:REGIONS.malaysia.center,zoom:window.innerWidth<760?3.05:REGIONS.malaysia.zoom,duration:550});return;}
   if(focus==="region"||!preset){map.flyTo({center:region.center,zoom:region.zoom,duration:550});return;}
   if(window.maplibregl){
     const bounds=new window.maplibregl.LngLatBounds(preset.from,preset.to);
@@ -159,7 +159,7 @@ function initMap(){
   try{
     map=new window.maplibregl.Map({
       container:"map",style:"https://tiles.openfreemap.org/styles/"+activeMapStyle,
-      center:REGIONS.malaysia.center,zoom:REGIONS.malaysia.zoom,minZoom:3,maxZoom:17,
+      center:REGIONS.malaysia.center,zoom:window.innerWidth<760?3.05:REGIONS.malaysia.zoom,minZoom:2.6,maxZoom:17,
       cooperativeGestures:true,attributionControl:true,renderWorldCopies:false
     });
     map.addControl(new window.maplibregl.NavigationControl({showCompass:false}),"top-right");
@@ -212,8 +212,7 @@ function selectRegion(key){
   if(key!=="malaysia"){
     $("route").value=region.route;
     routeKey=region.route;
-    syncRoute(false);
-    updateMap("region");
+    syncRoute("region");
   }else{
     renderRegions();syncUrl();updateMap("overview");
     refresh();
@@ -227,13 +226,14 @@ function renderIntelligence(options){
     traffic:{light:"Lancar",moderate:"Sederhana",heavy:"Sesak"},
     mode:{eco:"Eco",normal:"Normal",sport:"Sport"}
   };
-  $("ctx-region").textContent=REGIONS[regionKey]?.short||"Malaysia";
+  const tripRegion=PRESETS[routeKey]?.region||regionKey;
+  $("ctx-region").textContent=REGIONS[tripRegion]?.short||"Malaysia";
   $("ctx-road").textContent=labels.roads[result.road];
   $("ctx-surface").textContent=labels.surfaces[result.surface];
   $("ctx-traffic").textContent=labels.traffic[result.traffic];
   $("ctx-mode").textContent=labels.mode[result.mode];
   $("ctx-weather").textContent=result.rain?"Hujan (andaian)":"Kering (andaian)";
-  $("hud-region").textContent=(REGIONS[regionKey]?.short||"Malaysia").toUpperCase();
+  $("hud-region").textContent=(REGIONS[tripRegion]?.short||"Malaysia").toUpperCase();
   $("hud-road").textContent=labels.roads[result.road].toUpperCase();
   const strip=$("verdict-strip");
   const isLow=result.startSoc<=10;
@@ -286,7 +286,7 @@ function chooseVariant(choice){
 }
 $("variant-prime").addEventListener("click",()=>chooseVariant("prime"));
 $("variant-premium").addEventListener("click",()=>chooseVariant("premium"));
-$("route").addEventListener("change",syncRoute);
+$("route").addEventListener("change",()=>{const preset=PRESETS[$("route").value];if(preset)regionKey=preset.region||"malaysia";syncRoute(true);});
 for(const id of ["distance","speed","soc","people","cargo","road","mode","traffic","surface","ac","rain","tariff"]){
   $(id).addEventListener("input",refresh);
   if(["distance","speed","tariff"].includes(id))$(id).addEventListener("change",refresh);
@@ -295,7 +295,7 @@ $("play").addEventListener("click",()=>{
   if(!result)return;
   if(progress>=1){stopSimulation();updateAnimation();}
   if(playing){
-    playing=false;elapsed=Math.min(simulationMs,elapsed+performance.now()-startedAt);
+    playing=false;if(startedAt)elapsed=Math.min(simulationMs,elapsed+performance.now()-startedAt);
     startedAt=0;if(raf)cancelAnimationFrame(raf);raf=0;
     $("play").textContent="▶ Sambung simulasi";
     $("progress-text").textContent=Math.round(progress*100)+"% · Dijeda";
@@ -321,7 +321,7 @@ $("copy").addEventListener("click",async()=>{
     "Bateri destinasi: "+fmt(result.arrivalSoc,1)+"%",
     "Kos elektrik berdasarkan tarif input: RM"+fmt(result.estimatedCost,2),
     "Status simpanan 10%: "+(result.reachWithReserve?"Anggaran cukup":"Rancang pengecasan"),
-    "Wilayah: "+REGIONS[regionKey].label,
+    "Wilayah: "+REGIONS[PRESETS[routeKey]?.region||regionKey].label,
     "Jenis jalan: "+$("road").selectedOptions[0].text,
     "Permukaan jalan (andaian): "+$("surface").selectedOptions[0].text,
     "Trafik (andaian): "+$("traffic").selectedOptions[0].text,
