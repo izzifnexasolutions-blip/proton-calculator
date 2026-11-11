@@ -2,6 +2,7 @@ import {VEHICLES,PRESETS,REGIONS,estimate} from "./drive-sim-core.js";
 import {createRoutePlanner} from "./drive-phase2.js";
 import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
 import {createSmartDashboard} from "./drive-smart-ui.js";
+import {createPhase4Controls} from "./drive-phase4-controls.js";
 const $=id=>document.getElementById(id);
 // The map is the FIRST and CENTRAL interaction, not the last block after forms.
 // Reorder existing DOM nodes only; preserve their IDs and existing listeners.
@@ -21,9 +22,9 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,selectedScenario="manual";
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
-const simulationMs=12000;
+let simulationMs=12000;
 function stopSimulation(){
   if(raf)cancelAnimationFrame(raf);
   raf=0;playing=false;progress=0;elapsed=0;startedAt=0;
@@ -62,6 +63,7 @@ function updateAnimation(){
   $("progress-text").textContent=Math.round(progress*100)+"% · "+(depleted?"Bateri habis sebelum tiba":playing?"Simulasi sedang berjalan":progress>=1?"Selesai":"Sedia");
   const mapAnimating=routePlanner?.onDriveProgress(progress,result)||false;
   smart?.frame(result,{...reading,canStillDrive:!depleted},playing&&!depleted,mapAnimating);
+  phase4?.render(result,progress,playing&&!depleted,{...reading,canStillDrive:!depleted});
 }
 function animate(now){
   raf=0;if(!playing)return;
@@ -73,6 +75,7 @@ function animate(now){
     playing=false;elapsed=simulationMs;
     $("play").textContent=maxProgress<1?"↻ Ulang · perlu cas":"↻ Mainkan semula";
     smart?.frame(result,{...sampleJourney(result,progress),canStillDrive:maxProgress>=1},false,routePlanner?.hasActualRoute||false);
+    phase4?.render(result,progress,false,{...sampleJourney(result,progress),canStillDrive:maxProgress>=1});
     return;
   }
   raf=requestAnimationFrame(animate);
@@ -96,6 +99,7 @@ function invalid(message){
   routePlanner?.onEstimate(null);
   routePlanner?.onDriveProgress(0,null);
   smart?.render(null);
+  phase4?.render(null,0,false,null);
 }
 function refresh(){
   stopSimulation();
@@ -452,6 +456,29 @@ smart=createSmartDashboard({
   },
   onPlay:()=>{$("play").click();$("drive-theatre").scrollIntoView?.({block:"center",behavior:"smooth"});},
   onReset:()=>{$("reset").click();}
+});
+phase4=createPhase4Controls({
+  getSnapshot:()=>({
+    result,progress,playing,reading:result?sampleJourney(result,progress):null
+  }),
+  onSeek:fraction=>{
+    if(!result)return;
+    if(raf)cancelAnimationFrame(raf);
+    raf=0;playing=false;startedAt=0;
+    const limit=Math.min(1,Math.max(0,result.stopAtKm/result.km));
+    progress=Math.max(0,Math.min(fraction,limit));
+    elapsed=progress*simulationMs;
+    $("play").textContent=progress>=limit-1e-7?
+      (limit<1?"↻ Ulang · perlu cas":"↻ Mainkan semula"):
+      "▶ Sambung simulasi";
+    updateAnimation();
+  },
+  onRate:rate=>{
+    simulationMs=12000/rate;
+    elapsed=progress*simulationMs;
+    startedAt=playing?performance.now():0;
+    if(result)updateAnimation();
+  }
 });
 routePlanner=createRoutePlanner({
   PRESETS,
