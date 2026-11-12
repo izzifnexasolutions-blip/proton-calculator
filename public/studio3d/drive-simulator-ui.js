@@ -14,15 +14,16 @@ function arrangeMapFirst(){
   const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
   const search=$("journey-search"),legend=$("journey-map-legend"),
-    charge=$("charge-v2"),timeline=$("journey-timeline");
+    charge=$("charge-v2"),catalog=$("ev-upload-catalog"),timeline=$("journey-timeline");
   const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
-  if(!card||!shell||!search||!map||!legend||!charge||!timeline||!mast)return;
+  if(!card||!shell||!search||!map||!legend||!charge||!catalog||!timeline||!mast)return;
   card.classList.add("primary-map-card");
   shell.insertBefore(card,mast);
   search.after(map);
   map.after(legend);
   legend.after(charge);
-  charge.after(timeline);
+  charge.after(catalog);
+  catalog.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
