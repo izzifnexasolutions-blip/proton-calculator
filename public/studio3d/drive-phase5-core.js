@@ -170,7 +170,10 @@ export function buildRouteSituations(route,elevations=null){
     const source=type==="uphill"||type==="downhill"||type==="highland"?
       "Ketinggian SRTM kasar · bukan profil cerun jalan":roadway.source;
     const prev=sectors.at(-1);
-    if(prev&&prev.type===type){
+    // Retain ~20–45 km checkpoints on long single-class motorway routes.
+    // They are route slices, NOT invented land-use or traffic transitions.
+    const maxSectionKm=Math.max(20,Math.min(45,km/7));
+    if(prev&&prev.type===type&&prev.km+(endKm-startKm)<=maxSectionKm){
       prev.endKm=endKm;prev.km=endKm-prev.startKm;
     }else sectors.push({type,kind,label,startKm,endKm,km:endKm-startKm,source,road:name,terrain});
   }
