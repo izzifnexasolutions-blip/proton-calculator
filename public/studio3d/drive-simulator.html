@@ -217,6 +217,12 @@
             </label>
             <button type="submit" class="journey-calculate" id="journey-calculate">⌁ Kira Laluan <span>↗</span></button>
           </div>
+          <div class="journey-quick-soc">
+            <label for="journey-start-soc">🔋 Bateri mula <strong id="journey-start-soc-value">80%</strong></label>
+            <input id="journey-start-soc" type="range" min="5" max="100" step="5" value="80"
+              aria-label="Peratus bateri pada awal perjalanan" />
+            <span>Seret untuk kemas kini anggaran SOC semua zon</span>
+          </div>
           <div id="journey-search-status" class="journey-search-status" role="status" aria-live="polite">Pilih lokasi daripada cadangan. Carian tempat percuma menggunakan Photon/OSM secara terhad; jarak jalan daripada OSRM.</div>
         </form>
         <div class="journey-headline-kpis" id="journey-kpis" aria-label="Ringkasan perjalanan">
@@ -243,6 +249,10 @@
           </div>
           <p class="journey-intro">Bateri dan penggunaan tenaga ialah anggaran model perjalanan, <strong>bukan bacaan mengikut cerun sebenar</strong>. Kategori jalan merujuk data OSRM atau sampel ketinggian kasar; trafik dan cuaca ialah senario pilihan, bukan maklumat langsung.</p>
           <div class="journey-rail" id="journey-rail" aria-hidden="true"></div>
+          <div class="journey-charger-action">
+            <button id="journey-find-chargers" type="button" disabled>⚡ Cari Pengecas AC / DC Sepanjang Laluan</button>
+            <small id="journey-charger-feedback">Carian pengecas hanya dibuat apabila butang ditekan. Status sebenar stesen mesti disemak dengan operator.</small>
+          </div>
           <div class="journey-timeline-list" id="journey-timeline-list"><p class="journey-empty">Belum ada laluan OSRM. Isi lokasi kemudian tekan Kira Laluan.</p></div>
           <div class="journey-mode-footer" id="journey-mode-footer">ℹ Pilihan mod ialah cadangan kecekapan secara umum, bukan arahan automatik kepada kereta.</div>
         </div>
