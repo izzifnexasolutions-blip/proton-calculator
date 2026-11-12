@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="./drive-phase5.css?v=20261112b">
 <link rel="stylesheet" href="./drive-journey-experience.css?v=20261112a">
 <link rel="stylesheet" href="./drive-map-explained.css?v=20261112a">
-<link rel="stylesheet" href="./drive-charging-v2.css?v=20261112v2">
+<link rel="stylesheet" href="./drive-charging-v2.css?v=20261112wc">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -248,9 +248,10 @@
           <span><i style="--marker:#ffad6a"></i> Bateri 10%</span>
           <span><i style="--marker:#ed5379"></i> Bateri 0%*</span>
           <span><i style="--marker:#cf9fff"></i> DC CCS2 (rekod OSM)</span>
+          <span><i style="--marker:#f0b969"></i> ⚡ 27 titik katalog Pantai Barat (OCM)</span>
           <span><i style="--marker:#8bebb4"></i> AC Type 2 (rekod OSM)</span>
         </div>
-        <small>Tekan titik pada peta untuk penerangan dan kilometer. Penanda bateri ialah <b>anggaran simulasi</b>, bukan lokasi stesen cas. Status pengecas OSM perlu disahkan dengan operator.</small>
+        <small>Tekan titik pada peta untuk penerangan dan kilometer. Penanda bateri ialah <b>anggaran simulasi</b>, bukan lokasi stesen cas. Status pengecas OSM/katalog belum semestinya aktif; semak dengan operator.</small>
       </div>
 <section class="charge-v2" id="charge-v2" aria-label="Smart Charging Planner 2.0" data-state="idle">
   <div class="charge-v2-top">
@@ -267,13 +268,13 @@
     <span id="charge-v2-step1">1 · Laluan OSRM</span><span id="charge-v2-step2">2 · Cari stesen AC/DC</span><span id="charge-v2-step3">3 · Sahkan hentian</span>
   </div>
   <div class="charge-v2-grid" aria-live="polite">
-    <div><small>REKOD PENGECAS</small><strong id="charge-v2-count">—</strong><span id="charge-v2-source">OSM / OCM jika tersedia</span></div>
+    <div><small>REKOD PENGECAS</small><strong id="charge-v2-count">27 katalog</strong><span id="charge-v2-source">Koordinat sumber OCM, bukan status langsung</span></div>
     <div><small>HENTIAN CADANGAN</small><strong id="charge-v2-stops">—</strong><span>Belum dianggap aktif</span></div>
     <div><small>MASA MENGECAS</small><strong id="charge-v2-time">—</strong><span>Anggaran jika ada data kuasa</span></div>
     <div><small>SOC DESTINASI</small><strong id="charge-v2-soc">—</strong><span>Anggaran model bateri</span></div>
   </div>
   <div class="charge-v2-bottom">
-    <p id="charge-v2-evidence">Tiada pengecas disahkan aktif atau tersedia secara langsung. Semak pengendali sebelum bergerak.</p>
+    <p id="charge-v2-evidence">Pin emas = rekod lokasi pengecas awam daripada Open Charge Map. Ia bukan pengesahan status pengecas aktif. Semak pengendali sebelum bergerak.</p>
     <button type="button" id="charge-v2-detail">Lihat semua stesen dan butiran ↓</button>
   </div>
 </section>
@@ -511,6 +512,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js?v=20261112v2"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261112wc"></script>
 </body>
 </html>
