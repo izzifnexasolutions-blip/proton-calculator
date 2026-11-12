@@ -129,6 +129,7 @@ function refresh(){
   if(!Number.isFinite(raw.speed)||raw.speed<25||raw.speed>130){invalid("Masukkan purata kelajuan antara 25 hingga 130 km/j.");return;}
   if(!Number.isFinite(raw.tariff)||raw.tariff<0||raw.tariff>5){invalid("Masukkan kadar elektrik antara RM0 hingga RM5/kWh.");return;}
   result=calculateJourney(raw,selectedScenario);
+  journey?.setSOC(result.startSoc);
   $("play").disabled=false;
   $("variant-prime").classList.toggle("active",variant==="prime");
   $("variant-premium").classList.toggle("active",variant==="premium");
@@ -588,6 +589,11 @@ journey=createJourneyExperience({
   getMap:()=>map,
   mapReady:()=>mapReady,
   onVariantChange:chooseVariant,
+  onSOCChange:value=>{
+    $("soc").value=String(value);
+    refresh();
+  },
+  onChargerSearch:()=>phase5?.scan(),
   onPresetChange:key=>{
     const preset=PRESETS[key];
     if(preset)regionKey=preset.region||"malaysia";
@@ -604,4 +610,5 @@ $("route").value=routeKey;
 syncRoute(false);
 journey.setPreset(routeKey);
 journey.setVariant(variant);
+journey.setSOC($("soc").value);
 window.addEventListener("load",initMap,{once:true});
