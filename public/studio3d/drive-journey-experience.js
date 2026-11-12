@@ -9,6 +9,7 @@
 import {isMalaysiaArea,crowKm} from "./drive-phase2.js";
 import {buildJourneyTimeline,formatKm} from "./drive-journey-model.js";
 import {cumulativeLine,pointAtFraction} from "./drive-phase5-core.js";
+import {localPlaceMatches} from "./malaysia-place-index-v3.js";
 const $=id=>document.getElementById(id);
 const PHOTON="https://photon.komoot.io/api/";
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -56,7 +57,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
   const fmtSoc=n=>Number.isFinite(n)?formatKm(Math.max(0,n),1)+"%":"—";
   function suggestLocals(query){
     const q=esc(query);
-    return !q?[]:local.filter(p=>esc(p.name).includes(q)).slice(0,5);
+    return !q?[]:localPlaceMatches(q,local,6);
   }
   function closeSuggestions(side){
     const list=lists[side];list.hidden=true;list.replaceChildren();
@@ -91,6 +92,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     chosen[side]={name:point.name,coords:[...point.coords],source:point.source};
     inputs[side].value=point.name;
     versions[side]++;clearTimeout(debounce[side]);
+    flight?.abort();
     closeSuggestions(side);
     const other=side==="from"?"to":"from";
     if(chosen[other]&&crowKm(chosen.from.coords,chosen.to.coords)<.35)
@@ -153,7 +155,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
       if(value.length<3){if(value)openSuggestions(side,locals);else closeSuggestions(side);return;}
       const cached=cache.get(esc(value));
       if(cached){openSuggestions(side,merge(locals,cached));return;}
-      openSuggestions(side,locals,true);
+      openSuggestions(side,locals,locals.length===0);
       debounce[side]=setTimeout(()=>searchRemote(side,value,version),SEARCH_DEBOUNCE_MS);
     });
     input.addEventListener("keydown",e=>{

@@ -306,8 +306,8 @@ function buildStop(station,arrivalEnergy,targetEnergy,result){
     provisional:true,drivingDetourKm:null,liveAvailability:null};
 }
 function eligible(stations){
-  return stations.filter(s=>s.knownConnector&&s.access!=="private"&&s.access!=="no"&&
-    s.kmAlong>1&&s.offsetKm<=6);
+  return stations.filter(s=>s.knownConnector&&!s.sourceConflict&&
+    s.access!=="private"&&s.access!=="no"&&s.kmAlong>1&&s.offsetKm<=6);
 }
 function scores(stops){
   const worstOff=stops.reduce((a,s)=>a+s.station.offsetKm,0);

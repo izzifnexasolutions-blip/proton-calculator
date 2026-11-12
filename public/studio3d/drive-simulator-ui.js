@@ -3,10 +3,11 @@ import {createRoutePlanner} from "./drive-phase2.js";
 import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
-import {createPhase5Planner} from "./drive-phase5.js?v=20261113perf";
+import {createPhase5Planner} from "./drive-phase5.js?v=20261113v3";
 import {WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
 import {createUserEvCatalog} from "./drive-user-catalog.js?v=20261113perf";
-import {createJourneyExperience} from "./drive-journey-experience.js?v=20261113perf";
+import {routeChargerShortlist,stationEvidence} from "./ev-journey-v3-core.js";
+import {createJourneyExperience} from "./drive-journey-experience.js?v=20261113v3";
 const $=id=>document.getElementById(id);
 // Customer-facing layout: map and pinless search FIRST. Move the original
 // card rather than cloning its DOM: all old calculator/3D IDs remain intact.
@@ -35,47 +36,86 @@ let activeMapStyle="fiord",mapInitialized=false;
 let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,evCatalog=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
+let evV3Busy=false;
 function renderChargeV2(){
- const panel=$("charge-v2");if(!panel)return;
- const route=routePlanner?.route,stations=phase5?.stations||[],plan=phase5?.plan||null,verified=phase5?.verified||null;
- const searched=phase5?.chargerScanStatus==="success";
- const set=(id,value)=>{$(id).textContent=value;};
- const step=(i,done)=>$("charge-v2-step"+i).classList.toggle("done",!!done);
- step(1,route);step(2,route&&searched);step(3,route&&verified?.safe);
- const soc=verified?.safe?verified.finishSoc:(route&&result&&result.reachAtAll?result.arrivalSoc:null);
- set("charge-v2-soc",soc==null?"—":fmt(soc,1)+"%");
- set("charge-v2-count",searched?stations.length+" rekod":"—");
- set("charge-v2-stops",plan?.kind==="none"?"Tidak perlu":plan?.stops?.length?plan.stops.length+" hentian":searched?"Tiada yang sesuai":"—");
- set("charge-v2-time",plan?.totalMinutesKnown!=null?"±"+fmt(plan.totalMinutesKnown,0)+" min":"—");
- set("charge-v2-source",searched?"Sumber: "+(stations.some(s=>s.sources?.includes("OCM"))?"OSM + OCM":"OSM"):"OSM / OCM jika tersedia");
- const button=$("charge-v2-action");button.disabled=!route;
- let state,label,desc,action,evidence;
- if(!route){
-   [state,label,desc,action,evidence]=["idle","BELUM ADA LALUAN",
-     WEST_COAST_CHARGERS.length+" lokasi sumber OCM dipaparkan sebagai pin emas. Pilih lokasi mula/destinasi dan kira laluan OSRM.",
-     "① Kira laluan dahulu","27 pin rekod lokasi tersedia pada peta walaupun pelayan Overpass tidak dapat dihubungi; status aktif belum diketahui."];
- }else if(!searched){
-   [state,label,desc,action,evidence]=["search","SEDIA CARI PENGECAS",
-     "Laluan dikira. Tekan carian untuk gabungkan stesen berhampiran daripada katalog Pantai Barat dan sumber OSM.",
-     "② Cari pengecas laluan","Carian atas permintaan sahaja; status aktif pengecas tidak tersedia secara langsung."];
- }else if(verified?.safe){
-   [state,label,desc,action,evidence]=["verified","JALAN DISAHKAN OSRM",
-     "Laluan melalui hentian disemak. SOC dan masa cas masih anggaran.",
-     "✓ Semak semula laluan","Semakan OSRM bukan bukti pengecas aktif. Sahkan dengan operator."];
- }else if(plan?.stops?.length){
-   [state,label,desc,action,evidence]=["warn","HENTIAN BELUM DISAHKAN",
-     plan.stops.length+" hentian dicadangkan. Sahkan jarak jalan dan baki bateri.",
-     "③ Semak jalan & SOC","Jarak geografi bukan lencongan memandu. Semak OSRM dahulu."];
- }else{
-   [state,label,desc,action,evidence]=[plan?.kind==="none"?"verified":"warn",
-     plan?.kind==="none"?"ANGGARAN TAK PERLU CAS":"TIADA HENTIAN SESUAI",
-     plan?.message||"Belum ada hentian dicadangkan daripada data semasa.",
-     "↻ Cari semula pengecas","Tiada rekod bukan bukti tiada pengecas di lokasi."];
- }
- panel.dataset.state=state;
- set("charge-v2-state",label);set("charge-v2-message",desc);
- button.textContent=action;set("charge-v2-evidence",evidence);
+  const panel=$("charge-v2");if(!panel)return;
+  const route=routePlanner?.route,stations=phase5?.stations||[],
+    plan=phase5?.plan||null,verified=phase5?.verified||null,
+    resultNow=result;
+  const researched=phase5?.chargerScanStatus==="success";
+  const set=(id,value)=>{$(id).textContent=value;};
+  const step=(i,done)=>$("charge-v2-step"+i).classList.toggle("done",!!done);
+  step(1,route);step(2,route&&stations.length);step(3,verified?.safe);
+  const soc=verified?.safe?verified.finishSoc:
+    (route&&resultNow?.reachAtAll?resultNow.arrivalSoc:null);
+  set("charge-v2-soc",soc==null?"—":fmt(soc,1)+"%");
+  set("charge-v2-count",route?stations.length+" rekod laluan":WEST_COAST_CHARGERS.length+" katalog");
+  set("charge-v2-stops",plan?.kind==="none"?"Tidak perlu":
+    plan?.stops?.length?plan.stops.length+" cadangan":"—");
+  set("charge-v2-time",plan?.totalMinutesKnown!=null?
+    "±"+fmt(plan.totalMinutesKnown,0)+" min":"Belum diketahui");
+  set("charge-v2-source",route?
+    "OSM / OCM · bukan status langsung":"Koordinat sumber OCM, bukan status langsung");
+  const button=$("charge-v2-action");button.disabled=!route||evV3Busy;
+  const nearby=$("ev-v3-nearby-list"),stops=$("ev-v3-stops");
+  const filter=$("ev-v3-filter").value;
+  nearby.replaceChildren();stops.replaceChildren();
+  function stationCard(label,meta,info,href){
+    const card=document.createElement("article");card.className="ev-v3-stop";
+    const badge=document.createElement("div");badge.className="ev-v3-chip";badge.textContent=label;
+    const title=document.createElement("strong");title.textContent=meta;
+    const note=document.createElement("small");note.textContent=info;
+    card.append(badge,title,note);
+    if(typeof href==="string"&&/^https:\/\//.test(href)){
+      const link=document.createElement("a");link.href=href;link.target="_blank";
+      link.rel="noopener noreferrer";link.textContent="Semak rekod sumber ↗";card.append(link);
+    }
+    return card;
+  }
+  const show=p=>{const note=document.createElement("p");note.textContent=p;stops.append(note);};
+  if(!route)show("Pilih dua lokasi dan kira laluan dahulu.");
+  else if(plan?.kind==="none")show("✓ Anggaran perjalanan ini tidak memerlukan hentian untuk tiba dengan baki ≥10%.");
+  else if(plan?.stops?.length){
+    for(const [i,stop] of plan.stops.entries()){
+      const s=stop.station,ev=stationEvidence(s);
+      stops.append(stationCard((verified?.safe?"✓ Jalan OSRM · ":"⚠ Belum semak jalan · ")+(i+1),
+        s.name+" · "+(stop.kind==="DC"?"DC CCS2":"AC Type 2"),
+        "km "+fmt(s.kmAlong,0)+" laluan · SOC tiba ±"+fmt(stop.arrivalSoc,0)+
+        "% → sasaran "+fmt(stop.targetSoc,0)+"% · "+
+        (stop.minutes==null?"masa cas tak diketahui":"cas ±"+fmt(stop.minutes,0)+" min")+
+        " · "+ev.label,s.osmUrl));
+    }
+  }else show("Belum ada hentian selamat dicadangkan. Tekan Auto Plan untuk cari atau semak rekod pengecas.");
+  const list=routeChargerShortlist(stations,5,filter);
+  for(const item of list){
+    nearby.append(stationCard(item.type,item.name,
+      "±km "+fmt(item.kmAlong,0)+" dari mula · "+fmt(item.offsetKm,1)+
+      " km jarak lurus dari laluan · "+item.status,item.sourceUrl));
+  }
+  if(!list.length){
+    const p=document.createElement("p");
+    p.textContent="Tiada rekod soket serasi dalam tapisan ini. Cuba semua jenis atau analisis semula.";
+    nearby.append(p);
+  }
+  set("ev-v3-nearby-title","Rekod pengecas berhampiran laluan ("+list.length+" dipaparkan)");
+  const state=evV3Busy?"busy":!route?"idle":verified?.safe||plan?.kind==="none"?"verified":
+    plan?.stops?.length?"warn":"search";
+  panel.dataset.state=state;
+  const title=evV3Busy?"MENGANALISIS…":!route?"BELUM ADA LALUAN":
+    verified?.safe?"JALAN DISEMAK OSRM":plan?.kind==="none"?"ANGGARAN TAK PERLU CAS":
+      plan?.stops?.length?"HENTIAN PERLU SEMAK":"SEDIA AUTO PLAN";
+  set("charge-v2-state",title);
+  set("charge-v2-message",!route?"Pilih mula dan destinasi, kemudian kira laluan sebenar.":
+    verified?.safe?"Hentian di bawah telah disemak untuk jalan dan baki bateri. Sahkan status pengendali.":
+    plan?.kind==="none"?"Anggaran bateri cukup sampai tanpa cas. Anda masih boleh lihat stesen berdekatan.":
+    plan?.stops?.length?"Ada cadangan daripada rekod sumber. Semak OSRM sebelum memandu.":
+      "Jalankan Auto Plan untuk cari hentian berdasarkan rekod berkoordinat dan SOC.");
+  button.textContent=evV3Busy?"Menyemak data & jalan…":
+    !route?"① Kira laluan dahulu":"⚡ Auto Plan · Cari & semak hentian";
+  set("charge-v2-evidence",
+    "Peta dan kiraan SOC ialah anggaran. Rekod OSM/OCM bukan data pengecas aktif; 510 rekod Excel belum disahkan tidak digunakan sebagai hentian.");
 }
+
 function stopSimulation(){
   if(raf)cancelAnimationFrame(raf);
   raf=0;playing=false;progress=0;elapsed=0;startedAt=0;
@@ -675,13 +715,12 @@ journey=createJourneyExperience({
   }
 });
 $("charge-v2-action").addEventListener("click",async()=>{
-  if(!routePlanner?.route)return;
-  const button=$("charge-v2-action");button.disabled=true;
-  try{
-    if(phase5?.chargerScanStatus!=="success"||!phase5?.plan?.stops?.length)await phase5?.scan();
-    else await phase5?.verify();
-  }finally{renderChargeV2();}
+  if(!routePlanner?.route||evV3Busy)return;
+  evV3Busy=true;renderChargeV2();
+  try{await phase5?.autoPlan();}
+  finally{evV3Busy=false;renderChargeV2();}
 });
+$("ev-v3-filter").addEventListener("change",renderChargeV2);
 $("charge-v2-detail").addEventListener("click",()=>{
   $("phase5-hub")?.scrollIntoView({behavior:"smooth",block:"start"});
 });

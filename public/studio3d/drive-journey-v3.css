@@ -1,0 +1,19 @@
+/* Smart EV Journey 3.0: customer-first compact decision cards. */
+.ev-v3-result{margin-top:15px;border-top:1px solid #355768;padding-top:15px}
+.ev-v3-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ev-v3-head strong{color:#e9fff8;font-size:14px}
+.ev-v3-head label{color:#c8e6e9;font-size:11px;display:flex;align-items:center;gap:6px}
+.ev-v3-head select{background:#203c50;color:#ecfffc;border:1px solid #547d90;border-radius:8px;padding:8px;max-width:230px;font-size:12px}
+.ev-v3-stops{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}
+.ev-v3-stop{padding:12px;border:1px solid #476a7c;border-radius:13px;background:#182f41;min-width:0}
+.ev-v3-stop strong{display:block;color:#f3ffff;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.ev-v3-stop small{display:block;color:#aecbda;margin-top:5px;font-size:11px;line-height:1.45}
+.ev-v3-stop a{color:#9be8e2;display:inline-block;margin-top:8px;font-size:11px}
+.ev-v3-stop .ev-v3-chip{font-weight:800;color:#8ceacc;font-size:10px;margin-bottom:5px}
+.ev-v3-stops>p{color:#a9cbd5;font-size:12px;margin:4px 0;line-height:1.6}
+.ev-v3-nearby{padding-top:12px}
+.ev-v3-nearby summary{color:#a9e7f5;cursor:pointer;font-size:12px;font-weight:800}
+.ev-v3-nearby .ev-v3-stops{margin-top:10px}
+.ev-v3-warning{font-size:11px;line-height:1.55;color:#c1d3dc;margin:12px 0 0}
+@media(max-width:700px){.ev-v3-head{align-items:stretch}.ev-v3-head label{justify-content:space-between;flex-wrap:wrap}
+.ev-v3-head select{max-width:100%}.ev-v3-stops{grid-template-columns:1fr}}

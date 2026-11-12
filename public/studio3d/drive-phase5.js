@@ -642,6 +642,24 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       if(mine===rev){onUpdated?.();verifyController=null;working=false;$("phase5-verify").disabled=!plan?.stops?.length;}
     }
   }
+  // Explicit click flow: use already available source-backed catalog first.
+  // If no viable candidate is recorded, refresh the bounded OSM/OCM route
+  // context once, then verify up to two driving-route candidate plans.
+  // This is NOT navigation or proof the station is online.
+  async function autoPlan(){
+    if(!route||!getResult())return {state:"no_route"};
+    if(getResult().reachWithReserve){
+      message("Anggaran boleh tiba dengan baki sekurang-kurangnya 10% tanpa hentian cas.","success");
+      onUpdated?.();return {state:"no_charge_needed"};
+    }
+    if(!plan?.stops?.length)await scan();
+    if(plan?.stops?.length)await verify();
+    else {
+      message("Tiada hentian yang boleh dicadangkan daripada rekod disemak. Cas sebelum bertolak atau cuba laluan lain.","warn");
+      onUpdated?.();
+    }
+    return {state:verified?.safe?"road_checked":plan?.stops?.length?"needs_review":"no_safe_candidate"};
+  }
   function customerReport(){
     const r=getResult();
     if(!route||!r)return "Kira laluan terlebih dahulu.";
@@ -692,5 +710,5 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     get places(){return places},get stationsVerified(){return chargerDataVerified},
     get chargerScanStatus(){return chargerScanStatus},
     get plan(){return plan},get verified(){return verified},
-    scan,verify,customerReport};
+    scan,verify,autoPlan,customerReport};
 }
