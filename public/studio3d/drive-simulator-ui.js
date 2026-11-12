@@ -4,17 +4,20 @@ import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
 import {createPhase5Planner} from "./drive-phase5.js";
+import {createJourneyExperience} from "./drive-journey-experience.js";
 const $=id=>document.getElementById(id);
-// The map is the FIRST and CENTRAL interaction, not the last block after forms.
-// Reorder existing DOM nodes only; preserve their IDs and existing listeners.
+// Customer-facing layout: map and pinless search FIRST. Move the original
+// card rather than cloning its DOM: all old calculator/3D IDs remain intact.
 function arrangeMapFirst(){
-  const header=$("route-heading")?.closest(".card-head");
-  const toolbar=$("pin-toolbar");
-  const hint=$("map-howto");
+  const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
-  if(header&&toolbar&&hint&&map){
-    header.after(toolbar,hint,map);
-  }
+  const search=$("journey-search"),timeline=$("journey-timeline");
+  const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
+  if(!card||!shell||!search||!map||!timeline||!mast)return;
+  card.classList.add("primary-map-card");
+  shell.insertBefore(card,mast);
+  search.after(map);
+  map.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -23,7 +26,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,selectedScenario="manual";
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
 function stopSimulation(){
@@ -77,6 +80,7 @@ function updateAnimation(){
         realZone.type==="downhill"?{slope:"down"}:{})}
   }}:reading;
   phase4?.render(result,progress,playing&&!depleted,{...driveReading,canStillDrive:!depleted});
+  journey?.setProgress(kmDone);
   if(realZone&&realZone.kind!=="unknown")
     $("drive-current-zone").textContent=realZone.label+" · data laluan";
 }
@@ -116,6 +120,7 @@ function invalid(message){
   phase5?.onBatteryChanged();
   smart?.render(null);
   phase4?.render(null,0,false,null);
+  journey?.resetTimeline();
 }
 function refresh(){
   stopSimulation();
@@ -129,6 +134,7 @@ function refresh(){
   $("variant-premium").classList.toggle("active",variant==="premium");
   $("variant-prime").setAttribute("aria-pressed",String(variant==="prime"));
   $("variant-premium").setAttribute("aria-pressed",String(variant==="premium"));
+  journey?.setVariant(variant);
   const c=VEHICLES[variant];
   $("spec-line").textContent=fmt(c.battery,2)+" kWh · "+c.wltp+" km WLTP · "+c.powerKw+" kW / "+c.torqueNm+" Nm";
   $("soc-out").textContent=result.startSoc+"%";
@@ -188,6 +194,8 @@ function syncRoute(focus=true){
   syncUrl();
   phase5?.reset();
   routePlanner?.onPresetChanged(preset);
+  if(preset)journey?.setPreset(routeKey);
+  else journey?.resetTimeline();
   refresh();updateMap(focus==="region"?"region":focus?"route":"overview");renderRegions();
 }
 function updateMap(focus="route"){
@@ -224,6 +232,7 @@ function installMapGuide(){
   updateMap(mapInitialized?"region":"overview");
   routePlanner?.onMapReady();
   phase5?.onMapReady();
+  journey?.onMapReady();
   mapInitialized=true;
 }
 function initMap(){
