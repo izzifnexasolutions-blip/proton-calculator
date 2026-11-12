@@ -1,0 +1,29 @@
+.ev-upload-catalog{background:linear-gradient(130deg,#122637,#172b3e);color:#eefcff;padding:20px;
+border:1px solid rgba(119,174,220,.3);border-radius:20px;margin:14px 0 20px}
+.ev-upload-top{display:flex;align-items:start;justify-content:space-between;gap:16px}
+.ev-upload-top small{font-size:11px;color:#93d7ff;font-weight:800;letter-spacing:.08em}
+.ev-upload-top h3{margin:7px 0;font-size:clamp(18px,2vw,24px);color:#fff}
+.ev-upload-top p,.ev-upload-foot{margin:5px 0 0;line-height:1.55;font-size:12px;color:#b9d2df}
+.ev-upload-count{flex-shrink:0;background:#25455d;border-radius:100px;padding:10px 15px;font-weight:800;color:#c5edff}
+.ev-upload-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.ev-upload-metrics>div{padding:13px;background:rgba(255,255,255,.06);border-radius:12px}
+.ev-upload-metrics strong{display:block;font-size:21px;color:#fff;margin-bottom:5px}
+.ev-upload-metrics small{font-size:11px;color:#b3d6e7}
+.ev-upload-switch{display:flex;align-items:center;gap:10px;padding:12px;background:#203e53;
+border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;color:#f0fbff}
+.ev-upload-switch input{width:19px;height:19px;accent-color:#72bdff;flex-shrink:0}
+.ev-upload-details{margin:14px 0 0;border:1px solid #3e6379;border-radius:12px;padding:12px}
+.ev-upload-details summary{cursor:pointer;font-weight:800;font-size:13px}
+.ev-upload-details label{display:block;margin:13px 0 7px;color:#c2dfed;font-size:12px}
+.ev-upload-details input{width:100%;border-radius:10px;padding:12px 14px;background:#102736;
+border:1px solid #57809c;color:#fff;font-size:14px}
+.ev-upload-results{max-height:350px;overflow:auto;margin-top:10px;display:grid;gap:8px}
+.ev-upload-item{padding:10px 12px;border-radius:10px;background:#193346;display:grid;gap:4px}
+.ev-upload-item strong{color:#fff;font-size:12px}
+.ev-upload-item small{color:#b7cfdb;font-size:11px}
+.ev-upload-item span{color:#94d9ff;font-size:10px;font-weight:800}
+.ev-upload-item span[data-risk="needs_review_placeholder"]{color:#ffca8e}
+.ev-upload-item span[data-risk="needs_geocode"]{color:#d9c4ff}
+@media(max-width:700px){.ev-upload-catalog{padding:14px}.ev-upload-top{flex-direction:column}
+.ev-upload-metrics{gap:6px}.ev-upload-metrics>div{padding:9px}.ev-upload-metrics strong{font-size:15px}
+.ev-upload-metrics small{font-size:10px}}
