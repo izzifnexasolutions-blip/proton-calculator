@@ -7,7 +7,7 @@ import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-p
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
-export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
+export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdated}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
   let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false,places=[];
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
@@ -161,7 +161,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       const text=document.createElement("div");text.className="phase5-road-info";
       const title=document.createElement("strong");title.textContent=s.label;
       const desc=document.createElement("small");
-      const locality=nearKnownPlace(places,line,(s.startKm+s.endKm)/2,9);
+      const locality=nearKnownPlace(places,line,((s.startKm+s.endKm)/2)/Math.max(.001,route.km)*line.lengthKm,9);
       desc.textContent=fmt(s.startKm,0)+"–"+fmt(s.endKm,0)+" km · "+
         (locality?"Sekitar "+locality.name+" (OSM) · ":"")+s.source;
       const length=document.createElement("b");length.textContent=fmt(s.km,1)+" km";
@@ -291,6 +291,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     verified=null;
     message("Laluan masuk ke pengecas belum disahkan. Tekan semak setelah memilih hentian.");
     renderPlan();
+    onUpdated?.();
   }
   function zoneAtKm(km){return route?zoneAtDistance(profile,km):null;}
   function onDrive(km){
@@ -428,6 +429,6 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   reset();
   return {onRoute,reset,onBatteryChanged:replan,onMapReady,onDrive,
     get route(){return route},get profile(){return profile},get stations(){return stations},
-    get plan(){return plan},get verified(){return verified},
+    get places(){return places},get plan(){return plan},get verified(){return verified},
     scan,verify,customerReport};
 }

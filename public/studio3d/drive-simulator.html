@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="./drive-smart-digital.css?v=20261112e">
 <link rel="stylesheet" href="./drive-phase4.css?v=20261112a">
 <link rel="stylesheet" href="./drive-phase5.css?v=20261112b">
+<link rel="stylesheet" href="./drive-journey-experience.css?v=20261112a">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -30,11 +31,7 @@
   </nav>
 </header>
 <div class="live-banner"><span class="live-dot"></span> MALAYSIA · LIVE ROAD & CHARGING INTELLIGENCE · PHASE 05</div>
-<section class="headline" aria-labelledby="heading">
-  <div class="eyebrow">MALAYSIA · REAL ROUTE PLANNER BETA · PHASE 02</div>
-  <h1 id="heading">Malaysia <span class="neon-heading">Smart EV Journey Lab.</span></h1>
-  <p>Simulasi penggunaan tenaga e.MAS 5 berdasarkan jarak, kelajuan, muatan dan jenis jalan. Peta Malaysia, 21 senario pemanduan, satu ujian gabungan tujuh keadaan dan simulasi digital untuk Prime serta Premium. Semua angka ialah <strong>simulasi anggaran</strong>, bukan data trafik, GPS atau bacaan kenderaan secara langsung.</p>
-</section>
+
 <section class="mast" aria-label="Ringkasan simulasi">
   <div class="metric metric--soc"><div class="metric-label"><span class="mini-led"></span> ARRIVAL BATTERY</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran SOC · bukan BMS</div><div class="metric-dial" id="metric-dial" aria-hidden="true"></div></div>
   <div class="metric"><div class="metric-label">RANGE BUFFER</div><div class="metric-number" id="m-range">—</div><div class="metric-unit">km selepas tiba · hingga 10%</div></div>
@@ -185,6 +182,82 @@
   <div class="col">
     <section class="card" aria-labelledby="route-heading">
       <div class="card-head"><h2 id="route-heading">01 · Peta Perjalanan Malaysia</h2><span class="tag">FREE · NO API KEY</span></div>
+      <div class="journey-search" id="journey-search">
+        <div class="journey-search-top">
+          <div><span class="journey-kicker"><span class="journey-pulse"></span> FARIS · MALAYSIA EV JOURNEY</span>
+            <h1>Ke mana <em>perjalanan kau?</em></h1>
+            <p>Taip tempat mula dan destinasi. Pilih hasil carian, kemudian kira laluan sebenar. Tak perlu letak pin.</p>
+          </div>
+          <span class="journey-no-key">✦ FREE MAP</span>
+        </div>
+        <form id="journey-search-form" class="journey-form" autocomplete="off">
+          <div class="journey-locations">
+            <div class="journey-location-field" id="journey-from-field">
+              <span class="journey-pin-dot start"></span>
+              <label for="journey-from">DARI MANA?</label>
+              <input id="journey-from" type="search" placeholder="Contoh: KLCC, Kuala Lumpur" enterkeyhint="search"
+                aria-autocomplete="list" aria-controls="journey-from-results" aria-expanded="false" required/>
+              <div class="journey-suggestions" id="journey-from-results" role="listbox" aria-label="Cadangan tempat mula" hidden></div>
+            </div>
+            <button class="journey-swap" id="journey-swap" type="button" aria-label="Tukar tempat mula dan destinasi">⇅</button>
+            <div class="journey-location-field" id="journey-to-field">
+              <span class="journey-pin-dot end"></span>
+              <label for="journey-to">NAK KE MANA?</label>
+              <input id="journey-to" type="search" placeholder="Contoh: Georgetown, Pulau Pinang" enterkeyhint="search"
+                aria-autocomplete="list" aria-controls="journey-to-results" aria-expanded="false" required/>
+              <div class="journey-suggestions" id="journey-to-results" role="listbox" aria-label="Cadangan destinasi" hidden></div>
+            </div>
+          </div>
+          <div class="journey-search-actions">
+            <label class="journey-preset-field" for="journey-preset">Laluan popular
+              <select id="journey-preset" aria-label="Pilih laluan popular"><option value="">Pilih contoh perjalanan</option></select>
+            </label>
+            <label class="journey-variant-field" for="journey-variant">Varian
+              <select id="journey-variant"><option value="prime">e.MAS 5 Prime</option><option value="premium">e.MAS 5 Premium</option></select>
+            </label>
+            <button type="submit" class="journey-calculate" id="journey-calculate">⌁ Kira Laluan <span>↗</span></button>
+          </div>
+          <div class="journey-quick-soc">
+            <label for="journey-start-soc">🔋 Bateri mula <strong id="journey-start-soc-value">80%</strong></label>
+            <input id="journey-start-soc" type="range" min="5" max="100" step="5" value="80"
+              aria-label="Peratus bateri pada awal perjalanan" />
+            <span>Seret untuk kemas kini anggaran SOC semua zon</span>
+          </div>
+          <div id="journey-search-status" class="journey-search-status" role="status" aria-live="polite">Pilih lokasi daripada cadangan. Carian tempat percuma menggunakan Photon/OSM secara terhad; jarak jalan daripada OSRM.</div>
+        </form>
+        <div class="journey-headline-kpis" id="journey-kpis" aria-label="Ringkasan perjalanan">
+          <div><small>JARAK</small><strong id="journey-distance">—</strong></div>
+          <div><small>MASA JALAN*</small><strong id="journey-time">—</strong></div>
+          <div><small>BATERI TIBA*</small><strong id="journey-arrival">—</strong></div>
+          <div><small>PERLU CAS?</small><strong id="journey-charge">—</strong></div>
+          <div><small>MOD CADANGAN</small><strong id="journey-mode">—</strong></div>
+        </div>
+      </div>
+      <details class="journey-timeline" id="journey-timeline" aria-labelledby="journey-timeline-heading">
+        <summary>
+          <span class="journey-timeline-title"><span class="journey-timeline-icon">▤</span>
+            <span><small>JOURNEY INTELLIGENCE</small><strong id="journey-timeline-heading">Timeline Perjalanan & Bateri</strong></span>
+          </span>
+          <span class="journey-timeline-summary" id="journey-timeline-brief">Kira laluan untuk melihat zon</span>
+          <span class="journey-chevron">⌄</span>
+        </summary>
+        <div class="journey-timeline-body">
+          <div class="journey-legend">
+            <span><i data-level="low"></i> Tekanan tenaga rendah</span>
+            <span><i data-level="medium"></i> Sederhana</span>
+            <span><i data-level="high"></i> Lebih tinggi</span>
+          </div>
+          <p class="journey-intro">Bateri dan penggunaan tenaga ialah anggaran model perjalanan, <strong>bukan bacaan mengikut cerun sebenar</strong>. Kategori jalan merujuk data OSRM atau sampel ketinggian kasar; trafik dan cuaca ialah senario pilihan, bukan maklumat langsung.</p>
+          <div class="journey-rail" id="journey-rail" aria-hidden="true"></div>
+          <div class="journey-charger-action">
+            <button id="journey-find-chargers" type="button" disabled>⚡ Cari Pengecas AC / DC Sepanjang Laluan</button>
+            <small id="journey-charger-feedback">Carian pengecas hanya dibuat apabila butang ditekan. Status sebenar stesen mesti disemak dengan operator.</small>
+          </div>
+          <div class="journey-timeline-list" id="journey-timeline-list"><p class="journey-empty">Belum ada laluan OSRM. Isi lokasi kemudian tekan Kira Laluan.</p></div>
+          <div class="journey-mode-footer" id="journey-mode-footer">ℹ Pilihan mod ialah cadangan kecekapan secara umum, bukan arahan automatik kepada kereta.</div>
+        </div>
+      </details>
+
       <div class="location-rail"><span><span class="location-pulse"></span> MALAYSIA JOURNEY NETWORK</span><span id="region-detail">Semenanjung · Sabah · Sarawak</span></div>
       <div class="region-strip" id="region-strip" role="group" aria-label="Pilih wilayah Malaysia">
         <button class="region-chip active" type="button" data-region="malaysia" aria-pressed="true">🇲🇾 Malaysia</button>
@@ -390,6 +463,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261112f"></script>
 </body>
 </html>

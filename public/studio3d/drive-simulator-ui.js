@@ -4,17 +4,20 @@ import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
 import {createPhase5Planner} from "./drive-phase5.js";
+import {createJourneyExperience} from "./drive-journey-experience.js";
 const $=id=>document.getElementById(id);
-// The map is the FIRST and CENTRAL interaction, not the last block after forms.
-// Reorder existing DOM nodes only; preserve their IDs and existing listeners.
+// Customer-facing layout: map and pinless search FIRST. Move the original
+// card rather than cloning its DOM: all old calculator/3D IDs remain intact.
 function arrangeMapFirst(){
-  const header=$("route-heading")?.closest(".card-head");
-  const toolbar=$("pin-toolbar");
-  const hint=$("map-howto");
+  const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
-  if(header&&toolbar&&hint&&map){
-    header.after(toolbar,hint,map);
-  }
+  const search=$("journey-search"),timeline=$("journey-timeline");
+  const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
+  if(!card||!shell||!search||!map||!timeline||!mast)return;
+  card.classList.add("primary-map-card");
+  shell.insertBefore(card,mast);
+  search.after(map);
+  map.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -23,7 +26,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,selectedScenario="manual";
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
 function stopSimulation(){
@@ -77,6 +80,7 @@ function updateAnimation(){
         realZone.type==="downhill"?{slope:"down"}:{})}
   }}:reading;
   phase4?.render(result,progress,playing&&!depleted,{...driveReading,canStillDrive:!depleted});
+  journey?.setProgress(kmDone);
   if(realZone&&realZone.kind!=="unknown")
     $("drive-current-zone").textContent=realZone.label+" · data laluan";
 }
@@ -116,6 +120,7 @@ function invalid(message){
   phase5?.onBatteryChanged();
   smart?.render(null);
   phase4?.render(null,0,false,null);
+  journey?.resetTimeline();
 }
 function refresh(){
   stopSimulation();
@@ -124,11 +129,13 @@ function refresh(){
   if(!Number.isFinite(raw.speed)||raw.speed<25||raw.speed>130){invalid("Masukkan purata kelajuan antara 25 hingga 130 km/j.");return;}
   if(!Number.isFinite(raw.tariff)||raw.tariff<0||raw.tariff>5){invalid("Masukkan kadar elektrik antara RM0 hingga RM5/kWh.");return;}
   result=calculateJourney(raw,selectedScenario);
+  journey?.setSOC(result.startSoc);
   $("play").disabled=false;
   $("variant-prime").classList.toggle("active",variant==="prime");
   $("variant-premium").classList.toggle("active",variant==="premium");
   $("variant-prime").setAttribute("aria-pressed",String(variant==="prime"));
   $("variant-premium").setAttribute("aria-pressed",String(variant==="premium"));
+  journey?.setVariant(variant);
   const c=VEHICLES[variant];
   $("spec-line").textContent=fmt(c.battery,2)+" kWh · "+c.wltp+" km WLTP · "+c.powerKw+" kW / "+c.torqueNm+" Nm";
   $("soc-out").textContent=result.startSoc+"%";
@@ -188,6 +195,8 @@ function syncRoute(focus=true){
   syncUrl();
   phase5?.reset();
   routePlanner?.onPresetChanged(preset);
+  if(preset)journey?.setPreset(routeKey);
+  else journey?.resetTimeline();
   refresh();updateMap(focus==="region"?"region":focus?"route":"overview");renderRegions();
 }
 function updateMap(focus="route"){
@@ -224,6 +233,7 @@ function installMapGuide(){
   updateMap(mapInitialized?"region":"overview");
   routePlanner?.onMapReady();
   phase5?.onMapReady();
+  journey?.onMapReady();
   mapInitialized=true;
 }
 function initMap(){
@@ -499,6 +509,22 @@ phase4=createPhase4Controls({
     if(result)updateAnimation();
   }
 });
+function refreshJourneyView(){
+  if(!journey)return;
+  const realRoute=routePlanner?.route;
+  if(!realRoute||!result){journey.resetTimeline();return;}
+  const inputs=getInputs();
+  journey.render({
+    route:{...realRoute,startName:routePlanner.start?.name||"Mula",
+      endName:routePlanner.end?.name||"Destinasi"},
+    result,
+    profile:phase5?.profile||[],
+    places:phase5?.places||[],
+    plan:phase5?.plan||null,
+    settings:{speed:inputs.speed,people:inputs.people,cargoKg:inputs.cargo,
+      rain:inputs.rain,traffic:inputs.traffic,mode:inputs.mode}
+  });
+}
 routePlanner=createRoutePlanner({
   PRESETS,
   mapProvider:()=>map,
@@ -530,6 +556,7 @@ routePlanner=createRoutePlanner({
   },
   onRouteInvalidated:()=>{
     phase5?.reset();
+    journey?.resetTimeline();
     // Invalidate the old route's battery output rather than leaving stale SOC.
     routeKey="custom";
     $("route").value="custom";
@@ -548,8 +575,41 @@ phase5=createPhase5Planner({
   getRoute:()=>routePlanner?.route,
   getResult:()=>result,
   getMap:()=>map,
-  mapReady:()=>mapReady
+  mapReady:()=>mapReady,
+  onUpdated:refreshJourneyView
+});
+journey=createJourneyExperience({
+  PRESETS,
+  getRoute:()=>routePlanner?.route,
+  getResult:()=>result,
+  getProfile:()=>phase5?.profile||[],
+  getPlaces:()=>phase5?.places||[],
+  getPlan:()=>phase5?.plan||null,
+  getInputSettings:getInputs,
+  getMap:()=>map,
+  mapReady:()=>mapReady,
+  onVariantChange:chooseVariant,
+  onSOCChange:value=>{
+    $("soc").value=String(value);
+    refresh();
+  },
+  onChargerSearch:()=>phase5?.scan(),
+  onSearchEdited:()=>routePlanner?.clearSearchRoute(),
+  onPresetChange:key=>{
+    const preset=PRESETS[key];
+    if(preset)regionKey=preset.region||"malaysia";
+    $("route").value=key;
+    syncRoute(true);
+  },
+  onRouteRequest:async(from,to)=>{
+    if(!routePlanner?.setSearchEndpoints(from,to))return false;
+    await routePlanner.calculate();
+    return !!routePlanner.hasActualRoute;
+  }
 });
 $("route").value=routeKey;
 syncRoute(false);
+journey.setPreset(routeKey);
+journey.setVariant(variant);
+journey.setSOC($("soc").value);
 window.addEventListener("load",initMap,{once:true});
