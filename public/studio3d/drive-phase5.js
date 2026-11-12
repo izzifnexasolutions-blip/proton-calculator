@@ -2,15 +2,17 @@
  * All route/charger claims are conditional and explicitly attributed.
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
-import {cumulativeLine,pointAtFraction,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdated}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
-  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false,places=[];
-  let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
+  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,
+    chargerDataVerified=false,chargerScanStatus="not_checked",places=[];
+  let cache=new Map(),rev=0,controller=null,verifyController=null,working=false,
+    placeLookupController=null,placeLookupCache=new Map(),popupMap=null;
   let lastScan=0,lastVerify=0;
   const write=(id,str)=>{$(id).textContent=str;};
   const status=(str,level="")=>{write("phase5-status",str);$("phase5-status").dataset.state=level;};
@@ -27,6 +29,28 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       return {type:"Feature",properties:{kind:s.kind,name:s.label},
         geometry:{type:"LineString",coordinates:coords}};
     })};
+  }
+  function placeGeo(){
+    // Only named place records actually obtained from OSM/Photon.
+    return {type:"FeatureCollection",features:places.filter(p=>
+      p.name&&Number.isFinite(p.lon)&&Number.isFinite(p.lat)).slice(0,16).map(p=>({
+      type:"Feature",properties:{name:String(p.name).slice(0,65),kind:p.kind||"place"},
+      geometry:{type:"Point",coordinates:[p.lon,p.lat]}
+    }))};
+  }
+  function addPlaces(list){
+    if(!Array.isArray(list)||!route)return;
+    const keys=new Set(places.map(p=>String(p.name).toLowerCase()+"|"+
+      Number(p.lat).toFixed(3)+"|"+Number(p.lon).toFixed(3)));
+    for(const p of list){
+      if(!p||!p.name||!Number.isFinite(p.lat)||!Number.isFinite(p.lon))continue;
+      if(!(p.lat>=.8&&p.lat<=7.8&&p.lon>=99&&p.lon<=119.5))continue;
+      const key=String(p.name).toLowerCase()+"|"+p.lat.toFixed(3)+"|"+p.lon.toFixed(3);
+      if(keys.has(key))continue;
+      keys.add(key);places.push({name:String(p.name).slice(0,80),kind:p.kind||"place",
+        lat:p.lat,lon:p.lon,source:p.source||"OSM"});
+    }
+    if(places.length>50)places=places.slice(0,50);
   }
   function chargerGeo(){
     const sel=new Set(plan?.stops?.map(x=>x.station.id)||[]);
@@ -73,6 +97,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     if(road)road.setData(roadData);
     const station=map.getSource("phase5Stations");
     if(station)station.setData(chargerGeo());
+    const labels=map.getSource("phase5NamedPlaces");
+    if(labels)labels.setData(placeGeo());
     const safeLine=map.getSource("phase5ChargeWindow");
     if(safeLine)safeLine.setData(safetySegment());
     const safeDots=map.getSource("phase5SafetyPoints");
@@ -93,6 +119,13 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         "circle-color":["match",["get","type"],"DC","#cf9fff","AC","#8bebb4","#9fb2c4"],
         "circle-radius":["case",["get","selected"],8,5],
         "circle-stroke-color":"#102537","circle-stroke-width":2}});
+    if(!map.getSource("phase5NamedPlaces"))
+      map.addSource("phase5NamedPlaces",{type:"geojson",data:placeGeo()});
+    if(!map.getLayer("phase5NamedPlaceLabels"))
+      map.addLayer({id:"phase5NamedPlaceLabels",type:"symbol",source:"phase5NamedPlaces",
+        layout:{"text-field":["get","name"],"text-size":12,"text-anchor":"top",
+          "text-offset":[0,1.1],"text-allow-overlap":false},
+        paint:{"text-color":"#e6f8ff","text-halo-color":"#153047","text-halo-width":2}});
     if(!map.getSource("phase5ChargeWindow"))
       map.addSource("phase5ChargeWindow",{type:"geojson",data:safetySegment()});
     if(!map.getLayer("phase5ChargeCorridor"))
@@ -106,12 +139,15 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
           "circle-color":["match",["get","kind"],"search","#63e4f0",
             "last","#ffc27b","warning","#ffad6a","empty","#ed5379","#b8d0d9"],
           "circle-stroke-color":"#0c263e","circle-stroke-width":3}});
+    bindMapPopups(map);
     mapUpdate();
   }
   function reset(){
-    rev++;controller?.abort();verifyController?.abort();controller=null;verifyController=null;
+    rev++;controller?.abort();verifyController?.abort();placeLookupController?.abort();
+    controller=null;verifyController=null;placeLookupController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
-    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;places=[];
+    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;
+    chargerDataVerified=false;chargerScanStatus="not_checked";places=[];
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
@@ -130,6 +166,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     for(const id of ["phase5-road-list","phase5-road-strip","phase5-stops",
       "phase5-alternatives","phase5-station-list"])$(id).replaceChildren();
     write("phase5-active-zone","Jenis jalan akan ditunjukkan ketika perjalanan.");
+    const area=$("journey-area-source");
+    if(area)area.textContent="Nama jalan daripada OSRM. Nama bandar/pekan akan diperiksa pada OSM apabila laluan dikira.";
     mapUpdate();
   }
   function onRoute(data){
