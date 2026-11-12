@@ -1,0 +1,35 @@
+/* FARIS R+PROTON - legible map marker key, road names, and charging evidence. */
+.primary-map-card>.journey-map-legend{order:3;margin:10px 0 0;border:1px solid #416981;border-radius:15px;padding:11px 13px;background:linear-gradient(120deg,#132f42,#10253a);width:100%}
+.primary-map-card>#journey-timeline{order:4}
+.journey-map-legend>strong{color:#ddf7fb;font-size:11px;font-weight:950;letter-spacing:.02em;display:block;margin-bottom:8px}
+.journey-map-legend-items{display:flex;flex-wrap:wrap;gap:6px}
+.journey-map-legend-items span{display:inline-flex;align-items:center;gap:6px;border:1px solid #3e6c7e;border-radius:9px;background:#1c3b50;padding:6px 8px;font-size:10px;font-weight:770;color:#e1f4f8}
+.journey-map-legend-items i{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--marker);border:2px solid #173449;box-shadow:0 0 0 1px var(--marker);flex:0 0 12px}
+.journey-map-legend>small{display:block;color:#a5c1d3;font-size:9px;line-height:1.55;margin:8px 0 0}
+.journey-map-legend b{color:#eaf5fc}
+.journey-road-source{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-2px 0 12px;border:1px solid #335e75;border-radius:12px;background:#102a3d;padding:10px 12px}
+.journey-road-source>span{white-space:nowrap;font-size:9px;font-weight:950;color:#9be2e8;letter-spacing:.08em}
+.journey-road-source>small{flex:1;font-size:10px;color:#c0d7e7;min-width:170px;line-height:1.45}
+.journey-source-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#94e6d7;box-shadow:0 0 9px #52f1d2}
+.journey-charger-evidence{display:block;max-width:100%;font-size:10px;color:#b9d5e5;border:1px solid #426b83;border-radius:9px;background:#1b3e50;padding:8px 10px;line-height:1.5;margin:8px 0}
+.journey-charger-evidence[data-evidence=recorded]{border-color:#4f9f85;background:#193e40;color:#bbffe2}
+.journey-charger-evidence[data-evidence=incomplete]{border-color:#b09058;background:#443b32;color:#fff0c9}
+.journey-charger-evidence[data-evidence=none_recorded]{color:#e3d3bb}
+.journey-charger-evidence[data-evidence=unknown]{color:#a9bccc}
+.journey-nearby{color:#a8eff3;font-size:11px;font-weight:850}
+.journey-step-sub strong{color:#e7f9ff}
+.journey-step-main .journey-step-head strong{font-size:14px}
+.journey-step-card[data-road=true]{border-left:3px solid #68ccda}
+.journey-map-popup{color:#10283a;font:500 12px/1.5 system-ui,Arial,sans-serif;max-width:250px}
+.journey-map-popup strong{display:block;font-size:14px;margin-bottom:5px}
+.journey-map-popup small{display:block;font-size:11px;margin-top:5px}
+.journey-map-popup a{color:#225a9e;font-size:12px;font-weight:700;text-decoration:underline}
+.journey-map-popup .emphasis{font-weight:800;color:#9e315a}
+@media(max-width:580px){
+ .primary-map-card>.journey-map-legend{padding:10px 9px}
+ .journey-map-legend-items{gap:5px}
+ .journey-map-legend-items span{font-size:9px;padding:6px 7px;min-height:29px}
+ .journey-map-legend>small{font-size:9px}
+ .journey-road-source{padding:9px}
+ .journey-charger-evidence{padding:7px 8px}
+}
