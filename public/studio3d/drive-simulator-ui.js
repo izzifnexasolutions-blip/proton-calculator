@@ -5,7 +5,7 @@ import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
 import {createPhase5Planner} from "./drive-phase5.js?v=20261113v3";
 import {WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
-import {createUserEvCatalog} from "./drive-user-catalog.js?v=20261113perf";
+import {createUserEvCatalog} from "./drive-user-catalog.js?v=20261113audit";
 import {routeChargerShortlist,stationEvidence} from "./ev-journey-v3-core.js";
 import {createJourneyExperience} from "./drive-journey-experience.js?v=20261113v3";
 const $=id=>document.getElementById(id);
