@@ -2,9 +2,9 @@
  * All route/charger claims are conditional and explicitly attributed.
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
-import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace,chargeDuration} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace,chargeDuration,parseOcmStations} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js?v=20261112wc";
-import {WEST_COAST_CHARGERS,WEST_COAST_CATALOG_DATE} from "./west-coast-public-chargers.js";
+import {WEST_COAST_CHARGERS,WEST_COAST_CATALOG_DATE,westCoastOcmRecords} from "./west-coast-public-chargers.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
@@ -330,8 +330,24 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     write("phase5-route-source","OSRM · "+fmt(route.km,1)+" km");
     renderRoads();
     onMapReady();
-    status("Geometri OSRM tersedia. Tekan Analisis Laluan + Cari Pengecas untuk dapatkan data OSM/SRTM.","");
+    // Local-only catalog lookup: show known charger POIs immediately when
+    // an explicit OSRM route is calculated. No live provider call or polling.
+    stations=parseOcmStations(westCoastOcmRecords(),line,route.km).map(s=>({
+      ...s,sources:["Katalog OCM"],notes:"Lokasi OCM 2026-11-12 · status semasa tidak disahkan"
+    }));
+    chargerDataVerified=stations.length>0;
+    chargerScanStatus=stations.length?"success":"not_checked";
+    write("phase5-charger-source",stations.length?
+      "Katalog Pantai Barat · "+stations.length+" rekod berhampiran laluan":
+      "Katalog 27 lokasi · tiada rekod dekat laluan");
+    write("phase5-scan-count",stations.length+" katalog");
+    renderStations();
+    status(stations.length?
+      "✓ "+stations.length+" pengecas sumber OCM berdekatan laluan. Tekan carian untuk kemas kini data OSM/SRTM.":
+      "Laluan OSRM tersedia; tiada rekod katalog dekat laluan. Tekan carian untuk data OSM/SRTM.",
+      stations.length?"success":"");
     replan();
+    onUpdated?.();
     const requestRevision=rev;
     void resolveRouteAreaNames(requestRevision);
   }
