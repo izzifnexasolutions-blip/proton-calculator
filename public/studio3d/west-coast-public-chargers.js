@@ -11,6 +11,7 @@ const rows=[
  [474654,"Wisma TNB Alor Setar",6.1220002331,100.3724723211,240,0,"TNB Electron","Kedah"],
  [474286,"Lotus's Stargate, Alor Setar",6.079605123,100.3691295716,50,11,"Gentari / JomCharge","Kedah"],
  [504297,"Tealive DT Setia Sentral, Bukit Mertajam",5.35485854,100.4179724732,24,0,"JomCharge","Pulau Pinang"],
+ [480140,"TNB Electron PRCC Bayan Lepas",5.3164053222,100.2957099673,200,0,"TNB Electron","Pulau Pinang"],
  [471537,"Taman Tasik Taiping",4.85316,100.74597,90,7,"JomCharge","Perak"],
  [302465,"AEON Mall Taiping",4.87335,100.73086,47,0,"TNB Electron","Perak"],
  [299969,"WCE E32 Plaza Tol Taiping Selatan",4.7671650798,100.7270955541,400,0,"DC Handal","Perak"],
