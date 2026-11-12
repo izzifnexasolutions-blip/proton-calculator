@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="./drive-charging-v2.css?v=20261112wc">
 <link rel="stylesheet" href="./drive-user-catalog.css?v=20261113a">
 <link rel="stylesheet" href="./drive-journey-v3.css?v=20261113v3">
+<link rel="stylesheet" href="./ev-review-audit.css?v=20261113audit">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -309,6 +310,28 @@
     <summary>🔎 Cari semua 510 rekod dan semak status</summary>
     <label for="ev-upload-search">Cari lokasi, bandar, negeri atau pengendali</label>
     <input id="ev-upload-search" type="search" placeholder="Contoh: Seremban, Bentong, Gentari…">
+    <div class="ev-audit-controls">
+      <label for="ev-audit-state">Negeri
+        <select id="ev-audit-state"><option value="all">Semua negeri</option></select>
+      </label>
+      <label for="ev-audit-bucket">Status audit
+        <select id="ev-audit-bucket">
+          <option value="all">Semua rekod</option>
+          <option value="candidate">Calon koordinat (belum sah)</option>
+          <option value="duplicate">Pendua</option>
+          <option value="placeholder">Nama generik</option>
+          <option value="no_coordinates">Tiada koordinat</option>
+        </select>
+      </label>
+      <button id="ev-audit-export" type="button">↓ Eksport CSV semakan</button>
+    </div>
+    <div class="ev-audit-pills">
+      <span id="ev-audit-count-candidate">194 calon</span>
+      <span id="ev-audit-count-duplicate">21 pendua</span>
+      <span id="ev-audit-count-placeholder">235 nama generik</span>
+      <span id="ev-audit-count-missing">60 tiada koordinat</span>
+    </div>
+    <p class="ev-audit-hint">Calon berkoordinat bukan bermaksud pengecas sudah disahkan. Semak nama, akses awam, pengendali dan lokasi fizikal sebelum digunakan untuk perjalanan.</p>
     <div id="ev-upload-results" class="ev-upload-results"></div>
   </details>
   <p class="ev-upload-foot" id="ev-upload-status" role="status">Katalog sedang dimuatkan…</p>
@@ -547,6 +570,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Katalog pengecas awam Pantai Barat: <a href="https://openchargemap.org/" target="_blank" rel="noopener noreferrer">© Open Charge Map contributors (CC BY 4.0)</a> · semak status terkini dengan operator. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js?v=20261113v3"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261113audit"></script>
 </body>
 </html>
