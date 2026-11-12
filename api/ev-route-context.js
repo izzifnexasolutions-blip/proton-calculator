@@ -10,7 +10,10 @@
  * - partial failure reporting instead of fabricating terrain/charger entries.
  */
 export const config={maxDuration:30};
-const OVERPASS="https://overpass-api.de/api/interpreter";
+// FOSSGIS endpoint began rejecting automated/cloud requests with HTTP 406
+// in April 2026. Private.coffee permits app/commercial queries. No host
+// rotation or automatic retries across public providers.
+const OVERPASS="https://overpass.private.coffee/api/interpreter";
 const TOPO="https://api.opentopodata.org/v1/srtm90m";
 const cache=new Map();
 let lastUpstream=0;
@@ -39,7 +42,7 @@ export default async function handler(req,res){
   if(!body||!Array.isArray(body.chargerPoints)||!Array.isArray(body.elevationPoints))
     return result(res,400,{error:"Koordinat carian tidak lengkap."});
   const charger=body.chargerPoints,elevation=body.elevationPoints;
-  if(charger.length<2||charger.length>30||elevation.length<2||elevation.length>21||
+  if(charger.length<2||charger.length>42||elevation.length<2||elevation.length>21||
     !charger.every(valid)||!elevation.every(valid))
     return result(res,400,{error:"Had koordinat atau kawasan carian Malaysia tidak dipenuhi."});
   const key=JSON.stringify([charger,elevation]);
@@ -52,23 +55,36 @@ export default async function handler(req,res){
   lastUpstream=now;
   const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),18000);
   const path=charger.map(([lon,lat])=>lat.toFixed(5)+","+lon.toFixed(5)).join(",");
-  const query='[out:json][timeout:18];nwr["amenity"="charging_station"](around:4500,'+
-    path+');out center 350;';
+  // Two bounded datasets in ONE request. 7km samples of a <=42-point
+  // corridor rather than an unbounded national charging-station query.
+  const query='[out:json][timeout:22];'+
+    'nwr["amenity"="charging_station"](around:7000,'+path+');out center 450;'+
+    'node["place"~"^(city|town|village)$"](around:4000,'+path+');out body 140;';
   const loc=elevation.map(([lon,lat])=>lat.toFixed(5)+","+lon.toFixed(5)).join("|");
   const topourl=TOPO+"?locations="+encodeURIComponent(loc);
-  const output={stations:[],elevations:[],stationError:null,elevationError:null,cacheHit:false};
+  const output={stations:[],places:[],elevations:[],stationError:null,elevationError:null,cacheHit:false};
   try{
     const [os,el]=await Promise.allSettled([
       fetch(OVERPASS,{method:"POST",body:new URLSearchParams({data:query}),
-        headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json"},
+        headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json",
+          "User-Agent":"FARISProtonJourney/1.2 (+https://www.farisprotonapp.com/)",
+          "Referer":"https://www.farisprotonapp.com/"},
         signal:ctl.signal}),
       fetch(topourl,{headers:{Accept:"application/json"},signal:ctl.signal})
     ]);
     if(os.status==="fulfilled"&&os.value.ok){
       try{
         const raw=await os.value.json();
-        if(Array.isArray(raw.elements))output.stations=raw.elements.slice(0,350);
-        else output.stationError="Data pengecas OSM tidak lengkap.";
+        if(Array.isArray(raw.elements)){
+          output.stations=raw.elements.filter(x=>x?.tags?.amenity==="charging_station").slice(0,450);
+          output.places=raw.elements.filter(x=>["city","town","village"].includes(x?.tags?.place))
+            .slice(0,140).map(x=>({
+              id:String(x.id),name:String(x.tags?.name||"").slice(0,90),
+              kind:x.tags.place,lat:Number(x.lat??x.center?.lat),
+              lon:Number(x.lon??x.center?.lon)
+            })).filter(x=>x.name&&Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+          if(raw.remark)output.stationError="Overpass: "+String(raw.remark).slice(0,95);
+        }else output.stationError="Data pengecas OSM tidak lengkap.";
       }catch{output.stationError="Respons pengecas OSM tidak sah.";}
     }else output.stationError=os.status==="rejected"?"Overpass tidak dapat dihubungi.":
       "Overpass HTTP "+os.value.status;
