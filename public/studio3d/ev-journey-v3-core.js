@@ -6,7 +6,8 @@ export function stationEvidence(station){
  const recognized=sources.filter(x=>["OSM","OCM","Katalog OCM"].includes(x));
  const listed=recognized.length>0;
  const compatible=station?.knownConnector===true&&(station.dc===true||station.ac===true);
- const publicCandidate=station?.access!=="private"&&station?.access!=="no";
+ const publicCandidate=station?.access!=="private"&&station?.access!=="no"&&
+   station?.sourceConflict!==true;
  return {
    listed,compatible,publicCandidate,planningCandidate:listed&&compatible&&publicCandidate,
    tier:!listed?"unverified_upload":station?.sourceConflict?"conflicting":"catalog_record",
