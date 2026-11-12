@@ -160,8 +160,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       const icon=document.createElement("span");icon.className="phase5-road-icon";icon.textContent=icons[s.kind]||"◌";
       const text=document.createElement("div");text.className="phase5-road-info";
       const title=document.createElement("strong");title.textContent=s.label;
-      const desc=document.createElement("small");desc.textContent=fmt(s.startKm,0)+"–"+
-        fmt(s.endKm,0)+" km · "+s.source;
+      const desc=document.createElement("small");
+      const locality=nearKnownPlace(places,line,(s.startKm+s.endKm)/2,9);
+      desc.textContent=fmt(s.startKm,0)+"–"+fmt(s.endKm,0)+" km · "+
+        (locality?"Sekitar "+locality.name+" (OSM) · ":"")+s.source;
       const length=document.createElement("b");length.textContent=fmt(s.km,1)+" km";
       text.append(title,desc);row.append(icon,text,length);list.append(row);
     }
@@ -222,12 +224,45 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     link.target="_blank";link.textContent="Semak lokasi OSM";
     card.append(top,meta,metrics,warn,link);return card;
   }
+
+  function showSafetyWindow(){
+    const w=safetyWindow();
+    if(!w){$("phase5-zoom-zone").disabled=true;return;}
+    const result=getResult();
+    $("phase5-window").dataset.needed=String(w.needed);
+    $("phase5-zoom-zone").disabled=!w.needed;
+    const showKm=n=>"km "+fmt(n,0);
+    write("phase5-window-start",w.needed?showKm(w.searchFromKm):"Tidak perlu");
+    write("phase5-window-last",w.needed?showKm(w.latestStopKm):"Tidak perlu");
+    write("phase5-window-reserve",w.needed?showKm(w.reserve10Km):"Tidak perlu");
+    write("phase5-window-empty",w.needed?showKm(w.emptyKm):"Tidak perlu");
+    if(!w.needed)
+      write("phase5-window-summary","✓ Anggaran bateri cukup untuk sampai dengan reserve sekurang-kurangnya 10%.");
+    else if(w.alreadyLow)
+      write("phase5-window-summary","⚠ CAS SEBELUM BERTOLAK — SOC mula "+fmt(result.startSoc,0)+"%, bawah had cadangan 15%.");
+    else write("phase5-window-summary","⚡ CARI PENGECAS DALAM ZON km "+
+      fmt(w.searchFromKm,0)+"–"+fmt(w.latestStopKm,0)+
+      ". Jangan tunggu sehingga bateri kosong pada sekitar km "+fmt(w.emptyKm,0)+".");
+    const local=nearKnownPlace(places,line,(w.searchFromKm+w.latestStopKm)/2,16);
+    if(local&&w.needed)
+      write("phase5-window-place","Kawasan berhampiran: "+local.name+
+        " (OSM: "+local.kind+", ±"+fmt(local.distanceKm,1)+
+        " km jarak lurus daripada laluan; bukan lokasi pengecas).");
+    else if(w.needed){
+      const coords=pointAtFraction(line,w.latestStopKm/route.km);
+      write("phase5-window-place",coords?
+        "Had 15% pada peta: "+coords[1].toFixed(4)+"°N, "+
+        coords[0].toFixed(4)+"°E. Nama tempat belum disahkan oleh OSM.":
+        "Nama kawasan belum diketahui. Rujuk titik amaran pada peta.");
+    }else write("phase5-window-place","Model meramalkan boleh sampai tanpa berhenti cas. Baki sebenar bergantung pada perjalanan.");
+  }
   function renderPlan(){
     const res=getResult(),holder=$("phase5-stops"),alts=$("phase5-alternatives");
     holder.replaceChildren();alts.replaceChildren();
     $("phase5-copy").disabled=!route;
     $("phase5-verify").disabled=!plan?.stops?.length;
     if(!route||!res){write("phase5-plan-title","Kira laluan dahulu");return;}
+    showSafetyWindow();
     const needed=!res.reachWithReserve;
     $("phase5-risk").dataset.state=!res.reachAtAll?"bad":needed?"warn":"safe";
     write("phase5-arrival-status",needed?
@@ -289,7 +324,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       let data=cache.get(key);
       if(!data){lastScan=now;data=await fetchRouteContext(route,{signal:controller.signal});}
       if(mine!==rev)return;
-      elevations=data.elevations;stations=data.stations;
+      elevations=data.elevations;stations=data.stations;places=data.places||[];
       chargerDataVerified=!data.stationError;
       profile=buildRouteSituations(route,elevations);
       roadData=roadGeo();
@@ -355,8 +390,14 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       "Jika tidak cukup, bateri habis sekitar km "+fmt(r.stopAtKm,0),
       "Reserve: 15% di stesen, 10% ketika tiba",
       "Data: "+(elevations?"OSRM + SRTM anggaran":"OSRM; SRTM tiada"),
-      "Bilangan stesen OSM dalam carian: "+stations.length,
+      "Bilangan stesen OSM dalam carian: "+(chargerDataVerified?stations.length:"Belum disahkan — carian OSM gagal/belum dibuat"),
       "Pelan: "+(plan?.message||"Belum dibuat")];
+    const safety=safetyWindow();
+    if(safety?.needed)lines.push("ZON CARI PENGECAS: km "+fmt(safety.searchFromKm,0)+
+      " hingga "+fmt(safety.latestStopKm,0)+
+      "; 10% sekitar km "+fmt(safety.reserve10Km,0)+
+      "; 0% sekitar km "+fmt(safety.emptyKm,0)+
+      ". Zon ialah anggaran, bukan stesen fizikal.");
     for(const s of plan?.stops||[])lines.push(
       s.station.name+" · "+s.kind+" · ±km "+fmt(s.station.kmAlong,0)+
       " · SOC ±"+fmt(s.arrivalSoc,0)+"% → "+fmt(s.targetSoc,0)+"%"+
@@ -365,6 +406,17 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       "Bateri, ketinggian dan masa mengecas ialah anggaran simulasi — semak dengan operator sebelum memandu.");
     return lines.join("\n");
   }
+  $("phase5-zoom-zone").addEventListener("click",()=>{
+    const w=safetyWindow(),map=getMap();
+    if(!w?.needed||!line||!map||!mapReady()){
+      status("Peta belum sedia. Kira dan buka laluan dahulu.","warn");return;
+    }
+    const coords=pointAtFraction(line,((w.searchFromKm+w.latestStopKm)/2)/route.km);
+    if(coords&&typeof map.flyTo==="function")
+      map.flyTo({center:coords,zoom:11,essential:true});
+    status("Peta difokuskan pada zon cari cas km "+fmt(w.searchFromKm,0)+"–"+
+      fmt(w.latestStopKm,0)+". Cari stesen berhampiran selepas data OSM dimuatkan.","success");
+  });
   $("phase5-scan").addEventListener("click",scan);
   $("phase5-verify").addEventListener("click",verify);
   $("phase5-filter").addEventListener("change",renderStations);
