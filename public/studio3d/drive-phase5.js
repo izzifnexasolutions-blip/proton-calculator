@@ -324,7 +324,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       const text=document.createElement("div");text.className="phase5-road-info";
       const title=document.createElement("strong");title.textContent=s.label;
       const desc=document.createElement("small");
-      const locality=nearKnownPlace(places,line,((s.startKm+s.endKm)/2)/Math.max(.001,route.km)*line.lengthKm,9);
+      const locality=nearKnownPlace(places,line,((s.startKm+s.endKm)/2)/Math.max(.001,route.km)*line.lengthKm,28);
       desc.textContent=fmt(s.startKm,0)+"–"+fmt(s.endKm,0)+" km · "+
         (locality?"Sekitar "+locality.name+" (OSM) · ":"")+s.source;
       const length=document.createElement("b");length.textContent=fmt(s.km,1)+" km";
