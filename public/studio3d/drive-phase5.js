@@ -2,14 +2,14 @@
  * All route/charger claims are conditional and explicitly attributed.
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
-import {cumulativeLine,pointAtFraction,buildRouteSituations,zoneAtDistance,planCharging} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
-  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false;
+  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false,places=[];
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
   let lastScan=0,lastVerify=0;
   const write=(id,str)=>{$(id).textContent=str;};
@@ -36,12 +36,47 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       geometry:{type:"Point",coordinates:s.coordinates}
     }))};
   }
+
+  function safetyWindow(){return route?chargeSafetyWindow(getResult()):null;}
+  function safetyPoints(){
+    const w=safetyWindow();
+    if(!line||!w?.needed)return emptyGeo();
+    const markers=[
+      {at:w.searchFromKm,kind:"search",label:"Mula cari DC/AC (30%)"},
+      {at:w.latestStopKm,kind:"last",label:"Had cadangan tiba stesen (15%)"},
+      {at:w.reserve10Km,kind:"warning",label:"Reserve 10%"},
+      {at:w.emptyKm,kind:"empty",label:"Bateri kosong (anggaran)"}
+    ];
+    return {type:"FeatureCollection",features:markers.map(m=>({
+      type:"Feature",properties:{kind:m.kind,label:m.label,km:m.at},
+      geometry:{type:"Point",coordinates:pointAtFraction(line,m.at/route.km)}
+    }))};
+  }
+  function safetySegment(){
+    const w=safetyWindow();
+    if(!line||!w?.needed||w.latestStopKm<=w.searchFromKm)return emptyGeo();
+    const start=w.searchFromKm/route.km,end=w.latestStopKm/route.km;
+    const points=[pointAtFraction(line,start)];
+    for(let i=1;i<line.coords.length-1;i++){
+      const ratio=line.distances[i]/line.lengthKm;
+      if(ratio>start&&ratio<end)points.push(line.coords[i]);
+    }
+    points.push(pointAtFraction(line,end));
+    return {type:"FeatureCollection",features:[{
+      type:"Feature",properties:{label:"Zon cari cas 30%–15%"},
+      geometry:{type:"LineString",coordinates:points}
+    }]};
+  }
   function mapUpdate(){
     const map=getMap();if(!map||!mapReady())return;
     const road=map.getSource("phase5Road");
     if(road)road.setData(roadData);
     const station=map.getSource("phase5Stations");
     if(station)station.setData(chargerGeo());
+    const safeLine=map.getSource("phase5ChargeWindow");
+    if(safeLine)safeLine.setData(safetySegment());
+    const safeDots=map.getSource("phase5SafetyPoints");
+    if(safeDots)safeDots.setData(safetyPoints());
   }
   function onMapReady(){
     const map=getMap();if(!map||!mapReady())return;
@@ -58,12 +93,25 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
         "circle-color":["match",["get","type"],"DC","#cf9fff","AC","#8bebb4","#9fb2c4"],
         "circle-radius":["case",["get","selected"],8,5],
         "circle-stroke-color":"#102537","circle-stroke-width":2}});
+    if(!map.getSource("phase5ChargeWindow"))
+      map.addSource("phase5ChargeWindow",{type:"geojson",data:safetySegment()});
+    if(!map.getLayer("phase5ChargeCorridor"))
+      map.addLayer({id:"phase5ChargeCorridor",type:"line",source:"phase5ChargeWindow",
+        paint:{"line-color":"#ffc27b","line-width":9,"line-opacity":.87}});
+    if(!map.getSource("phase5SafetyPoints"))
+      map.addSource("phase5SafetyPoints",{type:"geojson",data:safetyPoints()});
+    if(!map.getLayer("phase5BatteryMilestones"))
+      map.addLayer({id:"phase5BatteryMilestones",type:"circle",source:"phase5SafetyPoints",
+        paint:{"circle-radius":["match",["get","kind"],"last",9,"empty",10,7],
+          "circle-color":["match",["get","kind"],"search","#63e4f0",
+            "last","#ffc27b","warning","#ffad6a","empty","#ed5379","#b8d0d9"],
+          "circle-stroke-color":"#0c263e","circle-stroke-width":3}});
     mapUpdate();
   }
   function reset(){
     rev++;controller?.abort();verifyController?.abort();controller=null;verifyController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
-    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;
+    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;places=[];
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
@@ -73,6 +121,11 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     write("phase5-plan-title","Kira laluan dahulu");
     write("phase5-plan-desc","Dapatkan geometri OSRM sebelum merancang hentian.");
     write("phase5-arrival-status","—");write("phase5-total-time","Belum dikira");
+    $("phase5-window").dataset.needed="unknown";
+    $("phase5-zoom-zone").disabled=true;
+    write("phase5-window-summary","Kira laluan OSRM untuk tahu di mana perlu cas.");
+    for(const id of ["phase5-window-start","phase5-window-last","phase5-window-reserve","phase5-window-empty"])write(id,"—");
+    write("phase5-window-place","Nama tempat berhampiran dipaparkan jika direkodkan dalam OSM.");
     message("Akses jalan ke stesen belum disahkan.");
     for(const id of ["phase5-road-list","phase5-road-strip","phase5-stops",
       "phase5-alternatives","phase5-station-list"])$(id).replaceChildren();
