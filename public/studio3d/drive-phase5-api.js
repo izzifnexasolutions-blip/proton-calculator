@@ -1,6 +1,7 @@
 /* Phase 5: single-click-only requests to free community data providers.
    No polling, auto-retry, paid keys, hidden background search, or fake data. */
 import {cumulativeLine,pointAtFraction,parseElevations,parseChargingStations,parseOcmStations,mergeChargingStations} from "./drive-phase5-core.js";
+import {westCoastOcmRecords,WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
 export const OSM_OVERPASS="https://overpass.private.coffee/api/interpreter";
 export const SRTM_URL="https://api.opentopodata.org/v1/srtm90m";
 export const OSRM_CAR="https://routing.openstreetmap.de/routed-car/route/v1/driving/";
@@ -33,13 +34,22 @@ export async function fetchRouteContext(route,{signal}={}){
   const elevationPoints=Array.from({length:elevationCount},(_,i)=>pointAtFraction(line,i/(elevationCount-1)));
   // Same-origin Vercel function removes third-party CORS reliance.
   // Never use an arbitrary user-supplied URL.
-  const resp=await fetch("/api/ev-route-context",{
-    method:"POST",mode:"same-origin",signal,cache:"no-store",
-    headers:{"Content-Type":"application/json","Accept":"application/json"},
-    body:JSON.stringify({chargerPoints,elevationPoints})
-  });
-  const raw=await resp.json().catch(()=>({}));
-  if(!resp.ok)throw Error(String(raw.error||"Data peta terbuka tidak tersedia.").slice(0,140));
+  let raw,remoteError=null;
+  try{
+    const resp=await fetch("/api/ev-route-context",{
+      method:"POST",mode:"same-origin",signal,cache:"no-store",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({chargerPoints,elevationPoints})
+    });
+    raw=await resp.json().catch(()=>({}));
+    if(!resp.ok)throw Error(String(raw.error||"Data peta terbuka tidak tersedia.").slice(0,140));
+  }catch(error){
+    if(signal?.aborted||error?.name==="AbortError")throw error;
+    // Source backed offline fallback: never fabricate location or charger status.
+    remoteError=String(error?.message||error).slice(0,125);
+    raw={stations:[],places:[],elevations:[],stationError:remoteError,
+      elevationError:"SRTM tidak tersedia",ocmStatus:"not_configured"};
+  }
   const output={
     stations:[],places:[],elevations:null,
     stationError:raw.stationError||null,elevationError:raw.elevationError||null,ocmStatus:raw.ocmStatus||"not_configured"
@@ -53,7 +63,19 @@ export async function fetchRouteContext(route,{signal}={}){
     const fromOcm=parseOcmStations(raw.ocmStations||[],line,route.km);
     output.stations=mergeChargingStations(output.stations,fromOcm);
   }
-  if(output.stationError&&(output.ocmStatus==="success"||output.ocmStatus==="partial"))output.stationError=null;
+  // Audited public POI pins have stable source coordinates and work even if
+  // community Overpass/OCM servers block requests. These are NOT live-status data.
+  const curated=parseOcmStations(westCoastOcmRecords(),line,route.km).map(station=>({
+    ...station,sources:["Katalog OCM"],notes:"Katalog FARIS Pantai Barat · semak aplikasi operator",
+    lastOsmChecked:"Katalog 2026-11-12"
+  }));
+  output.stations=mergeChargingStations(output.stations,curated);
+  output.catalogCount=curated.length;
+  output.catalogTotal=WEST_COAST_CHARGERS.length;
+  output.providerStationError=raw.stationError||remoteError||null;
+  output.catalogFallback=!!output.providerStationError&&curated.length>0;
+  if(output.stations.length&&(output.catalogFallback||["success","partial"].includes(output.ocmStatus)))
+    output.stationError=null;
   if(!output.elevationError){
     output.elevations=parseElevations({results:raw.elevations||[]},line);
     if(!output.elevations)output.elevationError="Sampel ketinggian SRTM tidak mencukupi.";

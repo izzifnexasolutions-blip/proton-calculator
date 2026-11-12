@@ -408,7 +408,7 @@ export function parseOcmStations(records,line,routeKm){
 }
 export function mergeChargingStations(osm=[],ocm=[]){
   const result=[];
-  for(const station of [...osm.map(s=>({...s,sources:["OSM"]})),...ocm]){
+  for(const station of [...osm.map(s=>({...s,sources:s.sources?.length?s.sources:["OSM"]})),...ocm]){
     const name=String(station.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
     const previous=result.find(x=>{
       const other=String(x.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");

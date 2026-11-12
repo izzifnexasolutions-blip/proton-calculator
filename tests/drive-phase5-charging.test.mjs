@@ -67,7 +67,8 @@ test("route projection and scene classifications do not claim guessed traffic",(
   assert.equal(p5.categorizeRoad("Unnamed").type,"unknown");
 });
 const apiCode=(await readFile(new URL("drive-phase5-api.js",root),"utf8"))
-  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(encoded(coreSource)));
+  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(encoded(coreSource)))
+  .replace('from "./west-coast-public-chargers.js"', "from "+JSON.stringify(new URL("west-coast-public-chargers.js",root).href));
 const api=await import(encoded(apiCode));
 test("bounded user-triggered Overpass & SRTM requests",()=>{
   const query=api.makeOverpassQuery(fixtures.coords);
