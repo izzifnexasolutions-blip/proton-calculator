@@ -226,6 +226,73 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     if(area)area.textContent="Nama jalan daripada OSRM. Nama bandar/pekan akan diperiksa pada OSM apabila laluan dikira.";
     mapUpdate();
   }
+
+  /**
+   * A few bounded, sequential OSM Photon reverse lookups after a customer
+   * explicitly requests an OSRM route. The queried coordinate is *on* the
+   * route. A city/county name from its returned address is attributed as an
+   * approximate vicinity, not a guarantee the road passes through its centre.
+   * A failure never creates fictional places; no retry/fanout/polling.
+   */
+  async function resolveRouteAreaNames(requestRevision){
+    if(!route||!line||!line.lengthKm)return;
+    const parent=new AbortController();placeLookupController=parent;
+    const samples=route.km>300?[.11,.25,.39,.53,.67,.81,.92]:
+      route.km>90?[.16,.34,.52,.70,.88]:[.3,.67];
+    let successes=0,failures=0;
+    const info=$("journey-area-source");
+    if(info)info.textContent="Menyemak nama bandar/pekan berhampiran laluan OSM…";
+    for(const fraction of samples){
+      if(requestRevision!==rev||parent.signal.aborted)return;
+      const xy=pointAtFraction(line,fraction),key=xy.map(x=>x.toFixed(3)).join(",");
+      if(!placeLookupCache.has(key)){
+        // Keep public Photon traffic modest: <= 1 request every 1.65 seconds.
+        await new Promise(resolve=>setTimeout(resolve,1650));
+        if(requestRevision!==rev||parent.signal.aborted)return;
+        const url="https://photon.komoot.io/reverse?lon="+xy[0].toFixed(5)+
+          "&lat="+xy[1].toFixed(5)+"&radius=28&limit=3&lang=en"+
+          "&layer=city&layer=locality&layer=district";
+        try{
+          const response=await fetch(url,{signal:parent.signal,
+            cache:"default",mode:"cors",referrerPolicy:"strict-origin-when-cross-origin"});
+          if(!response.ok)throw new Error("Photon HTTP "+response.status);
+          const result=await response.json();
+          let place=null;
+          for(const f of (result?.features||[]).slice(0,3)){
+            const props=f.properties||{};
+            if(props.countrycode&&String(props.countrycode).toUpperCase()!=="MY")continue;
+            const label=String(props.city||props.district||props.county||
+              (props.osm_key==="place"?props.name:"")||"").trim();
+            if(!label||label.length>85)continue;
+            const geo=f.geometry?.coordinates;
+            if(!Array.isArray(geo)||haversine(xy,geo)>35)continue;
+            place={name:label,kind:props.city?"city":props.district?"district":
+              props.county?"county":props.osm_value||"place",
+              // This is a sampled route-coordinate association, not a town
+              // centroid or assertion that the route goes through the town.
+              lon:xy[0],lat:xy[1],source:"Photon reverse (OSM) · anggaran"};
+            break;
+          }
+          placeLookupCache.set(key,place);
+        }catch(e){
+          if(e?.name==="AbortError")return;
+          failures++;
+          if(failures>=2)break; // Fair-use: no retries of a failing public API.
+          continue;
+        }
+      }
+      if(requestRevision!==rev||parent.signal.aborted)return;
+      const place=placeLookupCache.get(key);
+      if(place){
+        successes++;addPlaces([place]);renderRoads();
+        onUpdated?.();mapUpdate();
+      }
+    }
+    if(requestRevision!==rev||parent.signal.aborted)return;
+    if(info)info.textContent=successes?
+      "✓ "+successes+" sampel kawasan dikenal pasti melalui Photon/OSM. Nama jalan berasal daripada OSRM; label 'Sekitar' ialah anggaran.":
+      "Nama kawasan tambahan belum dapat dimuatkan daripada Photon. Nama jalan OSRM masih digunakan; tiada nama tempat direka.";
+  }
   function onRoute(data){
     reset();
     if(!data||!Array.isArray(data.coordinates)||!data.km)return;
@@ -237,6 +304,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     onMapReady();
     status("Geometri OSRM tersedia. Tekan Analisis Laluan + Cari Pengecas untuk dapatkan data OSM/SRTM.","");
     replan();
+    const requestRevision=rev;
+    void resolveRouteAreaNames(requestRevision);
   }
   function renderRoads(){
     const list=$("phase5-road-list"),strip=$("phase5-road-strip");
@@ -420,8 +489,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       let data=cache.get(key);
       if(!data){lastScan=now;data=await fetchRouteContext(route,{signal:controller.signal});}
       if(mine!==rev)return;
-      elevations=data.elevations;stations=data.stations;places=data.places||[];
+      elevations=data.elevations;stations=data.stations;
+      addPlaces(data.places||[]);
       chargerDataVerified=!data.stationError;
+      chargerScanStatus=data.stationError?"error":"success";
       profile=buildRouteSituations(route,elevations);
       roadData=roadGeo();
       if(!data.stationError&&!data.elevationError)cache.set(key,data);
@@ -523,6 +594,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
   reset();
   return {onRoute,reset,onBatteryChanged:replan,onMapReady,onDrive,
     get route(){return route},get profile(){return profile},get stations(){return stations},
-    get places(){return places},get plan(){return plan},get verified(){return verified},
+    get places(){return places},get stationsVerified(){return chargerDataVerified},
+    get chargerScanStatus(){return chargerScanStatus},
+    get plan(){return plan},get verified(){return verified},
     scan,verify,customerReport};
 }
