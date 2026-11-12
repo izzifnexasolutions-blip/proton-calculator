@@ -35,8 +35,9 @@ export function estimatedPressure(zone,settings={}){
   return {level,label:level==="high"?"Lebih tinggi":level==="medium"?"Sederhana":"Rendah",
     reasons,indicative:true};
 }
-function namedZone(zone,line,places){
-  const near=line?nearKnownPlace(places,line,(zone.startKm+zone.endKm)/2,10):null;
+function namedZone(zone,line,places,totalKm){
+  const geometricKm=line?(zone.startKm+zone.endKm)/2/Math.max(.001,totalKm)*line.lengthKm:0;
+  const near=line?nearKnownPlace(places,line,geometricKm,10):null;
   return near?"Sekitar "+near.name+" · "+zone.label:zone.label;
 }
 export function buildJourneyTimeline({route,result,profile=[],places=[],plan=null,settings={}}={}){
@@ -58,7 +59,7 @@ export function buildJourneyTimeline({route,result,profile=[],places=[],plan=nul
     const socEnd=socAtDistance(result,toKm);
     const kwh=energyAtDistance(result,toKm)-energyAtDistance(result,fromKm);
     rows.push({id:"zone"+i,type:"zone",kind:z.kind,icon:DRIVE_ZONE_ICONS[z.kind]||"🧭",
-      name:namedZone(z,line,places),fromKm,toKm,km:toKm-fromKm,
+      name:namedZone(z,line,places,route.km),fromKm,toKm,km:toKm-fromKm,
       socStart,socEnd,kwh,mode:mode.mode,modeReason:mode.reason,
       level:drain.level,drainLabel:drain.label,reason:drain.reasons.join(" · "),
       note:z.source||"Klasifikasi belum tersedia",
