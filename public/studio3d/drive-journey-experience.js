@@ -45,7 +45,7 @@ export function parsePhotonResults(data){
   return list.slice(0,6);
 }
 export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,getPlaces,getPlan,
-  getInputSettings,getMap,mapReady,onRouteRequest,onVariantChange,onPresetChange,onSOCChange,onChargerSearch}){
+  getInputSettings,getMap,mapReady,onRouteRequest,onVariantChange,onPresetChange,onSOCChange,onChargerSearch,onSearchEdited}){
   const inputs={from:$("journey-from"),to:$("journey-to")},lists={from:$("journey-from-results"),to:$("journey-to-results")};
   const chosen={from:null,to:null},versions={from:0,to:0},debounce={from:0,to:0};
   const local=initialPoints(PRESETS),cache=new Map();
@@ -140,6 +140,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     input.addEventListener("input",()=>{
       versions[side]++;const version=versions[side];
       chosen[side]=null;
+      if(hasGeoRoute){onSearchEdited?.();resetTimeline();}
       selectedPreset="";$("journey-preset").value="";
       clearTimeout(debounce[side]);
       const value=input.value.trim(),locals=suggestLocals(value);
@@ -172,6 +173,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     versions.from++;versions.to++;
     closeSuggestions("from");closeSuggestions("to");
     $("journey-preset").value="";selectedPreset="";
+    if(hasGeoRoute){onSearchEdited?.();resetTimeline();}
     status("Arah perjalanan ditukar. Tekan Kira Laluan untuk mengemas kini jalan.","");
   });
   const preset=$("journey-preset");
