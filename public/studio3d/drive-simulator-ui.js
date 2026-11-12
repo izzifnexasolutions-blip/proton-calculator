@@ -11,13 +11,15 @@ const $=id=>document.getElementById(id);
 function arrangeMapFirst(){
   const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
-  const search=$("journey-search"),timeline=$("journey-timeline");
+  const search=$("journey-search"),legend=$("journey-map-legend"),
+    timeline=$("journey-timeline");
   const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
-  if(!card||!shell||!search||!map||!timeline||!mast)return;
+  if(!card||!shell||!search||!map||!legend||!timeline||!mast)return;
   card.classList.add("primary-map-card");
   shell.insertBefore(card,mast);
   search.after(map);
-  map.after(timeline);
+  map.after(legend);
+  legend.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
