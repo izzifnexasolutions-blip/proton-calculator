@@ -135,6 +135,30 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
     start=byPosition(preset.from);end=byPosition(preset.to);
     picking=null;invalidate(false);
   }
+  // Search first: exact selected geocoder coordinates, not a map pin.
+  // The app never routes a free-text guess without a chosen result.
+  function setSearchEndpoints(a,b){
+    const good=p=>p&&typeof p.name==="string"&&p.name.length&&
+      Array.isArray(p.coords)&&p.coords.length===2&&isMalaysiaArea(p.coords);
+    if(!good(a)||!good(b)){status("Pilih lokasi Malaysia yang sah untuk mula dan destinasi.","error");return false;}
+    if(crowKm(a.coords,b.coords)<.35){
+      status("Lokasi mula dan destinasi terlalu dekat.","error");return false;
+    }
+    start={id:"custom",name:a.name.slice(0,120),coords:a.coords.map(Number)};
+    end={id:"custom",name:b.name.slice(0,120),coords:b.coords.map(Number)};
+    picking=null;
+    invalidate(true);
+    const m=mapProvider();
+    if(m&&mapReadyProvider()&&window.maplibregl){
+      try{
+        const bounds=new window.maplibregl.LngLatBounds(start.coords,end.coords);
+        m.fitBounds(bounds,{padding:Math.max(38,Math.min(90,(m.getCanvas?.()?.clientWidth||650)*.07)),
+          maxZoom:13,duration:450});
+      }catch{}
+    }
+    status("✓ Lokasi carian dipilih. Mengira laluan hanya selepas tekan butang.","success");
+    return true;
+  }
   function setPoint(which,p,fromMap=false){
     if(!p||!isMalaysiaArea(p.coords)){
       status("Titik ini di luar liputan beta. Pilih lokasi di Malaysia.", "error");return;
@@ -361,6 +385,8 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   $("route2-calc").addEventListener("click",calculate);
   $("route2-clear").addEventListener("click",()=>{applied=null;invalidate(true)});
   const first=Object.values(PRESETS)[0];setWaypoints(first);
-  return {onMapReady:installLayers,onMapClick:handleMapClick,onEstimate,onDriveProgress,onPresetChanged:setWaypoints,
+  return {onMapReady:installLayers,onMapClick:handleMapClick,onEstimate,onDriveProgress,
+    onPresetChanged:setWaypoints,setSearchEndpoints,calculate,
+    get start(){return start},get end(){return end},
     get hasActualRoute(){return !!applied},get route(){return applied},get picking(){return picking}};
 }
