@@ -23,6 +23,7 @@ jobs:
           node --check public/studio3d/drive-phase5.js
           node --check public/studio3d/drive-simulator-ui.js
           node --check public/studio3d/drive-user-catalog.js
+          node --check public/studio3d/ev-review-audit.js
           node --check public/studio3d/malaysia-place-index-v3.js
           node --check public/studio3d/ev-journey-v3-core.js
           node --check public/studio3d/drive-journey-experience.js
