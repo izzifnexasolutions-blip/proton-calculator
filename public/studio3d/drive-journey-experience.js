@@ -50,6 +50,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
   const chosen={from:null,to:null},versions={from:0,to:0},debounce={from:0,to:0};
   const local=initialPoints(PRESETS),cache=new Map();
   let flight=null,lastSent=0,routeModel=null,activeZoneId=null,busy=false,selectedPreset="";
+  const SEARCH_DEBOUNCE_MS=480,SEARCH_TIMEOUT_MS=6500,MIN_GAP_MS=1650;
   let currentResults=[],context=null,hasGeoRoute=false;
   const status=(message,type="")=>{const el=$("journey-search-status");el.textContent=message;el.dataset.state=type};
   const fmtSoc=n=>Number.isFinite(n)?formatKm(Math.max(0,n),1)+"%":"—";
@@ -100,7 +101,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
   }
   async function searchRemote(side,query,version){
     if(versions[side]!==version||esc(inputs[side].value)!==esc(query))return;
-    const remaining=1650-(Date.now()-lastSent);
+    const remaining=MIN_GAP_MS-(Date.now()-lastSent);
     if(remaining>0){
       await new Promise(resolve=>setTimeout(resolve,remaining));
       if(versions[side]!==version)return;
@@ -111,6 +112,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     }
     flight?.abort();
     const token=new AbortController();flight=token;lastSent=Date.now();
+    const timeout=setTimeout(()=>token.abort(),SEARCH_TIMEOUT_MS);
     try{
       const url=PHOTON+"?q="+encodeURIComponent(query)+
         "&limit=6&lang=en&bbox=99,0.8,119.5,7.6";
@@ -123,9 +125,12 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
       if(versions[side]===version&&esc(inputs[side].value)===key)
         openSuggestions(side,merge(suggestLocals(query),geo));
     }catch(e){
-      if(e?.name!=="AbortError"&&versions[side]===version)
-        openSuggestions(side,suggestLocals(query),false,true);
-    }finally{if(flight===token)flight=null;}
+      if(versions[side]===version&&esc(inputs[side].value)===key){
+        const local=suggestLocals(query);
+        if(e?.name==="AbortError")openSuggestions(side,local,false,true);
+        else openSuggestions(side,local,false,true);
+      }
+    }finally{clearTimeout(timeout);if(flight===token)flight=null;}
   }
   function merge(a,b){
     const out=[],keys=new Set();
@@ -139,14 +144,17 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     const input=inputs[side];
     input.addEventListener("input",()=>{
       versions[side]++;const version=versions[side];
+      flight?.abort();
       chosen[side]=null;
       if(hasGeoRoute){onSearchEdited?.();resetTimeline();}
       selectedPreset="";$("journey-preset").value="";
       clearTimeout(debounce[side]);
       const value=input.value.trim(),locals=suggestLocals(value);
       if(value.length<3){if(value)openSuggestions(side,locals);else closeSuggestions(side);return;}
+      const cached=cache.get(esc(value));
+      if(cached){openSuggestions(side,merge(locals,cached));return;}
       openSuggestions(side,locals,true);
-      debounce[side]=setTimeout(()=>searchRemote(side,value,version),1100);
+      debounce[side]=setTimeout(()=>searchRemote(side,value,version),SEARCH_DEBOUNCE_MS);
     });
     input.addEventListener("keydown",e=>{
       if(e.key==="Escape"){closeSuggestions(side);return;}
