@@ -37,7 +37,7 @@ export function estimatedPressure(zone,settings={}){
 }
 function namedZone(zone,line,places,totalKm){
   const geometricKm=line?(zone.startKm+zone.endKm)/2/Math.max(.001,totalKm)*line.lengthKm:0;
-  const near=line?nearKnownPlace(places,line,geometricKm,10):null;
+  const near=line?nearKnownPlace(places,line,geometricKm,28):null;
   return near?"Sekitar "+near.name+" · "+zone.label:zone.label;
 }
 export function buildJourneyTimeline({route,result,profile=[],places=[],plan=null,stations=[],chargerStatus="not_checked",settings={}}={}){
