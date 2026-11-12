@@ -104,6 +104,62 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     const safeDots=map.getSource("phase5SafetyPoints");
     if(safeDots)safeDots.setData(safetyPoints());
   }
+
+  function bindMapPopups(map){
+    if(popupMap===map||typeof map.on!=="function")return;
+    popupMap=map;
+    const addPopup=(coords,content)=>{
+      if(!window.maplibregl?.Popup)return;
+      const container=document.createElement("div");container.className="journey-map-popup";
+      const name=document.createElement("strong");
+      name.textContent=content.title;container.append(name);
+      for(const line of content.lines){
+        const el=document.createElement("small");el.textContent=line;container.append(el);
+      }
+      if(content.url){
+        const link=document.createElement("a");link.href=content.url;
+        link.target="_blank";link.rel="noopener noreferrer";
+        link.textContent="Lihat rekod OpenStreetMap";container.append(link);
+      }
+      new window.maplibregl.Popup({closeButton:true,closeOnClick:true,maxWidth:"280px"})
+        .setLngLat(coords).setDOMContent(container).addTo(map);
+    };
+    map.on("click","phase5BatteryMilestones",event=>{
+      const feature=event?.features?.[0];if(!feature)return;
+      const x=feature.properties||{},km=Number(x.km);
+      const kind=x.kind;
+      const titles={search:"Biru muda · Mula cari pengecas (30%)",
+        last:"Kuning jingga · Had cadangan cas (15%)",
+        warning:"Jingga · Simpanan bateri 10%",
+        empty:"Merah · Bateri dijangka kosong (0%)"};
+      addPopup(feature.geometry.coordinates,{
+        title:titles[kind]||"Penanda bateri",
+        lines:["Anggaran titik perjalanan: km "+fmt(km,1),
+          "Peratus bateri ialah model anggaran, bukan bacaan BMS.",
+          "Titik ini bukan pengecas fizikal. Semak stesen AC/DC berdekatan."]
+      });
+    });
+    map.on("click","phase5StationDots",event=>{
+      const feature=event?.features?.[0];if(!feature)return;
+      const name=String(feature.properties?.name||"Stesen pengecas (OSM)");
+      const station=stations.find(s=>s.name===name&&
+        haversine(s.coordinates,feature.geometry.coordinates)<.05);
+      const type=station?.type||String(feature.properties?.type||"Tidak diketahui");
+      addPopup(feature.geometry.coordinates,{
+        title:"⚡ "+name,
+        lines:["Rekod OpenStreetMap · "+type,
+          "Kedudukan sekitar km "+(station?fmt(station.kmAlong,0):"—")+
+            " pada laluan · jarak lurus "+(station?fmt(station.offsetKm,1)+" km":"tak diketahui"),
+          "Status berfungsi, ketersediaan dan akses belum disahkan.",
+          "Semak aplikasi operator sebelum pergi."],
+        url:station?.osmUrl
+      });
+    });
+    for(const id of ["phase5BatteryMilestones","phase5StationDots"]){
+      map.on("mouseenter",id,()=>{if(map.getCanvas?.())map.getCanvas().style.cursor="pointer";});
+      map.on("mouseleave",id,()=>{if(map.getCanvas?.())map.getCanvas().style.cursor="";});
+    }
+  }
   function onMapReady(){
     const map=getMap();if(!map||!mapReady())return;
     if(!map.getSource("phase5Road"))map.addSource("phase5Road",{type:"geojson",data:roadData});
