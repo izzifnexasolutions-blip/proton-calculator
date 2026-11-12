@@ -5,6 +5,7 @@ import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
 import {createPhase5Planner} from "./drive-phase5.js?v=20261112wc";
 import {WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
+import {createUserEvCatalog} from "./drive-user-catalog.js";
 import {createJourneyExperience} from "./drive-journey-experience.js";
 const $=id=>document.getElementById(id);
 // Customer-facing layout: map and pinless search FIRST. Move the original
@@ -30,7 +31,7 @@ let variant=params.get("variant")==="prime"?"prime":"premium";
 let routeKey=PRESETS[params.get("route")]?params.get("route"):"putrajaya";
 let regionKey=REGIONS[params.get("region")]?params.get("region"):"malaysia";
 let activeMapStyle="fiord",mapInitialized=false;
-let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,selectedScenario="manual";
+let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,evCatalog=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
 function renderChargeV2(){
@@ -280,6 +281,7 @@ function installMapGuide(){
   routePlanner?.onMapReady();
   phase5?.onMapReady();
   journey?.onMapReady();
+  evCatalog?.onMapReady();
   mapInitialized=true;
 }
 function initMap(){
@@ -295,7 +297,13 @@ function initMap(){
       cooperativeGestures:true,attributionControl:true,renderWorldCopies:false
     });
     map.addControl(new window.maplibregl.NavigationControl({showCompass:false}),"top-right");
-    map.on("click",e=>routePlanner?.onMapClick(e.lngLat));
+    map.on("click",e=>{
+      // Avoid treating a click on a user-supplied, unverified station pin
+      // as a request to move a journey start/end coordinate.
+      if(map.getLayer("evUserUnverifiedDots")&&
+         map.queryRenderedFeatures(e.point,{layers:["evUserUnverifiedDots"]}).length)return;
+      routePlanner?.onMapClick(e.lngLat);
+    });
     map.on("load",installMapGuide);
     map.on("style.load",installMapGuide);
     map.on("error",()=>{
@@ -673,4 +681,5 @@ syncRoute(false);
 journey.setPreset(routeKey);
 journey.setVariant(variant);
 journey.setSOC($("soc").value);
+evCatalog=createUserEvCatalog(()=>map);
 window.addEventListener("load",initMap,{once:true});
