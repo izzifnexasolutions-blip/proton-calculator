@@ -3,10 +3,10 @@ import {createRoutePlanner} from "./drive-phase2.js";
 import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
-import {createPhase5Planner} from "./drive-phase5.js?v=20261112wc";
+import {createPhase5Planner} from "./drive-phase5.js?v=20261113perf";
 import {WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
-import {createUserEvCatalog} from "./drive-user-catalog.js";
-import {createJourneyExperience} from "./drive-journey-experience.js";
+import {createUserEvCatalog} from "./drive-user-catalog.js?v=20261113perf";
+import {createJourneyExperience} from "./drive-journey-experience.js?v=20261113perf";
 const $=id=>document.getElementById(id);
 // Customer-facing layout: map and pinless search FIRST. Move the original
 // card rather than cloning its DOM: all old calculator/3D IDs remain intact.
