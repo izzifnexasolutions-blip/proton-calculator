@@ -22,6 +22,7 @@ jobs:
           node --check public/studio3d/drive-phase5-api.js
           node --check public/studio3d/drive-phase5.js
           node --check public/studio3d/drive-simulator-ui.js
+          node --check public/studio3d/drive-user-catalog.js
           node --check public/studio3d/west-coast-public-chargers.js
           node --check api/ev-route-context.js
       - name: Charger and prior journey regression tests
