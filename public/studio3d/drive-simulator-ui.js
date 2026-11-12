@@ -3,7 +3,8 @@ import {createRoutePlanner} from "./drive-phase2.js";
 import {SCENARIOS,calculateJourney,sampleJourney} from "./drive-smart-scenarios.js";
 import {createSmartDashboard} from "./drive-smart-ui.js";
 import {createPhase4Controls} from "./drive-phase4-controls.js";
-import {createPhase5Planner} from "./drive-phase5.js";
+import {createPhase5Planner} from "./drive-phase5.js?v=20261112wc";
+import {WEST_COAST_CHARGERS} from "./west-coast-public-chargers.js";
 import {createJourneyExperience} from "./drive-journey-experience.js";
 const $=id=>document.getElementById(id);
 // Customer-facing layout: map and pinless search FIRST. Move the original
@@ -49,11 +50,11 @@ function renderChargeV2(){
  let state,label,desc,action,evidence;
  if(!route){
    [state,label,desc,action,evidence]=["idle","BELUM ADA LALUAN",
-     "Pilih lokasi mula dan destinasi, kemudian kira laluan sebenar menggunakan OSRM.",
-     "① Kira laluan dahulu","Tiada data pengecas. Masukkan laluan untuk bermula."];
+     WEST_COAST_CHARGERS.length+" lokasi sumber OCM dipaparkan sebagai pin emas. Pilih lokasi mula/destinasi dan kira laluan OSRM.",
+     "① Kira laluan dahulu","27 pin rekod lokasi tersedia pada peta walaupun pelayan Overpass tidak dapat dihubungi; status aktif belum diketahui."];
  }else if(!searched){
    [state,label,desc,action,evidence]=["search","SEDIA CARI PENGECAS",
-     "Laluan sebenar dikira. Cari rekod pengecas AC/DC untuk cadangan hentian.",
+     "Laluan dikira. Tekan carian untuk gabungkan stesen berhampiran daripada katalog Pantai Barat dan sumber OSM.",
      "② Cari pengecas laluan","Carian atas permintaan sahaja; status aktif pengecas tidak tersedia secara langsung."];
  }else if(verified?.safe){
    [state,label,desc,action,evidence]=["verified","JALAN DISAHKAN OSRM",
