@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="./drive-journey-experience.css?v=20261112a">
 <link rel="stylesheet" href="./drive-map-explained.css?v=20261112a">
 <link rel="stylesheet" href="./drive-charging-v2.css?v=20261112wc">
+<link rel="stylesheet" href="./drive-user-catalog.css?v=20261113a">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -278,6 +279,25 @@
     <button type="button" id="charge-v2-detail">Lihat semua stesen dan butiran ↓</button>
   </div>
 </section>
+<section class="ev-upload-catalog" id="ev-upload-catalog" aria-label="Katalog import pengecas EV">
+  <div class="ev-upload-top"><div><small>DATABASE IMPORT · 13 NOV 2026</small><h3>Senarai EV Malaysia daripada 8 Excel</h3>
+    <p>Rekod rujukan pengguna, bukan inventori pengecas yang telah disahkan. Pin biru hanya ditunjukkan atas pilihan anda dan tidak digunakan untuk cadangan hentian automatik.</p></div>
+    <span class="ev-upload-count" id="ev-upload-count">Memuatkan…</span></div>
+  <div class="ev-upload-metrics">
+    <div><strong id="ev-upload-geopins">—</strong><small>Lokasi dengan koordinat untuk semakan</small></div>
+    <div><strong id="ev-upload-quarantine">—</strong><small>Nama umum / berisiko</small></div>
+    <div><strong id="ev-upload-geocode">—</strong><small>Perlu cari koordinat</small></div>
+  </div>
+  <label class="ev-upload-switch"><input type="checkbox" id="ev-upload-toggle">
+    <span>📍 Papar pin biru belum disahkan pada peta (zum dekat)</span></label>
+  <details class="ev-upload-details">
+    <summary>🔎 Cari semua 510 rekod dan semak status</summary>
+    <label for="ev-upload-search">Cari lokasi, bandar, negeri atau pengendali</label>
+    <input id="ev-upload-search" type="search" placeholder="Contoh: Seremban, Bentong, Gentari…">
+    <div id="ev-upload-results" class="ev-upload-results"></div>
+  </details>
+  <p class="ev-upload-foot" id="ev-upload-status" role="status">Katalog sedang dimuatkan…</p>
+</section>
 <details class="journey-timeline" id="journey-timeline" aria-labelledby="journey-timeline-heading">
         <summary>
           <span class="journey-timeline-title"><span class="journey-timeline-icon">▤</span>
@@ -512,6 +532,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Katalog pengecas awam Pantai Barat: <a href="https://openchargemap.org/" target="_blank" rel="noopener noreferrer">© Open Charge Map contributors (CC BY 4.0)</a> · semak status terkini dengan operator. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js?v=20261112wc"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261113a"></script>
 </body>
 </html>
