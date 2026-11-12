@@ -155,7 +155,11 @@ export function buildRouteSituations(route,elevations=null){
     const centerKm=(startKm+endKm)/2;
     const stepPoint=centerKm/Math.max(km,1)*total;
     let walked=0,name="",ref="";
-    for(const step of steps){walked+=step.km;if(walked>=stepPoint){name=step.name||"";ref=step.ref||"";break;}}
+    for(const step of steps){
+      walked+=step.km;
+      if(walked>=stepPoint){name=String(step.name||"").trim();ref=String(step.ref||"").trim();break;}
+    }
+    if(/^(?:unnamed|unknown|none)$/i.test(name))name="";
     const roadway=categorizeRoad(name,ref);
     const terrain=terrainAt(elevations,centerKm,km);
     const kind=["up","down","highland"].includes(terrain.type)?"hilly":
@@ -165,19 +169,55 @@ export function buildRouteSituations(route,elevations=null){
     const type=terrain.type==="up"?"uphill":terrain.type==="down"?"downhill":
       terrain.type==="highland"?"highland":roadway.type==="highway"?"highway":
       roadway.type==="rural"?"rural":roadway.type==="road"?"road":"unknown";
-    const label=type==="uphill"?"Mendaki":type==="downhill"?"Menurun":
-      type==="highland"?"Tanah tinggi":roadway.label;
+    // Prefer an actual OSRM road name/reference instead of repeating generic
+    // 'Jalan utama/tempatan'. Never invent a road where OSRM has no name.
+    const qualifiedName=name?(ref&&!name.toLowerCase().includes(ref.toLowerCase())?
+      name+" ("+ref+")":name):ref?ref:"";
+    const terrainLabel=type==="uphill"?"Mendaki":type==="downhill"?"Menurun":
+      type==="highland"?"Tanah tinggi":"";
+    const label=terrainLabel?(qualifiedName?terrainLabel+" · "+qualifiedName:terrainLabel):
+      qualifiedName||roadway.label;
     const source=type==="uphill"||type==="downhill"||type==="highland"?
       "Ketinggian SRTM kasar · bukan profil cerun jalan":roadway.source;
     const prev=sectors.at(-1);
     // Retain ~20–45 km checkpoints on long single-class motorway routes.
     // They are route slices, NOT invented land-use or traffic transitions.
     const maxSectionKm=Math.max(20,Math.min(45,km/7));
-    if(prev&&prev.type===type&&prev.km+(endKm-startKm)<=maxSectionKm){
+    if(prev&&prev.type===type&&prev.road===name&&prev.roadRef===ref&&
+      prev.km+(endKm-startKm)<=maxSectionKm){
       prev.endKm=endKm;prev.km=endKm-prev.startKm;
-    }else sectors.push({type,kind,label,startKm,endKm,km:endKm-startKm,source,road:name,terrain});
+    }else sectors.push({type,kind,label,startKm,endKm,km:endKm-startKm,source,road:name,roadRef:ref,terrain});
   }
   return sectors;
+}
+/**
+ * A grounded charging-record indicator, never a statistical probability of
+ * finding a working charger. Records may be incomplete, private or out-of-date.
+ */
+export function chargerEvidenceForSection(stations=[],status="not_checked",fromKm=0,toKm=0){
+  if(status!=="success")return {
+    status,dc:0,ac:0,unknown:0,total:0,
+    label:status==="error"?"Carian pengecas gagal — status tak diketahui":
+      "Pengecas belum disemak",confidence:"unknown",nearest:null
+  };
+  const start=Math.min(fromKm,toKm),end=Math.max(fromKm,toKm);
+  const list=Array.isArray(stations)?stations.filter(s=>
+    s&&Number.isFinite(s.kmAlong)&&s.kmAlong>=start-8&&s.kmAlong<=end+8&&
+    s.offsetKm<=7&&s.access!=="private"&&s.access!=="no"):[];
+  const compatible=list.filter(s=>s.knownConnector&&(s.dc||s.ac));
+  const dc=compatible.filter(s=>s.dc).length;
+  const ac=compatible.filter(s=>s.ac).length;
+  const unknown=list.length-compatible.length;
+  const summary=[dc?dc+" DC CCS2":null,ac?ac+" AC Type 2":null].filter(Boolean).join(" · ");
+  const nearest=compatible.slice().sort((a,b)=>
+    Math.abs(a.kmAlong-(start+end)/2)-Math.abs(b.kmAlong-(start+end)/2))[0]||null;
+  return {status,dc,ac,unknown,total:list.length,nearest,
+    confidence:compatible.length?"recorded":unknown?"incomplete":"none_recorded",
+    label:compatible.length?
+      summary+" direkodkan di OSM (belum disahkan aktif)":
+      unknown?"Ada rekod OSM, tetapi soket belum disahkan":
+      "Tiada rekod serasi berhampiran dalam carian OSM (bukan bukti tiada pengecas)"
+  };
 }
 export function zoneAtDistance(situations,km){
   return situations?.find(s=>km>=s.startKm-1e-7&&km<=s.endKm+1e-7)||situations?.at(-1)||null;

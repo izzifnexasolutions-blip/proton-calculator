@@ -301,9 +301,9 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
   }
   function render(contextInfo){
     context=contextInfo;
-    const {route,result,profile,places,plan,settings}=contextInfo||{};
+    const {route,result,profile,places,plan,stations,chargerStatus,settings}=contextInfo||{};
     if(!route||!result){resetTimeline();return;}
-    routeModel=buildJourneyTimeline({route,result,profile,places,plan,settings});
+    routeModel=buildJourneyTimeline({route,result,profile,places,plan,stations,chargerStatus,settings});
     $("journey-find-chargers").disabled=false;
     setSOC(result.startSoc);
     hasGeoRoute=true;
@@ -336,6 +336,7 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
       const badge=document.createElement("div");badge.className="journey-step-circle";badge.dataset.level=r.level;badge.textContent=r.icon;
       const main=document.createElement("div");main.className="journey-step-main";
       const card=document.createElement("div");card.className="journey-step-card";
+      if(r.type==="zone"&&r.roadName)card.dataset.road="true";
       const head=document.createElement("div");head.className="journey-step-head";
       const title=document.createElement("strong");title.textContent=short(r.name);
       const range=document.createElement("small");range.textContent=r.type==="start"?"MULA":
@@ -355,6 +356,21 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
       }else if(r.type==="charge")pill(stats,"⚠ BUKAN lokasi pengecas");
       else if(r.type==="stop")pill(stats,"AC/DC · semak operator");
       card.append(stats);
+      if((r.type==="zone"||r.type==="charge")&&r.charger){
+        const ev=document.createElement("div");ev.className="journey-charger-evidence";
+        ev.dataset.evidence=r.charger.confidence||"unknown";
+        ev.textContent="⚡ Potensi tempat cas: "+r.charger.label;
+        card.append(ev);
+        // Named physical charger only when it actually exists in retrieved OSM.
+        if(r.charger.nearest){
+          const station=r.charger.nearest;
+          const loc=document.createElement("div");loc.className="journey-step-note";
+          loc.textContent="Stesen direkodkan: "+station.name+" · sekitar km "+
+            formatKm(station.kmAlong,0)+" · "+formatKm(station.offsetKm,1)+
+            " km jarak lurus dari jalan (bukan lencongan memandu).";
+          card.append(loc);
+        }
+      }
       const note=document.createElement("div");note.className="journey-step-note";
       note.textContent=r.type==="zone"?
         (r.reason?r.reason+" · ":"")+r.modeReason:

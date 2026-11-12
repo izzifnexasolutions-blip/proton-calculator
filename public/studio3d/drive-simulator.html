@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="./drive-phase4.css?v=20261112a">
 <link rel="stylesheet" href="./drive-phase5.css?v=20261112b">
 <link rel="stylesheet" href="./drive-journey-experience.css?v=20261112a">
+<link rel="stylesheet" href="./drive-map-explained.css?v=20261112a">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -233,7 +234,24 @@
           <div><small>MOD CADANGAN</small><strong id="journey-mode">—</strong></div>
         </div>
       </div>
-      <details class="journey-timeline" id="journey-timeline" aria-labelledby="journey-timeline-heading">
+      
+      <div class="journey-map-legend" id="journey-map-legend" aria-label="Petunjuk warna penanda peta">
+        <strong>Kenali penanda peta</strong>
+        <div class="journey-map-legend-items">
+          <span><i style="--marker:#f8cb79"></i> Mula</span>
+          <span><i style="--marker:#fc5279"></i> Destinasi</span>
+          <span><i style="--marker:#63e4f0"></i> Biru muda: cari cas 30%</span>
+          <span>🚗 Kereta semasa simulasi</span>
+          <span>〰️ Garis biru: laluan OSRM</span>
+          <span><i style="--marker:#ffc27b"></i> 15% sebelum cas</span>
+          <span><i style="--marker:#ffad6a"></i> Bateri 10%</span>
+          <span><i style="--marker:#ed5379"></i> Bateri 0%*</span>
+          <span><i style="--marker:#cf9fff"></i> DC CCS2 (rekod OSM)</span>
+          <span><i style="--marker:#8bebb4"></i> AC Type 2 (rekod OSM)</span>
+        </div>
+        <small>Tekan titik pada peta untuk penerangan dan kilometer. Penanda bateri ialah <b>anggaran simulasi</b>, bukan lokasi stesen cas. Status pengecas OSM perlu disahkan dengan operator.</small>
+      </div>
+<details class="journey-timeline" id="journey-timeline" aria-labelledby="journey-timeline-heading">
         <summary>
           <span class="journey-timeline-title"><span class="journey-timeline-icon">▤</span>
             <span><small>JOURNEY INTELLIGENCE</small><strong id="journey-timeline-heading">Timeline Perjalanan & Bateri</strong></span>
@@ -249,6 +267,10 @@
           </div>
           <p class="journey-intro">Bateri dan penggunaan tenaga ialah anggaran model perjalanan, <strong>bukan bacaan mengikut cerun sebenar</strong>. Kategori jalan merujuk data OSRM atau sampel ketinggian kasar; trafik dan cuaca ialah senario pilihan, bukan maklumat langsung.</p>
           <div class="journey-rail" id="journey-rail" aria-hidden="true"></div>
+          <div class="journey-road-source">
+            <span><i class="journey-source-dot"></i> NAMA TEMPAT · OPENSTREETMAP</span>
+            <small id="journey-area-source">Nama jalan diambil daripada OSRM. Lokasi bandar/pekan akan dipadankan dengan data OSM jika tersedia.</small>
+          </div>
           <div class="journey-charger-action">
             <button id="journey-find-chargers" type="button" disabled>⚡ Cari Pengecas AC / DC Sepanjang Laluan</button>
             <small id="journey-charger-feedback">Carian pengecas hanya dibuat apabila butang ditekan. Status sebenar stesen mesti disemak dengan operator.</small>
@@ -463,6 +485,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js?v=20261112f"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261112g"></script>
 </body>
 </html>

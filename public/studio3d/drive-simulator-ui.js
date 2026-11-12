@@ -11,13 +11,15 @@ const $=id=>document.getElementById(id);
 function arrangeMapFirst(){
   const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
-  const search=$("journey-search"),timeline=$("journey-timeline");
+  const search=$("journey-search"),legend=$("journey-map-legend"),
+    timeline=$("journey-timeline");
   const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
-  if(!card||!shell||!search||!map||!timeline||!mast)return;
+  if(!card||!shell||!search||!map||!legend||!timeline||!mast)return;
   card.classList.add("primary-map-card");
   shell.insertBefore(card,mast);
   search.after(map);
-  map.after(timeline);
+  map.after(legend);
+  legend.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -521,6 +523,8 @@ function refreshJourneyView(){
     profile:phase5?.profile||[],
     places:phase5?.places||[],
     plan:phase5?.plan||null,
+    stations:phase5?.stations||[],
+    chargerStatus:phase5?.chargerScanStatus||"not_checked",
     settings:{speed:inputs.speed,people:inputs.people,cargoKg:inputs.cargo,
       rain:inputs.rain,traffic:inputs.traffic,mode:inputs.mode}
   });

@@ -3,7 +3,7 @@
  * OSRM names + SRTM coarse terrain are inference. Never invent live traffic.
  * SOC is derived from the shared e.MAS 5 energy estimator, not zone telemetry.
  */
-import {socAtDistance,energyAtDistance,chargeSafetyWindow,nearKnownPlace,cumulativeLine} from "./drive-phase5-core.js";
+import {socAtDistance,energyAtDistance,chargeSafetyWindow,nearKnownPlace,cumulativeLine,chargerEvidenceForSection} from "./drive-phase5-core.js";
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 export const formatKm=(n,d=0)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 export const DRIVE_ZONE_ICONS=Object.freeze({highway:"🛣️",hilly:"⛰️",rural:"🌴",road:"🏙️",unknown:"🧭"});
@@ -37,10 +37,10 @@ export function estimatedPressure(zone,settings={}){
 }
 function namedZone(zone,line,places,totalKm){
   const geometricKm=line?(zone.startKm+zone.endKm)/2/Math.max(.001,totalKm)*line.lengthKm:0;
-  const near=line?nearKnownPlace(places,line,geometricKm,10):null;
+  const near=line?nearKnownPlace(places,line,geometricKm,28):null;
   return near?"Sekitar "+near.name+" · "+zone.label:zone.label;
 }
-export function buildJourneyTimeline({route,result,profile=[],places=[],plan=null,settings={}}={}){
+export function buildJourneyTimeline({route,result,profile=[],places=[],plan=null,stations=[],chargerStatus="not_checked",settings={}}={}){
   if(!route||!result||!(route.km>0))return {rows:[],rail:[],window:null,summary:null};
   const line=cumulativeLine(route.coordinates);
   const window=chargeSafetyWindow(result);
@@ -55,11 +55,13 @@ export function buildJourneyTimeline({route,result,profile=[],places=[],plan=nul
   for(let i=0;i<zones.length;i++){
     const z=zones[i],fromKm=clamp(z.startKm,0,route.km),toKm=clamp(z.endKm,fromKm,route.km);
     const mode=suggestDriveMode(z,settings),drain=estimatedPressure(z,settings);
+    const charger=chargerEvidenceForSection(stations,chargerStatus,fromKm,toKm);
     const socStart=socAtDistance(result,fromKm);
     const socEnd=socAtDistance(result,toKm);
     const kwh=energyAtDistance(result,toKm)-energyAtDistance(result,fromKm);
     rows.push({id:"zone"+i,type:"zone",kind:z.kind,icon:DRIVE_ZONE_ICONS[z.kind]||"🧭",
-      name:namedZone(z,line,places,route.km),fromKm,toKm,km:toKm-fromKm,
+      name:namedZone(z,line,places,route.km),roadName:z.road||"",roadRef:z.roadRef||"",
+      fromKm,toKm,km:toKm-fromKm,charger,
       socStart,socEnd,kwh,mode:mode.mode,modeReason:mode.reason,
       level:drain.level,drainLabel:drain.label,reason:drain.reasons.join(" · "),
       note:z.source||"Klasifikasi belum tersedia",
@@ -73,7 +75,8 @@ export function buildJourneyTimeline({route,result,profile=[],places=[],plan=nul
       name:window.alreadyLow?"Cas sebelum bertolak":"Zon mula cari pengecas",
       fromKm:startKm,toKm:lastKm,km:Math.max(0,lastKm-startKm),
       socStart:socAtDistance(result,startKm),socEnd:socAtDistance(result,lastKm),
-      level:"high",mode:"—",note:"Zon SOC 30%–15% pada laluan OSRM. BUKAN lokasi stesen yang disahkan."});
+      level:"high",mode:"—",note:"Zon SOC 30%–15% pada laluan OSRM. BUKAN lokasi stesen yang disahkan.",
+      charger:chargerEvidenceForSection(stations,chargerStatus,startKm,lastKm)});
     for(const [i,stop] of (plan?.stops||[]).entries()){
       rows.push({id:"stop"+i,type:"stop",kind:"charge",icon:"🔋",
         name:stop.station.name+" · "+stop.kind+" (semak operator)",

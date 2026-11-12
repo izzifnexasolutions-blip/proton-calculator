@@ -11,7 +11,7 @@
   background:linear-gradient(153deg,#183149 0%,#102238 60%,#102032 100%);
   box-shadow:0 17px 45px #030b1c88
 }
-.primary-map-card>:not(#journey-search):not(.map-hero-wrap):not(#journey-timeline){display:none!important}
+.primary-map-card>:not(#journey-search):not(.map-hero-wrap):not(#journey-map-legend):not(#journey-timeline){display:none!important}
 .primary-map-card #journey-search{order:1}
 .primary-map-card>.map-hero-wrap{order:2;margin:13px 0 0!important;width:100%;height:auto;min-height:0}
 .primary-map-card>#journey-timeline{order:3}
