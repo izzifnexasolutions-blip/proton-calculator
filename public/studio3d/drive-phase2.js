@@ -137,6 +137,16 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   }
   // Search first: exact selected geocoder coordinates, not a map pin.
   // The app never routes a free-text guess without a chosen result.
+  // Clear *old* verified route immediately when a customer edits free text.
+  // Do not leave the previous trip displayed as if it matched new input.
+  function clearSearchRoute(){
+    if(!applied&&!controller)return;
+    seq++;controller?.abort();controller=null;
+    applied=null;driveIndex=null;lastResolved=0;picking=null;
+    clearVisual();
+    status("Lokasi carian berubah. Pilih hasil carian baharu dan kira semula.","warn");
+    onRouteInvalidated();
+  }
   function setSearchEndpoints(a,b){
     const good=p=>p&&typeof p.name==="string"&&p.name.length&&
       Array.isArray(p.coords)&&p.coords.length===2&&isMalaysiaArea(p.coords);
@@ -386,7 +396,7 @@ export function createRoutePlanner({PRESETS,mapProvider,mapReadyProvider,onRoute
   $("route2-clear").addEventListener("click",()=>{applied=null;invalidate(true)});
   const first=Object.values(PRESETS)[0];setWaypoints(first);
   return {onMapReady:installLayers,onMapClick:handleMapClick,onEstimate,onDriveProgress,
-    onPresetChanged:setWaypoints,setSearchEndpoints,calculate,
+    onPresetChanged:setWaypoints,setSearchEndpoints,clearSearchRoute,calculate,
     get start(){return start},get end(){return end},
     get hasActualRoute(){return !!applied},get route(){return applied},get picking(){return picking}};
 }
