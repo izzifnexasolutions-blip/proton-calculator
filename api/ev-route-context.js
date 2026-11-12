@@ -15,6 +15,7 @@ export const config={maxDuration:30};
 // rotation or automatic retries across public providers.
 const OVERPASS="https://overpass.private.coffee/api/interpreter";
 const TOPO="https://api.opentopodata.org/v1/srtm90m";
+const OCM="https://api.openchargemap.io/v3/poi/";
 const cache=new Map();
 let lastUpstream=0;
 const MAX_BYTES=11000;
@@ -62,7 +63,8 @@ export default async function handler(req,res){
     'node["place"~"^(city|town|village)$"](around:4000,'+path+');out body 140;';
   const loc=elevation.map(([lon,lat])=>lat.toFixed(5)+","+lon.toFixed(5)).join("|");
   const topourl=TOPO+"?locations="+encodeURIComponent(loc);
-  const output={stations:[],places:[],elevations:[],stationError:null,elevationError:null,cacheHit:false};
+  const output={stations:[],places:[],elevations:[],stationError:null,elevationError:null,cacheHit:false,
+    ocmStations:[],ocmStatus:process.env.OPENCHARGEMAP_API_KEY?"pending":"not_configured"};
   try{
     const [os,el]=await Promise.allSettled([
       fetch(OVERPASS,{method:"POST",body:new URLSearchParams({data:query}),
@@ -100,6 +102,26 @@ export default async function handler(req,res){
     output.stationError="Sumber pengecas tidak tersedia.";
     output.elevationError="Sumber ketinggian tidak tersedia.";
   }finally{clearTimeout(timer);}
+  // OCM uses a free developer API key supplied by the operator (never in the browser).
+  // Optional enrichment only: an OCM outage never makes an OSM result disappear.
+  const ocmKey=process.env.OPENCHARGEMAP_API_KEY;
+  if(ocmKey&&!ctl.signal.aborted){
+    const anchors=[charger[0],charger[Math.floor((charger.length-1)/2)],charger.at(-1)];
+    const unique=[...new Map(anchors.map(p=>[p.map(x=>x.toFixed(2)).join(","),p])).values()];
+    try{
+      const settled=await Promise.allSettled(unique.map(async([lon,lat])=>{
+        const url=OCM+"?output=json&countrycode=MY&maxresults=75&distance=35&distanceunit=KM"+
+          "&latitude="+lat.toFixed(5)+"&longitude="+lon.toFixed(5);
+        const response=await fetch(url,{signal:ctl.signal,headers:{"X-API-Key":ocmKey,Accept:"application/json"}});
+        if(!response.ok)throw Error("OCM HTTP "+response.status);
+        const json=await response.json();
+        return Array.isArray(json)?json.slice(0,75):[];
+      }));
+      output.ocmStations=settled.filter(x=>x.status==="fulfilled").flatMap(x=>x.value).slice(0,225);
+      output.ocmStatus=settled.every(x=>x.status==="fulfilled")?"success":
+        output.ocmStations.length?"partial":"error";
+    }catch{output.ocmStatus="error";}
+  }
   // Cache partial success too, to prevent bursts from repeated button presses.
   if(cache.size>30)cache.clear();
   cache.set(key,{t:Date.now(),data:output});

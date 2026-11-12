@@ -369,3 +369,58 @@ export function planCharging(result,stations=[],options={}){
     totalMinutesKnown:best.stops.every(s=>s.minutes!==null)?
       best.stops.reduce((n,s)=>n+s.minutes,0):null};
 }
+
+/** OCM fields are third-party catalog observations, not proof of service. */
+export function parseOcmStations(records,line,routeKm){
+  if(!Array.isArray(records)||!line||!(routeKm>0))return [];
+  const out=[],seen=new Set();
+  for(const item of records.slice(0,300)){
+    const id=Number(item?.ID),address=item?.AddressInfo||{};
+    const lat=Number(address.Latitude),lon=Number(address.Longitude);
+    if(!Number.isSafeInteger(id)||!isNum(lat)||!isNum(lon)||lat<.8||lat>7.8||lon<99||lon>119.5||seen.has(id))continue;
+    seen.add(id);
+    const projection=nearLine([lon,lat],line);
+    if(!projection||projection.offsetKm>7)continue;
+    const connections=Array.isArray(item.Connections)?item.Connections:[];
+    const compatible=connections.filter(c=>/\b(CCS|Type 2)\b/i.test(String(c?.ConnectionType?.Title||"")));
+    const dc=compatible.some(c=>/CCS/i.test(String(c.ConnectionType?.Title||"")));
+    const ac=compatible.some(c=>/Type 2/i.test(String(c.ConnectionType?.Title||""))&&!/CCS/i.test(String(c.ConnectionType?.Title||"")));
+    const power=(list)=>list.map(c=>Number(c.PowerKW)).filter(v=>isNum(v)&&v>0&&v<=500);
+    const dcPower=power(compatible.filter(c=>/CCS/i.test(String(c.ConnectionType?.Title||""))));
+    const acPower=power(compatible.filter(c=>/Type 2/i.test(String(c.ConnectionType?.Title||""))&&!/CCS/i.test(String(c.ConnectionType?.Title||""))));
+    const access=item?.UsageType?.IsPayAtLocation===true?"unknown":
+      item?.UsageType?.IsPublicAccess===false?"private":"unknown";
+    const name=String(address.Title||"Stesen cas (nama OCM tidak direkodkan)").slice(0,100);
+    out.push({id:"ocm:"+id,osmUrl:"https://openchargemap.org/site/poi/details/"+id,
+      name,operator:String(item?.OperatorInfo?.Title||"Tidak direkodkan").slice(0,90),
+      coordinates:[lon,lat],ac,dc,otherDC:false,
+      type:dc&&ac?"AC/DC":dc?"DC":ac?"AC":"Tidak diketahui",
+      acPowerKw:acPower.length?Math.max(...acPower):null,
+      dcPowerKw:dcPower.length?Math.max(...dcPower):null,
+      powerKw:dcPower.length?Math.max(...dcPower):acPower.length?Math.max(...acPower):null,
+      access,roadProgress:clamp(projection.progress,0,1),
+      kmAlong:clamp(projection.progress,0,1)*routeKm,offsetKm:projection.offsetKm,
+      lastOsmChecked:"Tidak diketahui",notes:"Sumber: Open Charge Map",
+      accessNeedsCheck:true,knownConnector:dc||ac,availability:"Tidak diketahui",
+      sources:["OCM"]});
+  }
+  return out;
+}
+export function mergeChargingStations(osm=[],ocm=[]){
+  const result=[];
+  for(const station of [...osm.map(s=>({...s,sources:["OSM"]})),...ocm]){
+    const name=String(station.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const previous=result.find(x=>{
+      const other=String(x.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+      return haversine(x.coordinates,station.coordinates)<.12&&
+        (name===other||(!name||!other)||Math.min(name.length,other.length)<8);
+    });
+    if(!previous){result.push(station);continue;}
+    previous.sources=[...new Set([...(previous.sources||[]),...(station.sources||[])])];
+    // Never fuse power values across providers into an asserted actual output.
+    // Preserve the original observation and mark any source discrepancy.
+    if(previous.dc!==station.dc||previous.ac!==station.ac||
+      previous.powerKw!==station.powerKw)previous.sourceConflict=true;
+  }
+  return result.sort((a,b)=>a.kmAlong-b.kmAlong).slice(0,300);
+}
