@@ -12,14 +12,15 @@ function arrangeMapFirst(){
   const card=$("route-heading")?.closest("section.card");
   const map=document.querySelector(".map-hero-wrap");
   const search=$("journey-search"),legend=$("journey-map-legend"),
-    timeline=$("journey-timeline");
+    charge=$("charge-v2"),timeline=$("journey-timeline");
   const shell=document.querySelector(".shell"),mast=document.querySelector(".mast");
-  if(!card||!shell||!search||!map||!legend||!timeline||!mast)return;
+  if(!card||!shell||!search||!map||!legend||!charge||!timeline||!mast)return;
   card.classList.add("primary-map-card");
   shell.insertBefore(card,mast);
   search.after(map);
   map.after(legend);
-  legend.after(timeline);
+  legend.after(charge);
+  charge.after(timeline);
 }
 arrangeMapFirst();
 const fmt=(v,d=1)=>Number(v).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -31,6 +32,47 @@ let activeMapStyle="fiord",mapInitialized=false;
 let result=null,map=null,mapReady=false,markers=[],routePlanner=null,smart=null,phase4=null,phase5=null,journey=null,selectedScenario="manual";
 let raf=0,playing=false,progress=0,elapsed=0,startedAt=0;
 let simulationMs=12000;
+function renderChargeV2(){
+ const panel=$("charge-v2");if(!panel)return;
+ const route=routePlanner?.route,stations=phase5?.stations||[],plan=phase5?.plan||null,verified=phase5?.verified||null;
+ const searched=phase5?.chargerScanStatus==="success";
+ const set=(id,value)=>{$(id).textContent=value;};
+ const step=(i,done)=>$("charge-v2-step"+i).classList.toggle("done",!!done);
+ step(1,route);step(2,route&&searched);step(3,route&&verified?.safe);
+ const soc=verified?.safe?verified.finishSoc:(route&&result&&result.reachAtAll?result.arrivalSoc:null);
+ set("charge-v2-soc",soc==null?"—":fmt(soc,1)+"%");
+ set("charge-v2-count",searched?stations.length+" rekod":"—");
+ set("charge-v2-stops",plan?.kind==="none"?"Tidak perlu":plan?.stops?.length?plan.stops.length+" hentian":searched?"Tiada yang sesuai":"—");
+ set("charge-v2-time",plan?.totalMinutesKnown!=null?"±"+fmt(plan.totalMinutesKnown,0)+" min":"—");
+ set("charge-v2-source",searched?"Sumber: "+(stations.some(s=>s.sources?.includes("OCM"))?"OSM + OCM":"OSM"):"OSM / OCM jika tersedia");
+ const button=$("charge-v2-action");button.disabled=!route;
+ let state,label,desc,action,evidence;
+ if(!route){
+   [state,label,desc,action,evidence]=["idle","BELUM ADA LALUAN",
+     "Pilih lokasi mula dan destinasi, kemudian kira laluan sebenar menggunakan OSRM.",
+     "① Kira laluan dahulu","Tiada data pengecas. Masukkan laluan untuk bermula."];
+ }else if(!searched){
+   [state,label,desc,action,evidence]=["search","SEDIA CARI PENGECAS",
+     "Laluan sebenar dikira. Cari rekod pengecas AC/DC untuk cadangan hentian.",
+     "② Cari pengecas laluan","Carian atas permintaan sahaja; status aktif pengecas tidak tersedia secara langsung."];
+ }else if(verified?.safe){
+   [state,label,desc,action,evidence]=["verified","JALAN DISAHKAN OSRM",
+     "Laluan melalui hentian disemak. SOC dan masa cas masih anggaran.",
+     "✓ Semak semula laluan","Semakan OSRM bukan bukti pengecas aktif. Sahkan dengan operator."];
+ }else if(plan?.stops?.length){
+   [state,label,desc,action,evidence]=["warn","HENTIAN BELUM DISAHKAN",
+     plan.stops.length+" hentian dicadangkan. Sahkan jarak jalan dan baki bateri.",
+     "③ Semak jalan & SOC","Jarak geografi bukan lencongan memandu. Semak OSRM dahulu."];
+ }else{
+   [state,label,desc,action,evidence]=[plan?.kind==="none"?"verified":"warn",
+     plan?.kind==="none"?"ANGGARAN TAK PERLU CAS":"TIADA HENTIAN SESUAI",
+     plan?.message||"Belum ada hentian dicadangkan daripada data semasa.",
+     "↻ Cari semula pengecas","Tiada rekod bukan bukti tiada pengecas di lokasi."];
+ }
+ panel.dataset.state=state;
+ set("charge-v2-state",label);set("charge-v2-message",desc);
+ button.textContent=action;set("charge-v2-evidence",evidence);
+}
 function stopSimulation(){
   if(raf)cancelAnimationFrame(raf);
   raf=0;playing=false;progress=0;elapsed=0;startedAt=0;
@@ -178,6 +220,7 @@ function refresh(){
   routePlanner?.onEstimate(result);
   smart?.render(result);
   phase5?.onBatteryChanged();
+  renderChargeV2();
   updateAnimation();
 }
 function syncRoute(focus=true){
@@ -512,6 +555,7 @@ phase4=createPhase4Controls({
   }
 });
 function refreshJourneyView(){
+  renderChargeV2();
   if(!journey)return;
   const realRoute=routePlanner?.route;
   if(!realRoute||!result){journey.resetTimeline();return;}
@@ -560,6 +604,7 @@ routePlanner=createRoutePlanner({
   },
   onRouteInvalidated:()=>{
     phase5?.reset();
+    renderChargeV2();
     journey?.resetTimeline();
     // Invalidate the old route's battery output rather than leaving stale SOC.
     routeKey="custom";
@@ -610,6 +655,17 @@ journey=createJourneyExperience({
     await routePlanner.calculate();
     return !!routePlanner.hasActualRoute;
   }
+});
+$("charge-v2-action").addEventListener("click",async()=>{
+  if(!routePlanner?.route)return;
+  const button=$("charge-v2-action");button.disabled=true;
+  try{
+    if(phase5?.chargerScanStatus!=="success"||!phase5?.plan?.stops?.length)await phase5?.scan();
+    else await phase5?.verify();
+  }finally{renderChargeV2();}
+});
+$("charge-v2-detail").addEventListener("click",()=>{
+  $("phase5-hub")?.scrollIntoView({behavior:"smooth",block:"start"});
 });
 $("route").value=routeKey;
 syncRoute(false);
