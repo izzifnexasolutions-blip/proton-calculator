@@ -120,3 +120,24 @@
 .phase5-filter-label{flex-wrap:wrap;justify-content:end}
 }
 @media(max-width:380px){.phase5-stop-metrics{grid-template-columns:1fr 1fr}.phase5-stop-metrics span:nth-child(3){grid-column:1/-1}.phase5-data-grid{grid-template-columns:1fr 1fr}.phase5-data-grid>div:last-child{grid-column:1/-1}}
+
+/* Always visible critical charging window - also works offline after OSRM. */
+.phase5-window{margin:13px 0 16px;padding:16px;border-radius:19px;border:1px solid #548d9d;background:linear-gradient(130deg,#143647,#17253f)}
+.phase5-window[data-needed=true]{border-color:#e3a06b;background:linear-gradient(130deg,#3c3040,#192740);box-shadow:inset 0 1px #ffd7a923,0 6px 22px #ffaf6214}
+.phase5-window-head{display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.phase5-window-head span{font-size:10px;color:#98edeb;letter-spacing:.11em;font-weight:950}
+.phase5-window-head button{border-radius:10px;padding:9px 12px;min-height:35px;border:1px solid #72c8dc;background:#1a5970;color:#dcfaff;font-size:10px;font-weight:900}
+.phase5-window-head button:disabled{opacity:.4}
+.phase5-window>strong{font-size:17px;color:#f1feff;line-height:1.45;display:block;font-weight:900}
+.phase5-window-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:15px 0 10px}
+.phase5-window-metrics>div{border:1px solid #3f677c;border-radius:12px;background:#132b3d;padding:10px 9px;min-width:0}
+.phase5-window-metrics>div:nth-child(1){border-top:3px solid #70e3f0}
+.phase5-window-metrics>div:nth-child(2){border-top:3px solid #f4b47c}
+.phase5-window-metrics>div:nth-child(3){border-top:3px solid #ffc57e}
+.phase5-window-metrics>div:nth-child(4){border-top:3px solid #f183a0}
+.phase5-window-metrics small{display:block;font-size:9px;color:#9dbbd0;letter-spacing:.02em;font-weight:900;line-height:1.4}
+.phase5-window-metrics b{display:block;font:700 24px/1.15 "Rajdhani",system-ui,sans-serif;color:#e6fafe;margin-top:7px;white-space:nowrap}
+#phase5-window-place{font-size:11px;color:#c5e4eb;line-height:1.5;font-weight:750;margin:8px 0}
+.phase5-window-legend{font-size:10px;color:#94b1c5;line-height:1.6}
+@media(max-width:760px){.phase5-window{padding:12px}.phase5-window-metrics{gap:5px}.phase5-window-metrics>div{padding:7px 5px}.phase5-window-metrics small{font-size:8px}.phase5-window-metrics b{font-size:20px}.phase5-window>strong{font-size:14px}}
+@media(max-width:380px){.phase5-window-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.phase5-window-metrics b{font-size:23px}}
