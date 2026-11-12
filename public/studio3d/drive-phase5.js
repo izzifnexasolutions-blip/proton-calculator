@@ -4,6 +4,7 @@
  */
 import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace,chargeDuration} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
+import {WEST_COAST_CHARGERS,WEST_COAST_CATALOG_DATE} from "./west-coast-public-chargers.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
@@ -51,6 +52,12 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         lat:p.lat,lon:p.lon,source:p.source||"OSM"});
     }
     if(places.length>50)places=places.slice(0,50);
+  }
+  function westCoastGeo(){
+    return {type:"FeatureCollection",features:WEST_COAST_CHARGERS.map(s=>({
+      type:"Feature",properties:{id:s.id,name:s.name,operator:s.operator,dcKw:s.dcKw,acKw:s.acKw,state:s.state},
+      geometry:{type:"Point",coordinates:[s.lon,s.lat]}
+    }))};
   }
   function chargerGeo(){
     const sel=new Set(plan?.stops?.map(x=>x.station.id)||[]);
@@ -119,7 +126,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       if(content.url){
         const link=document.createElement("a");link.href=content.url;
         link.target="_blank";link.rel="noopener noreferrer";
-        link.textContent="Lihat rekod OpenStreetMap";container.append(link);
+        link.textContent="Lihat rekod sumber pengecas ↗";container.append(link);
       }
       new window.maplibregl.Popup({closeButton:true,closeOnClick:true,maxWidth:"280px"})
         .setLngLat(coords).setDOMContent(container).addTo(map);
@@ -139,6 +146,20 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
           "Titik ini bukan pengecas fizikal. Semak stesen AC/DC berdekatan."]
       });
     });
+    map.on("click","westCoastCatalogPins",event=>{
+      const feature=event?.features?.[0];if(!feature)return;
+      const station=WEST_COAST_CHARGERS.find(s=>s.id===Number(feature.properties?.id));
+      if(!station)return;
+      addPopup([station.lon,station.lat],{
+        title:"⚡ "+station.name,
+        lines:["Katalog Pantai Barat · "+station.state+" · "+station.operator,
+          station.dcKw?"DC CCS2 "+station.dcKw+" kW direkodkan":"DC CCS2 tidak direkodkan",
+          station.acKw?"AC Type 2 "+station.acKw+" kW direkodkan":"AC Type 2 tidak direkodkan",
+          "Koordinat rekod OCM · data diperiksa "+WEST_COAST_CATALOG_DATE,
+          "Status semasa, bay kosong dan akses mesti disahkan dengan operator."],
+        url:station.sourceUrl
+      });
+    });
     map.on("click","phase5StationDots",event=>{
       const feature=event?.features?.[0];if(!feature)return;
       const name=String(feature.properties?.name||"Stesen pengecas (OSM)");
@@ -155,7 +176,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         url:station?.osmUrl
       });
     });
-    for(const id of ["phase5BatteryMilestones","phase5StationDots"]){
+    for(const id of ["phase5BatteryMilestones","phase5StationDots","westCoastCatalogPins"]){
       map.on("mouseenter",id,()=>{if(map.getCanvas?.())map.getCanvas().style.cursor="pointer";});
       map.on("mouseleave",id,()=>{if(map.getCanvas?.())map.getCanvas().style.cursor="";});
     }
@@ -168,6 +189,13 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         "line-width":5,"line-opacity":.7,
         "line-color":["match",["get","kind"],"highway","#64ddec","hilly","#ffcd84",
           "rural","#86e7ae","road","#ba9bea","#7c9cac"]}});
+    if(!map.getSource("westCoastCatalog"))
+      map.addSource("westCoastCatalog",{type:"geojson",data:westCoastGeo()});
+    if(!map.getLayer("westCoastCatalogPins"))
+      map.addLayer({id:"westCoastCatalogPins",type:"circle",source:"westCoastCatalog",
+        paint:{"circle-color":"#f0b969","circle-radius":7,
+          "circle-stroke-color":"#102537","circle-stroke-width":2,
+          "circle-opacity":.95}});
     if(!map.getSource("phase5Stations"))map.addSource("phase5Stations",{
       type:"geojson",data:chargerGeo()});
     if(!map.getLayer("phase5StationDots"))
@@ -337,11 +365,11 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     div.dataset.type=s.dc?"DC":s.ac?"AC":"unknown";
     const title=document.createElement("strong");title.textContent=s.name;
     const sub=document.createElement("div");sub.className="phase5-connectors";
-    sub.textContent=s.type+(s.powerKw?" · "+fmt(s.powerKw,0)+" kW (OSM)":" · kuasa tak direkodkan");
+    sub.textContent=s.type+(s.powerKw?" · "+fmt(s.powerKw,0)+" kW direkodkan":" · kuasa tak direkodkan");
     const desc=document.createElement("small");
     desc.textContent="±km "+fmt(s.kmAlong,0)+" pada laluan · "+
       fmt(s.offsetKm,1)+" km jarak lurus · akses: "+s.access+
-      " · status pengecas: tidak diketahui";
+      " · status langsung: tidak diketahui";
     const link=document.createElement("a");link.href=s.osmUrl;link.target="_blank";
     link.rel="noopener noreferrer";link.textContent="Lihat rekod pengecas ↗";
     const source=document.createElement("small");
@@ -361,10 +389,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         "Tiada rekod pengecas daripada carian semasa. Ini bukan bukti tiada pengecas di kawasan tersebut.";
       list.append(text);return;
     }
-    items.slice(0,16).forEach(s=>list.append(stationCard(s)));
-    if(items.length>16){
+    items.slice(0,30).forEach(s=>list.append(stationCard(s)));
+    if(items.length>30){
       const note=document.createElement("small");note.className="phase5-data-notice";
-      note.textContent="Memaparkan 16 daripada "+items.length+
+      note.textContent="Memaparkan 30 daripada "+items.length+
         " rekod. Had hasil dikenakan untuk paparan LIVE.";list.append(note);
     }
   }
@@ -376,7 +404,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     const title=document.createElement("strong");title.textContent=(i+1)+". "+s.name;
     top.append(type,title);
     const meta=document.createElement("p");
-    meta.textContent="OSM · "+s.operator+" · anggaran km "+fmt(s.kmAlong,0)+
+    meta.textContent=(s.sources||["OSM"]).join("+")+" · "+s.operator+" · anggaran km "+fmt(s.kmAlong,0)+
       " · "+fmt(s.offsetKm,1)+" km jarak lurus"+
       (s.powerKw?" · kuasa direkodkan "+fmt(s.powerKw,0)+" kW":" · kuasa tidak diketahui");
     const metrics=document.createElement("div");metrics.className="phase5-stop-metrics";
@@ -503,18 +531,21 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       if(!data.stationError&&!data.elevationError)cache.set(key,data);
       renderRoads();renderStations();replan();onMapReady();
       write("phase5-data-source",elevations?"SRTM 90m · anggaran":"SRTM tiada data");
-      write("phase5-charger-source",data.stationError?"Data pengecas gagal":
-        "OSM"+(["success","partial"].includes(data.ocmStatus)?" + Open Charge Map":"")+
-        " · "+stations.length+" rekod"+
-        (data.ocmStatus==="not_configured"?" (OCM tidak dikonfigurasi)":""));
-      write("phase5-scan-count",data.stationError?"Carian gagal":stations.length+" stesen");
-      if(data.stationError||data.elevationError)
+      write("phase5-charger-source",data.stationError?"Tiada rekod koridor ditemui":
+        (data.catalogCount?"Katalog Pantai Barat ("+data.catalogCount+") + ":"")+
+        (data.providerStationError?"OSM terganggu":"OSM")+
+        (["success","partial"].includes(data.ocmStatus)?" + OCM API":"")+
+        " · "+stations.length+" rekod");
+      write("phase5-scan-count",stations.length+" rekod");
+      if(data.catalogFallback)
+        status("✓ Menggunakan "+data.catalogCount+" rekod katalog OCM Pantai Barat berhampiran laluan. Overpass terganggu; kesahihan semasa tidak diketahui.","warn");
+      else if(data.stationError||data.elevationError)
         status("Data separa. "+
           (data.stationError?data.stationError+" ":"")+
           (data.elevationError?data.elevationError:"")+
           ". Keputusan yang tiada data tidak diandaikan.","warn");
       else status("Carian selesai: "+stations.length+
-        " stesen OSM dalam koridor sampel. Semak soket dan ketersediaan sebelum bertolak.","success");
+        " rekod pengecas daripada OSM / katalog Pantai Barat dalam koridor. Sahkan akses dan status operator.","success");
     }catch(e){
       if(mine!==rev)return;
       status("Pelayan awam tidak tersedia: "+String(e.message||e).slice(0,160)+
