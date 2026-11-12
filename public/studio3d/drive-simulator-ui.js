@@ -508,6 +508,22 @@ phase4=createPhase4Controls({
     if(result)updateAnimation();
   }
 });
+function refreshJourneyView(){
+  if(!journey)return;
+  const realRoute=routePlanner?.route;
+  if(!realRoute||!result){journey.resetTimeline();return;}
+  const inputs=getInputs();
+  journey.render({
+    route:{...realRoute,startName:routePlanner.start?.name||"Mula",
+      endName:routePlanner.end?.name||"Destinasi"},
+    result,
+    profile:phase5?.profile||[],
+    places:phase5?.places||[],
+    plan:phase5?.plan||null,
+    settings:{speed:inputs.speed,people:inputs.people,cargoKg:inputs.cargo,
+      rain:inputs.rain,traffic:inputs.traffic,mode:inputs.mode}
+  });
+}
 routePlanner=createRoutePlanner({
   PRESETS,
   mapProvider:()=>map,
@@ -539,6 +555,7 @@ routePlanner=createRoutePlanner({
   },
   onRouteInvalidated:()=>{
     phase5?.reset();
+    journey?.resetTimeline();
     // Invalidate the old route's battery output rather than leaving stale SOC.
     routeKey="custom";
     $("route").value="custom";
@@ -557,8 +574,34 @@ phase5=createPhase5Planner({
   getRoute:()=>routePlanner?.route,
   getResult:()=>result,
   getMap:()=>map,
-  mapReady:()=>mapReady
+  mapReady:()=>mapReady,
+  onUpdated:refreshJourneyView
+});
+journey=createJourneyExperience({
+  PRESETS,
+  getRoute:()=>routePlanner?.route,
+  getResult:()=>result,
+  getProfile:()=>phase5?.profile||[],
+  getPlaces:()=>phase5?.places||[],
+  getPlan:()=>phase5?.plan||null,
+  getInputSettings:getInputs,
+  getMap:()=>map,
+  mapReady:()=>mapReady,
+  onVariantChange:chooseVariant,
+  onPresetChange:key=>{
+    const preset=PRESETS[key];
+    if(preset)regionKey=preset.region||"malaysia";
+    $("route").value=key;
+    syncRoute(true);
+  },
+  onRouteRequest:async(from,to)=>{
+    if(!routePlanner?.setSearchEndpoints(from,to))return false;
+    await routePlanner.calculate();
+    return !!routePlanner.hasActualRoute;
+  }
 });
 $("route").value=routeKey;
 syncRoute(false);
+journey.setPreset(routeKey);
+journey.setVariant(variant);
 window.addEventListener("load",initMap,{once:true});
