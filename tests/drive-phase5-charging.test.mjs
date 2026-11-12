@@ -73,8 +73,8 @@ test("bounded user-triggered Overpass & SRTM requests",()=>{
   const query=api.makeOverpassQuery(fixtures.coords);
   assert.match(query,/amenity/);
   assert.match(query,/charging_station/);
-  assert.match(query,/around:4500/);
-  assert.match(query,/out center 350/);
+  assert.match(query,/around:7000/);
+  assert.match(query,/out center 450/);
   const url=api.makeElevationURL(fixtures.coords);
   assert.match(url,/opentopodata.org/);
   assert.ok(decodeURIComponent(url).split("|").length<=21);
