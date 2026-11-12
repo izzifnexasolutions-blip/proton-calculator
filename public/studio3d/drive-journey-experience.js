@@ -45,7 +45,7 @@ export function parsePhotonResults(data){
   return list.slice(0,6);
 }
 export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,getPlaces,getPlan,
-  getInputSettings,getMap,mapReady,onRouteRequest,onVariantChange,onPresetChange}){
+  getInputSettings,getMap,mapReady,onRouteRequest,onVariantChange,onPresetChange,onSOCChange,onChargerSearch}){
   const inputs={from:$("journey-from"),to:$("journey-to")},lists={from:$("journey-from-results"),to:$("journey-to-results")};
   const chosen={from:null,to:null},versions={from:0,to:0},debounce={from:0,to:0};
   const local=initialPoints(PRESETS),cache=new Map();
@@ -197,6 +197,32 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     if(setPreset(preset.value)){onPresetChange?.(preset.value);resetTimeline();}
   });
   $("journey-variant").addEventListener("change",()=>onVariantChange?.($("journey-variant").value));
+  function setSOC(value){
+    const v=clamp(Number(value)||80,5,100);
+    $("journey-start-soc").value=String(v);
+    $("journey-start-soc-value").textContent=Math.round(v)+"%";
+    $("journey-start-soc").style.setProperty("--journey-soc-fill",v+"%");
+  }
+  $("journey-start-soc").addEventListener("input",()=>{
+    const v=Number($("journey-start-soc").value);
+    setSOC(v);
+    onSOCChange?.(v);
+  });
+  $("journey-find-chargers").addEventListener("click",async()=>{
+    if(!getRoute()){status("Kira laluan OSRM dahulu sebelum cari pengecas.","warn");return;}
+    const button=$("journey-find-chargers");
+    if(button.disabled)return;
+    button.disabled=true;
+    $("journey-charger-feedback").textContent="Mencari rekod pengecas OSM sepanjang laluan…";
+    try{
+      await onChargerSearch?.();
+      $("journey-charger-feedback").textContent=
+        $("phase5-status")?.textContent||"Carian selesai. Semak kad pengecas di bawah peta.";
+    }catch(e){
+      $("journey-charger-feedback").textContent=
+        "Carian belum berjaya: "+String(e?.message||e).slice(0,120);
+    }finally{button.disabled=!getRoute();}
+  });
   function setVariant(v){
     $("journey-variant").value=v==="prime"?"prime":"premium";
   }
@@ -225,6 +251,8 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
   });
   function resetTimeline(){
     routeModel=null;hasGeoRoute=false;activeZoneId=null;
+    $("journey-find-chargers").disabled=true;
+    $("journey-charger-feedback").textContent="Kira laluan dulu. Status pengecas sebenar perlu disahkan dengan operator.";
     $("journey-timeline").open=false;
     $("journey-timeline-brief").textContent="Kira laluan untuk melihat zon";
     $("journey-timeline-list").replaceChildren();
@@ -274,6 +302,8 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
     const {route,result,profile,places,plan,settings}=contextInfo||{};
     if(!route||!result){resetTimeline();return;}
     routeModel=buildJourneyTimeline({route,result,profile,places,plan,settings});
+    $("journey-find-chargers").disabled=false;
+    setSOC(result.startSoc);
     hasGeoRoute=true;
     const summary=routeModel.summary||{};
     $("journey-distance").textContent=formatKm(route.km,1)+" km";
@@ -345,6 +375,6 @@ export function createJourneyExperience({PRESETS,getRoute,getResult,getProfile,g
       $("journey-rail").children[i].dataset.current=String(routeModel.rail[i]?.id===selected.id);
   }
   resetTimeline();
-  return {setPreset,setVariant,render,resetTimeline,setProgress,onMapReady,
+  return {setPreset,setVariant,setSOC,render,resetTimeline,setProgress,onMapReady,
     get selected(){return {...chosen}},get routeModel(){return routeModel}};
 }
