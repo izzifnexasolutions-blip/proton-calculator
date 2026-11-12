@@ -1,6 +1,6 @@
 /* Phase 5: single-click-only requests to free community data providers.
    No polling, auto-retry, paid keys, hidden background search, or fake data. */
-import {cumulativeLine,pointAtFraction,parseElevations,parseChargingStations} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,parseElevations,parseChargingStations,parseOcmStations,mergeChargingStations} from "./drive-phase5-core.js";
 export const OSM_OVERPASS="https://overpass.private.coffee/api/interpreter";
 export const SRTM_URL="https://api.opentopodata.org/v1/srtm90m";
 export const OSRM_CAR="https://routing.openstreetmap.de/routed-car/route/v1/driving/";
@@ -42,13 +42,18 @@ export async function fetchRouteContext(route,{signal}={}){
   if(!resp.ok)throw Error(String(raw.error||"Data peta terbuka tidak tersedia.").slice(0,140));
   const output={
     stations:[],places:[],elevations:null,
-    stationError:raw.stationError||null,elevationError:raw.elevationError||null
+    stationError:raw.stationError||null,elevationError:raw.elevationError||null,ocmStatus:raw.ocmStatus||"not_configured"
   };
   if(!output.stationError){
     output.stations=parseChargingStations({elements:raw.stations||[]},line,route.km);
     output.places=Array.isArray(raw.places)?raw.places.filter(p=>
       typeof p.name==="string"&&p.name.length&&Number.isFinite(p.lat)&&Number.isFinite(p.lon)).slice(0,140):[];
   }
+  if(output.ocmStatus==="success"||output.ocmStatus==="partial"){
+    const fromOcm=parseOcmStations(raw.ocmStations||[],line,route.km);
+    output.stations=mergeChargingStations(output.stations,fromOcm);
+  }
+  if(output.stationError&&(output.ocmStatus==="success"||output.ocmStatus==="partial"))output.stationError=null;
   if(!output.elevationError){
     output.elevations=parseElevations({results:raw.elevations||[]},line);
     if(!output.elevations)output.elevationError="Sampel ketinggian SRTM tidak mencukupi.";
