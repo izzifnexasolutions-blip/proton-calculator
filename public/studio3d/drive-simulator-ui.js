@@ -594,6 +594,7 @@ journey=createJourneyExperience({
     refresh();
   },
   onChargerSearch:()=>phase5?.scan(),
+  onSearchEdited:()=>routePlanner?.clearSearchRoute(),
   onPresetChange:key=>{
     const preset=PRESETS[key];
     if(preset)regionKey=preset.region||"malaysia";
