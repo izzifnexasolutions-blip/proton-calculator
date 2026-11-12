@@ -165,3 +165,17 @@
   .journey-step-metrics>span,.journey-drain{padding:6px}
 }
 @media(prefers-reduced-motion:reduce){.journey-swap,.journey-chevron,.journey-rail-segment{transition:none!important}}
+
+/* Fast battery control and optional charging discovery stay within map-first workflow. */
+.journey-quick-soc{margin-top:10px;display:grid;grid-template-columns:auto minmax(90px,1fr) auto;align-items:center;gap:12px;padding:10px 12px;background:#112b3f;border:1px solid #365b72;border-radius:12px}
+.journey-quick-soc label{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px;color:#cce9f3;font-weight:850}
+.journey-quick-soc label strong{color:#a5f5d8;font:800 20px/1 "Rajdhani",system-ui,sans-serif}
+.journey-quick-soc input{appearance:none;-webkit-appearance:none;width:100%;height:9px;border-radius:99px;border:1px solid #527990;background:linear-gradient(to right,#6edcc5 0%,#63d3d5 var(--journey-soc-fill,80%),#26445b var(--journey-soc-fill,80%),#26445b 100%);accent-color:#82ecd9;cursor:pointer}
+.journey-quick-soc input::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:19px;height:19px;border-radius:50%;border:3px solid #21657a;background:#b6fff0;box-shadow:0 0 0 3px #62ddd52e}
+.journey-quick-soc input::-moz-range-thumb{width:15px;height:15px;border-radius:50%;border:3px solid #21657a;background:#b6fff0}
+.journey-quick-soc>span{color:#8baec3;font-size:9px;max-width:155px;line-height:1.4}
+.journey-charger-action{margin:1px 0 13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.journey-charger-action button{background:linear-gradient(125deg,#96dfff,#a8b5fa);border:1px solid #aadfff;border-radius:12px;min-height:42px;padding:10px 15px;color:#142239;font-weight:950;font-size:11px}
+.journey-charger-action button:disabled{opacity:.40;cursor:not-allowed}
+.journey-charger-action small{color:#a4c2d6;line-height:1.5;flex:1;min-width:170px;font-size:10px}
+@media(max-width:650px){.journey-quick-soc{grid-template-columns:1fr auto;gap:9px}.journey-quick-soc input{grid-column:1/-1;grid-row:2}.journey-quick-soc>span{font-size:8px;text-align:right}.journey-quick-soc label strong{font-size:19px}.journey-charger-action button{width:100%}}
