@@ -2,6 +2,7 @@
  * Never mix them into route stop planning or show them as live availability.
  * Pin render only when explicitly toggled on; named placeholders never get pins.
  */
+import {REVIEW_BUCKETS,reviewBucket,auditSummary,auditFilter,exportAuditCsv} from "./ev-review-audit.js";
 const URL="/studio3d/ev-user-import-catalog-20261113.json";
 const $=id=>document.getElementById(id);
 const empty=()=>({type:"FeatureCollection",features:[]});
@@ -17,12 +18,12 @@ function formatPlace(record){
  return [record.name,record.area,record.state,record.operator].filter(Boolean).join(" · ");
 }
 export function createUserEvCatalog(getMap){
- let records=[],enabled=false,layerMap=null,loadRequested=null;
+ let records=[],enabled=false,layerMap=null,loadRequested=null,currentMatches=[];
  const feedback=$("ev-upload-status"),listing=$("ev-upload-results"),
    search=$("ev-upload-search"),toggle=$("ev-upload-toggle");
  function pointGeo(){
    const set=new Set();
-   const rows=records.filter(r=>r.reviewStatus==="user_supplied_unverified" &&
+   const rows=records.filter(r=>reviewBucket(r)==="candidate" &&
      Number.isFinite(r.lon)&&Number.isFinite(r.lat)).filter(r=>{
        const key=r.name.toLocaleLowerCase("ms-MY")+"|"+r.lat.toFixed(3)+"|"+r.lon.toFixed(3);
        if(set.has(key))return false;
@@ -70,22 +71,35 @@ export function createUserEvCatalog(getMap){
  }
  function updateList(){
    if(!records.length)return;
-   const q=(search.value||"").toLocaleLowerCase("ms-MY").trim();
-   const matches=q?records.filter(r=>formatPlace(r).toLocaleLowerCase("ms-MY").includes(q)):records;
-   const visible=matches.slice(0,35);
+   currentMatches=auditFilter(records,{query:search.value,
+     state:$("ev-audit-state").value,status:$("ev-audit-bucket").value});
+   const visible=currentMatches.slice(0,35);
    listing.replaceChildren();
    for(const r of visible){
      const item=document.createElement("div");item.className="ev-upload-item";
      const name=document.createElement("strong");name.textContent=r.name;
-     const meta=document.createElement("small");meta.textContent=[r.area,r.state,r.operator,r.connectorRaw].filter(Boolean).join(" · ");
+     const meta=document.createElement("small");
+     meta.textContent=[r.area,r.state,r.operator,r.connectorRaw].filter(Boolean).join(" · ");
      const status=document.createElement("span");
-     status.textContent=r.reviewStatus==="needs_review_placeholder"?"Nama umum · semakan wajib":
-       r.reviewStatus==="needs_geocode"?"Perlu koordinat":"Koordinat Excel · belum disahkan";
+     status.textContent=REVIEW_BUCKETS[reviewBucket(r)];
      status.dataset.risk=r.reviewStatus;
-     item.append(name,meta,status);listing.append(item);
+     const provenance=document.createElement("small");provenance.className="ev-audit-extra";
+     provenance.textContent="Sumber: "+r.sourceFile+" · baris "+r.sourceRow+
+       (r.duplicateOf?" · Pendua: "+r.duplicateOf:"");
+     item.append(name,meta,status,provenance);listing.append(item);
    }
-   feedback.textContent=matches.length+" daripada "+records.length+
-     " rekod dipadankan · menunjukkan "+visible.length+" pertama. Data belum disahkan.";
+   feedback.textContent=currentMatches.length+" daripada "+records.length+
+     " rekod dipadankan · menunjukkan "+visible.length+" pertama. Semua data belum disahkan.";
+   $("ev-audit-export").disabled=currentMatches.length===0;
+ }
+ function downloadFiltered(){
+   if(!currentMatches.length)return;
+   const csv=exportAuditCsv(currentMatches);
+   const url=globalThis.URL.createObjectURL(new Blob(["\uFEFF",csv],{type:"text/csv;charset=utf-8"}));
+   const a=document.createElement("a");a.href=url;
+   a.download="FARIS_EV_Audit_Semakan_"+new Date().toISOString().slice(0,10)+".csv";
+   document.body.append(a);a.click();a.remove();
+   window.setTimeout(()=>globalThis.URL.revokeObjectURL(url),1000);
  }
  // The 510-row reference dataset is not required for route search or the
  // initial map. Load only when the user opens the review list or enables pins.
@@ -97,6 +111,16 @@ export function createUserEvCatalog(getMap){
      if(!Array.isArray(data?.records)||data.records.length!==510)
        throw Error("Data import tidak lengkap");
      records=data.records;
+     const summary=auditSummary(records);
+     const stateSelect=$("ev-audit-state");
+     for(const state of summary.states){
+       const option=document.createElement("option");option.value=state;
+       option.textContent=state;stateSelect.append(option);
+     }
+     $("ev-audit-count-candidate").textContent=summary.candidate+" calon";
+     $("ev-audit-count-duplicate").textContent=summary.duplicate+" pendua";
+     $("ev-audit-count-placeholder").textContent=summary.placeholder+" nama generik";
+     $("ev-audit-count-missing").textContent=summary.no_coordinates+" tiada koordinat";
      pointCache=pointGeo();
      $("ev-upload-count").textContent=records.length+" rekod";
      $("ev-upload-geopins").textContent=pointCache.features.length+" pin calon";
@@ -121,8 +145,11 @@ export function createUserEvCatalog(getMap){
    else install();
  });
  search.addEventListener("input",()=>{if(records.length)updateList();});
+ $("ev-audit-state").addEventListener("change",updateList);
+ $("ev-audit-bucket").addEventListener("change",updateList);
+ $("ev-audit-export").addEventListener("click",downloadFiltered);
  $("ev-upload-count").textContent="510 rekod";
- $("ev-upload-geopins").textContent="215 calon";
+ $("ev-upload-geopins").textContent="194 calon unik";
  $("ev-upload-quarantine").textContent="235 nama umum";
  $("ev-upload-geocode").textContent="60 tiada koordinat";
  feedback.textContent="Buka senarai atau aktifkan pin untuk membaca data. Status lokasi belum disahkan.";
