@@ -53,7 +53,7 @@
   </div>
   <div class="phase5-action-bar">
     <button type="button" id="phase5-scan" class="phase5-scan">⌁ Analisis Laluan + Cari Pengecas</button>
-    <span class="phase5-action-note">Hanya aktif selepas laluan OSRM berjaya. Setiap tekan membuat satu carian kepada dua pelayan percuma.</span>
+    <span class="phase5-action-note">Hanya aktif selepas OSRM berjaya. Carian menggunakan pelayan komuniti OSM dan SRTM; zon cas tetap tersedia jika carian gagal.</span>
   </div>
   <div class="phase5-status" id="phase5-status" role="status" aria-live="polite">Kira laluan OSRM dahulu, kemudian tekan analisis.</div>
   <div class="phase5-data-grid">
@@ -78,6 +78,19 @@
   <div class="phase5-risk" id="phase5-risk">
     <small>BATTERY SAFETY CHECK</small>
     <strong id="phase5-arrival-status">—</strong>
+  </div>
+
+  <div class="phase5-window" id="phase5-window" data-needed="unknown">
+    <div class="phase5-window-head"><span>⚡ ZON CARI PENGECAS — DIKIRA TERUS</span><button id="phase5-zoom-zone" type="button" disabled>⌖ Tunjuk Pada Peta</button></div>
+    <strong id="phase5-window-summary">Kira laluan OSRM untuk tahu di kilometer mana perlu mula mencari pengecas.</strong>
+    <div class="phase5-window-metrics">
+      <div><small>MULA CARI · 30%</small><b id="phase5-window-start">—</b></div>
+      <div><small>SEBELUM · 15%</small><b id="phase5-window-last">—</b></div>
+      <div><small>HAD · 10%</small><b id="phase5-window-reserve">—</b></div>
+      <div><small>HABIS · 0%</small><b id="phase5-window-empty">—</b></div>
+    </div>
+    <p id="phase5-window-place">Nama tempat berhampiran muncul jika ada rekod penempatan OSM. Kilometer zon tetap dikira walaupun carian pengecas gagal.</p>
+    <div class="phase5-window-legend">Biru: mula mencari · Jingga: sebelum reserve 15% · Merah: bateri dijangka kosong. Ini jarak pada laluan OSRM, bukan lokasi pengecas yang telah disahkan.</div>
   </div>
   <div class="phase5-plan">
     <div class="phase5-plan-head"><div><small>CADANGAN HENTIAN · BELUM DISAHKAN</small>

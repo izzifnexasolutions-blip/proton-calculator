@@ -1,17 +1,18 @@
 /* Phase 5: single-click-only requests to free community data providers.
    No polling, auto-retry, paid keys, hidden background search, or fake data. */
 import {cumulativeLine,pointAtFraction,parseElevations,parseChargingStations} from "./drive-phase5-core.js";
-export const OSM_OVERPASS="https://overpass-api.de/api/interpreter";
+export const OSM_OVERPASS="https://overpass.private.coffee/api/interpreter";
 export const SRTM_URL="https://api.opentopodata.org/v1/srtm90m";
 export const OSRM_CAR="https://routing.openstreetmap.de/routed-car/route/v1/driving/";
 export function makeOverpassQuery(geometry){
   const line=cumulativeLine(geometry);
   if(!line||!line.lengthKm)throw Error("Laluan jalan tiada geometri sah.");
-  const count=Math.max(8,Math.min(30,Math.ceil(line.lengthKm/12)+1));
+  const count=Math.max(8,Math.min(42,Math.ceil(line.lengthKm/13)+1));
   const list=Array.from({length:count},(_,i)=>pointAtFraction(line,i/(count-1)));
   const joined=list.map(([lon,lat])=>lat.toFixed(5)+","+lon.toFixed(5)).join(",");
-  return '[out:json][timeout:22];nwr["amenity"="charging_station"](around:4500,'+
-    joined+');out center 350;';
+  return '[out:json][timeout:22];'+
+    'nwr["amenity"="charging_station"](around:7000,'+joined+');out center 450;'+
+    'node["place"~"^(city|town|village)$"](around:4000,'+joined+');out body 140;';
 }
 export function makeElevationURL(geometry){
   const line=cumulativeLine(geometry);
@@ -26,7 +27,7 @@ export async function fetchRouteContext(route,{signal}={}){
   if(!Array.isArray(geometry)||geometry.length<2)throw Error("Kira laluan OSRM dahulu.");
   const line=cumulativeLine(geometry);
   if(!line?.lengthKm)throw Error("Geometri laluan tidak sah.");
-  const chargingCount=Math.max(8,Math.min(30,Math.ceil(line.lengthKm/12)+1));
+  const chargingCount=Math.max(8,Math.min(42,Math.ceil(line.lengthKm/13)+1));
   const elevationCount=Math.max(9,Math.min(21,Math.ceil(line.lengthKm/22)+1));
   const chargerPoints=Array.from({length:chargingCount},(_,i)=>pointAtFraction(line,i/(chargingCount-1)));
   const elevationPoints=Array.from({length:elevationCount},(_,i)=>pointAtFraction(line,i/(elevationCount-1)));
@@ -40,11 +41,13 @@ export async function fetchRouteContext(route,{signal}={}){
   const raw=await resp.json().catch(()=>({}));
   if(!resp.ok)throw Error(String(raw.error||"Data peta terbuka tidak tersedia.").slice(0,140));
   const output={
-    stations:[],elevations:null,
+    stations:[],places:[],elevations:null,
     stationError:raw.stationError||null,elevationError:raw.elevationError||null
   };
   if(!output.stationError){
     output.stations=parseChargingStations({elements:raw.stations||[]},line,route.km);
+    output.places=Array.isArray(raw.places)?raw.places.filter(p=>
+      typeof p.name==="string"&&p.name.length&&Number.isFinite(p.lat)&&Number.isFinite(p.lon)).slice(0,140):[];
   }
   if(!output.elevationError){
     output.elevations=parseElevations({results:raw.elevations||[]},line);

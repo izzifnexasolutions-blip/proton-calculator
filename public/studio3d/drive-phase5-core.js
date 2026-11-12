@@ -170,7 +170,10 @@ export function buildRouteSituations(route,elevations=null){
     const source=type==="uphill"||type==="downhill"||type==="highland"?
       "Ketinggian SRTM kasar · bukan profil cerun jalan":roadway.source;
     const prev=sectors.at(-1);
-    if(prev&&prev.type===type){
+    // Retain ~20–45 km checkpoints on long single-class motorway routes.
+    // They are route slices, NOT invented land-use or traffic transitions.
+    const maxSectionKm=Math.max(20,Math.min(45,km/7));
+    if(prev&&prev.type===type&&prev.km+(endKm-startKm)<=maxSectionKm){
       prev.endKm=endKm;prev.km=endKm-prev.startKm;
     }else sectors.push({type,kind,label,startKm,endKm,km:endKm-startKm,source,road:name,terrain});
   }
@@ -191,6 +194,55 @@ function energyAt(result,km){
   return result.needed*distance/result.km;
 }
 export function energyAtDistance(result,km){return energyAt(result,km)}
+/**
+ * Always-visible planning window, independent of OSM station availability.
+ * Returns DISTANCES, never invents a charger or settlement at the location.
+ * 30% prompts looking, 15% recommended latest arrival to a charger,
+ * 10% low reserve, 0% estimated stop. This is NOT a route guarantee.
+ */
+export function chargeSafetyWindow(result){
+  if(!result||!(result.km>0)||!(result.effectiveBattery>0))return null;
+  function kmAtSOC(targetSoc){
+    if(result.startSoc<=targetSoc)return 0;
+    const end=socAtDistance(result,result.km);
+    if(end!==null&&end>targetSoc)return result.km;
+    let left=0,right=result.km;
+    for(let i=0;i<40;i++){
+      const mid=(left+right)/2;
+      if(socAtDistance(result,mid)>targetSoc)left=mid;
+      else right=mid;
+    }
+    return (left+right)/2;
+  }
+  const needed=!result.reachWithReserve;
+  const first=kmAtSOC(30),last=kmAtSOC(15),reserve=kmAtSOC(10),empty=kmAtSOC(0);
+  return {
+    needed,searchFromKm:first,latestStopKm:last,
+    reserve10Km:reserve,emptyKm:empty,
+    alreadyLow:result.startSoc<=15,
+    label:!needed?"Pengecasan tidak diwajibkan oleh model perjalanan.":
+      result.startSoc<=15?"Bateri permulaan rendah — cas sebelum bertolak.":
+      "Cari pengecas sebelum SOC jatuh di bawah 15%."
+  };
+}
+export function nearKnownPlace(places,line,km,limitKm=15){
+  if(!Array.isArray(places)||!line||!Number.isFinite(km))return null;
+  const point=pointAtFraction(line,clamp(km/Math.max(.0001,line.lengthKm),0,1));
+  if(!point)return null;
+  let candidate=null;
+  for(const p of places){
+    if(!p?.name||!Number.isFinite(p.lat)||!Number.isFinite(p.lon))continue;
+    const direct=haversine(point,[p.lon,p.lat]);
+    if(direct>limitKm)continue;
+    const projection=nearLine([p.lon,p.lat],line);
+    if(!projection||projection.offsetKm>8)continue;
+    const score=direct+projection.offsetKm*.2;
+    if(!candidate||score<candidate.score)
+      candidate={name:p.name,kind:p.kind||"place",distanceKm:direct,score,
+        approximate:true};
+  }
+  return candidate;
+}
 export function socAtDistance(result,km){
   if(!result||!result.effectiveBattery)return null;
   return clamp((result.startingEnergy-energyAt(result,km))/result.effectiveBattery*100,0,100);

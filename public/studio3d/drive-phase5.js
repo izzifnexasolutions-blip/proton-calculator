@@ -2,14 +2,14 @@
  * All route/charger claims are conditional and explicitly attributed.
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
-import {cumulativeLine,pointAtFraction,buildRouteSituations,zoneAtDistance,planCharging} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
 const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
-  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false;
+  let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,chargerDataVerified=false,places=[];
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false;
   let lastScan=0,lastVerify=0;
   const write=(id,str)=>{$(id).textContent=str;};
@@ -36,12 +36,47 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       geometry:{type:"Point",coordinates:s.coordinates}
     }))};
   }
+
+  function safetyWindow(){return route?chargeSafetyWindow(getResult()):null;}
+  function safetyPoints(){
+    const w=safetyWindow();
+    if(!line||!w?.needed)return emptyGeo();
+    const markers=[
+      {at:w.searchFromKm,kind:"search",label:"Mula cari DC/AC (30%)"},
+      {at:w.latestStopKm,kind:"last",label:"Had cadangan tiba stesen (15%)"},
+      {at:w.reserve10Km,kind:"warning",label:"Reserve 10%"},
+      {at:w.emptyKm,kind:"empty",label:"Bateri kosong (anggaran)"}
+    ];
+    return {type:"FeatureCollection",features:markers.map(m=>({
+      type:"Feature",properties:{kind:m.kind,label:m.label,km:m.at},
+      geometry:{type:"Point",coordinates:pointAtFraction(line,m.at/route.km)}
+    }))};
+  }
+  function safetySegment(){
+    const w=safetyWindow();
+    if(!line||!w?.needed||w.latestStopKm<=w.searchFromKm)return emptyGeo();
+    const start=w.searchFromKm/route.km,end=w.latestStopKm/route.km;
+    const points=[pointAtFraction(line,start)];
+    for(let i=1;i<line.coords.length-1;i++){
+      const ratio=line.distances[i]/line.lengthKm;
+      if(ratio>start&&ratio<end)points.push(line.coords[i]);
+    }
+    points.push(pointAtFraction(line,end));
+    return {type:"FeatureCollection",features:[{
+      type:"Feature",properties:{label:"Zon cari cas 30%–15%"},
+      geometry:{type:"LineString",coordinates:points}
+    }]};
+  }
   function mapUpdate(){
     const map=getMap();if(!map||!mapReady())return;
     const road=map.getSource("phase5Road");
     if(road)road.setData(roadData);
     const station=map.getSource("phase5Stations");
     if(station)station.setData(chargerGeo());
+    const safeLine=map.getSource("phase5ChargeWindow");
+    if(safeLine)safeLine.setData(safetySegment());
+    const safeDots=map.getSource("phase5SafetyPoints");
+    if(safeDots)safeDots.setData(safetyPoints());
   }
   function onMapReady(){
     const map=getMap();if(!map||!mapReady())return;
@@ -58,21 +93,39 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
         "circle-color":["match",["get","type"],"DC","#cf9fff","AC","#8bebb4","#9fb2c4"],
         "circle-radius":["case",["get","selected"],8,5],
         "circle-stroke-color":"#102537","circle-stroke-width":2}});
+    if(!map.getSource("phase5ChargeWindow"))
+      map.addSource("phase5ChargeWindow",{type:"geojson",data:safetySegment()});
+    if(!map.getLayer("phase5ChargeCorridor"))
+      map.addLayer({id:"phase5ChargeCorridor",type:"line",source:"phase5ChargeWindow",
+        paint:{"line-color":"#ffc27b","line-width":9,"line-opacity":.87}});
+    if(!map.getSource("phase5SafetyPoints"))
+      map.addSource("phase5SafetyPoints",{type:"geojson",data:safetyPoints()});
+    if(!map.getLayer("phase5BatteryMilestones"))
+      map.addLayer({id:"phase5BatteryMilestones",type:"circle",source:"phase5SafetyPoints",
+        paint:{"circle-radius":["match",["get","kind"],"last",9,"empty",10,7],
+          "circle-color":["match",["get","kind"],"search","#63e4f0",
+            "last","#ffc27b","warning","#ffad6a","empty","#ed5379","#b8d0d9"],
+          "circle-stroke-color":"#0c263e","circle-stroke-width":3}});
     mapUpdate();
   }
   function reset(){
     rev++;controller?.abort();verifyController?.abort();controller=null;verifyController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
-    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;
+    roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;chargerDataVerified=false;places=[];
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
     write("phase5-charger-source","OSM belum dimuatkan");
-    write("phase5-scan-count","0 stesen");
+    write("phase5-scan-count","Belum dicari");
     write("phase5-road-count","0 zon");
     write("phase5-plan-title","Kira laluan dahulu");
     write("phase5-plan-desc","Dapatkan geometri OSRM sebelum merancang hentian.");
     write("phase5-arrival-status","—");write("phase5-total-time","Belum dikira");
+    $("phase5-window").dataset.needed="unknown";
+    $("phase5-zoom-zone").disabled=true;
+    write("phase5-window-summary","Kira laluan OSRM untuk tahu di mana perlu cas.");
+    for(const id of ["phase5-window-start","phase5-window-last","phase5-window-reserve","phase5-window-empty"])write(id,"—");
+    write("phase5-window-place","Nama tempat berhampiran dipaparkan jika direkodkan dalam OSM.");
     message("Akses jalan ke stesen belum disahkan.");
     for(const id of ["phase5-road-list","phase5-road-strip","phase5-stops",
       "phase5-alternatives","phase5-station-list"])$(id).replaceChildren();
@@ -107,8 +160,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       const icon=document.createElement("span");icon.className="phase5-road-icon";icon.textContent=icons[s.kind]||"◌";
       const text=document.createElement("div");text.className="phase5-road-info";
       const title=document.createElement("strong");title.textContent=s.label;
-      const desc=document.createElement("small");desc.textContent=fmt(s.startKm,0)+"–"+
-        fmt(s.endKm,0)+" km · "+s.source;
+      const desc=document.createElement("small");
+      const locality=nearKnownPlace(places,line,(s.startKm+s.endKm)/2,9);
+      desc.textContent=fmt(s.startKm,0)+"–"+fmt(s.endKm,0)+" km · "+
+        (locality?"Sekitar "+locality.name+" (OSM) · ":"")+s.source;
       const length=document.createElement("b");length.textContent=fmt(s.km,1)+" km";
       text.append(title,desc);row.append(icon,text,length);list.append(row);
     }
@@ -136,6 +191,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     if(!items.length){
       const text=document.createElement("p");text.className="phase5-empty";
       text.textContent=stations.length?"Tiada stesen dalam kategori ini.":
+        !chargerDataVerified?"Carian OSM belum berjaya. Zon cas di atas tetap sah sebagai anggaran, tetapi lokasi pengecas belum dapat disahkan.":
         "Tiada rekod pengecas daripada carian semasa. Ini bukan bukti tiada pengecas di kawasan tersebut.";
       list.append(text);return;
     }
@@ -169,12 +225,45 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     link.target="_blank";link.textContent="Semak lokasi OSM";
     card.append(top,meta,metrics,warn,link);return card;
   }
+
+  function showSafetyWindow(){
+    const w=safetyWindow();
+    if(!w){$("phase5-zoom-zone").disabled=true;return;}
+    const result=getResult();
+    $("phase5-window").dataset.needed=String(w.needed);
+    $("phase5-zoom-zone").disabled=!w.needed;
+    const showKm=n=>"km "+fmt(n,0);
+    write("phase5-window-start",w.needed?showKm(w.searchFromKm):"Tidak perlu");
+    write("phase5-window-last",w.needed?showKm(w.latestStopKm):"Tidak perlu");
+    write("phase5-window-reserve",w.needed?showKm(w.reserve10Km):"Tidak perlu");
+    write("phase5-window-empty",w.needed?showKm(w.emptyKm):"Tidak perlu");
+    if(!w.needed)
+      write("phase5-window-summary","✓ Anggaran bateri cukup untuk sampai dengan reserve sekurang-kurangnya 10%.");
+    else if(w.alreadyLow)
+      write("phase5-window-summary","⚠ CAS SEBELUM BERTOLAK — SOC mula "+fmt(result.startSoc,0)+"%, bawah had cadangan 15%.");
+    else write("phase5-window-summary","⚡ CARI PENGECAS DALAM ZON km "+
+      fmt(w.searchFromKm,0)+"–"+fmt(w.latestStopKm,0)+
+      ". Jangan tunggu sehingga bateri kosong pada sekitar km "+fmt(w.emptyKm,0)+".");
+    const local=nearKnownPlace(places,line,(w.searchFromKm+w.latestStopKm)/2,16);
+    if(local&&w.needed)
+      write("phase5-window-place","Kawasan berhampiran: "+local.name+
+        " (OSM: "+local.kind+", ±"+fmt(local.distanceKm,1)+
+        " km jarak lurus daripada laluan; bukan lokasi pengecas).");
+    else if(w.needed){
+      const coords=pointAtFraction(line,w.latestStopKm/route.km);
+      write("phase5-window-place",coords?
+        "Had 15% pada peta: "+coords[1].toFixed(4)+"°N, "+
+        coords[0].toFixed(4)+"°E. Nama tempat belum disahkan oleh OSM.":
+        "Nama kawasan belum diketahui. Rujuk titik amaran pada peta.");
+    }else write("phase5-window-place","Model meramalkan boleh sampai tanpa berhenti cas. Baki sebenar bergantung pada perjalanan.");
+  }
   function renderPlan(){
     const res=getResult(),holder=$("phase5-stops"),alts=$("phase5-alternatives");
     holder.replaceChildren();alts.replaceChildren();
     $("phase5-copy").disabled=!route;
     $("phase5-verify").disabled=!plan?.stops?.length;
     if(!route||!res){write("phase5-plan-title","Kira laluan dahulu");return;}
+    showSafetyWindow();
     const needed=!res.reachWithReserve;
     $("phase5-risk").dataset.state=!res.reachAtAll?"bad":needed?"warn":"safe";
     write("phase5-arrival-status",needed?
@@ -236,7 +325,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       let data=cache.get(key);
       if(!data){lastScan=now;data=await fetchRouteContext(route,{signal:controller.signal});}
       if(mine!==rev)return;
-      elevations=data.elevations;stations=data.stations;
+      elevations=data.elevations;stations=data.stations;places=data.places||[];
       chargerDataVerified=!data.stationError;
       profile=buildRouteSituations(route,elevations);
       roadData=roadGeo();
@@ -245,7 +334,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       write("phase5-data-source",elevations?"SRTM 90m · anggaran":"SRTM tiada data");
       write("phase5-charger-source",data.stationError?"Overpass gagal":
         "OSM · "+stations.length+" rekod");
-      write("phase5-scan-count",stations.length+" stesen");
+      write("phase5-scan-count",data.stationError?"Carian gagal":stations.length+" stesen");
       if(data.stationError||data.elevationError)
         status("Data separa. "+
           (data.stationError?data.stationError+" ":"")+
@@ -302,8 +391,14 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       "Jika tidak cukup, bateri habis sekitar km "+fmt(r.stopAtKm,0),
       "Reserve: 15% di stesen, 10% ketika tiba",
       "Data: "+(elevations?"OSRM + SRTM anggaran":"OSRM; SRTM tiada"),
-      "Bilangan stesen OSM dalam carian: "+stations.length,
+      "Bilangan stesen OSM dalam carian: "+(chargerDataVerified?stations.length:"Belum disahkan — carian OSM gagal/belum dibuat"),
       "Pelan: "+(plan?.message||"Belum dibuat")];
+    const safety=safetyWindow();
+    if(safety?.needed)lines.push("ZON CARI PENGECAS: km "+fmt(safety.searchFromKm,0)+
+      " hingga "+fmt(safety.latestStopKm,0)+
+      "; 10% sekitar km "+fmt(safety.reserve10Km,0)+
+      "; 0% sekitar km "+fmt(safety.emptyKm,0)+
+      ". Zon ialah anggaran, bukan stesen fizikal.");
     for(const s of plan?.stops||[])lines.push(
       s.station.name+" · "+s.kind+" · ±km "+fmt(s.station.kmAlong,0)+
       " · SOC ±"+fmt(s.arrivalSoc,0)+"% → "+fmt(s.targetSoc,0)+"%"+
@@ -312,6 +407,17 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       "Bateri, ketinggian dan masa mengecas ialah anggaran simulasi — semak dengan operator sebelum memandu.");
     return lines.join("\n");
   }
+  $("phase5-zoom-zone").addEventListener("click",()=>{
+    const w=safetyWindow(),map=getMap();
+    if(!w?.needed||!line||!map||!mapReady()){
+      status("Peta belum sedia. Kira dan buka laluan dahulu.","warn");return;
+    }
+    const coords=pointAtFraction(line,((w.searchFromKm+w.latestStopKm)/2)/route.km);
+    if(coords&&typeof map.flyTo==="function")
+      map.flyTo({center:coords,zoom:11,essential:true});
+    status("Peta difokuskan pada zon cari cas km "+fmt(w.searchFromKm,0)+"–"+
+      fmt(w.latestStopKm,0)+". Cari stesen berhampiran selepas data OSM dimuatkan.","success");
+  });
   $("phase5-scan").addEventListener("click",scan);
   $("phase5-verify").addEventListener("click",verify);
   $("phase5-filter").addEventListener("change",renderStations);

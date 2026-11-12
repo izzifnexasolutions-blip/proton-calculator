@@ -87,3 +87,37 @@ test("OSRM verified charging legs recompute the actual route energy",()=>{
   assert.equal(typeof v.safe,"boolean");
   assert.ok(Number.isFinite(v.finishSoc));
 });
+
+test("532 km road retains >10 honest checkpoints instead of two blocks",()=>{
+  const km=532.5,coords=Array.from({length:35},(_,i)=>[101.7+i*.02,3.1+i*.05]);
+  const road={km,coordinates:coords,roadSteps:[{name:"Lebuhraya Utara Selatan",ref:"E1",km}]};
+  const sectors=p5.buildRouteSituations(road);
+  assert.ok(sectors.length>=10&&sectors.length<=28);
+  assert.ok(Math.abs(sectors.reduce((n,s)=>n+s.km,0)-km)<.0001);
+  assert.ok(sectors.every(s=>s.source.includes("OSRM")&&s.kind==="highway"));
+});
+test("charging search window works even when OSM returns no charger records",()=>{
+  const trip=estimate({variant:"premium",soc:80,distance:532.5,road:"mixed",speed:75,ac:true});
+  const window=p5.chargeSafetyWindow(trip);
+  assert.equal(window.needed,true);
+  assert.ok(window.searchFromKm>0&&window.searchFromKm<window.latestStopKm);
+  assert.ok(window.latestStopKm<window.reserve10Km);
+  assert.ok(window.reserve10Km<window.emptyKm&&window.emptyKm<532.5);
+  assert.equal(p5.planCharging(trip,[]).kind,"unavailable");
+});
+test("short trip says no compulsory stop; very low SOC says charge before departure",()=>{
+  const enough=p5.chargeSafetyWindow(estimate({variant:"premium",soc:100,distance:35}));
+  assert.equal(enough.needed,false);
+  const low=p5.chargeSafetyWindow(estimate({variant:"prime",soc:10,distance:100}));
+  assert.equal(low.needed,true);
+  assert.equal(low.alreadyLow,true);
+  assert.equal(low.searchFromKm,0);
+  assert.equal(low.latestStopKm,0);
+});
+test("nearest place is an attributed OSM vicinity not a charger promise",()=>{
+  const coords=[[101.7,3.15],[101.8,3.20],[101.9,3.25]];
+  const index=p5.cumulativeLine(coords);
+  const near=p5.nearKnownPlace([{name:"Pekan Sampel",kind:"town",lon:101.8,lat:3.20}],index,index.lengthKm/2);
+  assert.equal(near.name,"Pekan Sampel");
+  assert.equal(near.approximate,true);
+});
