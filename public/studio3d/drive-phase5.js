@@ -2,7 +2,7 @@
  * All route/charger claims are conditional and explicitly attributed.
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
-import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace} from "./drive-phase5-core.js";
+import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace,chargeDuration} from "./drive-phase5-core.js";
 import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -344,7 +344,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       " · status pengecas: tidak diketahui";
     const link=document.createElement("a");link.href=s.osmUrl;link.target="_blank";
     link.rel="noopener noreferrer";link.textContent="Lihat rekod pengecas ↗";
-    div.append(title,sub,desc,link);return div;
+    const source=document.createElement("small");
+    source.textContent="Sumber: "+(s.sources||["OSM"]).join(" + ")+
+      (s.sourceConflict?" · Maklumat sumber bercanggah — semak operator":"");
+    div.append(title,sub,desc,source,link);return div;
   }
   function renderStations(){
     const list=$("phase5-station-list");list.replaceChildren();
@@ -386,7 +389,9 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     warn.textContent="Akses, kuasa sebenar, pengecas kosong/berfungsi dan masa cas belum disahkan.";
     const link=document.createElement("a");link.href=s.osmUrl;link.rel="noopener noreferrer";
     link.target="_blank";link.textContent="Semak lokasi OSM";
-    card.append(top,meta,metrics,warn,link);return card;
+    const evidence=document.createElement("small");
+    evidence.textContent="Sumber: "+(s.sources||["OSM"]).join(" + ");
+    card.append(top,meta,metrics,evidence,warn,link);return card;
   }
 
   function showSafetyWindow(){
@@ -498,8 +503,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       if(!data.stationError&&!data.elevationError)cache.set(key,data);
       renderRoads();renderStations();replan();onMapReady();
       write("phase5-data-source",elevations?"SRTM 90m · anggaran":"SRTM tiada data");
-      write("phase5-charger-source",data.stationError?"Overpass gagal":
-        "OSM · "+stations.length+" rekod");
+      write("phase5-charger-source",data.stationError?"Data pengecas gagal":
+        "OSM"+(["success","partial"].includes(data.ocmStatus)?" + Open Charge Map":"")+
+        " · "+stations.length+" rekod"+
+        (data.ocmStatus==="not_configured"?" (OCM tidak dikonfigurasi)":""));
       write("phase5-scan-count",data.stationError?"Carian gagal":stations.length+" stesen");
       if(data.stationError||data.elevationError)
         status("Data separa. "+
@@ -523,25 +530,61 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     if(now-lastVerify<8000){status("Tunggu seketika sebelum permintaan OSRM seterusnya.","warn");return;}
     lastVerify=now;working=true;const mine=++rev;
     verifyController=new AbortController();
-    const timeout=setTimeout(()=>verifyController?.abort(),13000);
+    const timeout=setTimeout(()=>verifyController?.abort(),19000);
     $("phase5-verify").disabled=true;
-    message("Memeriksa jalan memandu ke hentian yang dicadangkan menggunakan OSRM…");
+    message("Menguji jarak jalan sebenar, penggunaan bateri dan masa cas bagi pilihan hentian…");
     try{
-      const res=await verifyDrivingStops(route,plan.stops,{signal:verifyController.signal});
+      // Route checks are explicit-user-action only and limited to at most two
+      // candidate plans to avoid overloading the free community router.
+      const candidates=[plan,...(plan.alternatives||[])].filter(p=>p?.stops?.length).slice(0,2);
+      const inspected=[];
+      for(const candidate of candidates){
+        if(mine!==rev||verifyController.signal.aborted)break;
+        try{
+          const road=await verifyDrivingStops(route,candidate.stops,{signal:verifyController.signal});
+          const battery=verifyChargeEnergy(getResult(),candidate.stops,road.legKm);
+          const result=getResult(),cap=result.effectiveBattery;
+          const stops=candidate.stops.map((stop,i)=>{
+            const actual=battery.steps[i],addedKwh=Math.max(0,(stop.targetSoc-actual.arrivalSoc)/100*cap);
+            const mins=chargeDuration(stop.station,result.variant,addedKwh,stop.kind==="DC");
+            return {...stop,arrivalSoc:actual.arrivalSoc,addKwh:addedKwh,minutes:mins,
+              drivingDetourKm:road.deltaKm,provisional:false,roadVerified:true};
+          });
+          const totalMinutesKnown=stops.every(x=>x.minutes!==null)?
+            stops.reduce((n,x)=>n+x.minutes,0):null;
+          inspected.push({candidate,road,battery,stops,totalMinutesKnown});
+          if(battery.safe)break;
+        }catch(error){
+          inspected.push({candidate,error:String(error?.message||error)});
+        }
+      }
       if(mine!==rev)return;
-      const battery=verifyChargeEnergy(getResult(),plan.stops,res.legKm);
-      verified={...res,...battery};
-      message((battery.safe?"✓ Jalan ke stesen ditemui. ":"⚠ Margin bateri tidak cukup. ")+
-        "Jarak laluan melalui stesen ±"+fmt(res.totalKm,1)+" km"+
-        " (perbezaan berbanding terus ±"+fmt(res.deltaKm,1)+" km). "+
-        battery.steps.map(x=>x.name+" tiba ±"+fmt(x.arrivalSoc,0)+"%").join(" · ")+
-        ". SOC akhir ±"+fmt(battery.finishSoc,0)+"%. "+
-        battery.reason+" Semak operator: kuasa, akses, soket, harga, tempahan dan stesen berfungsi.",
-        battery.safe?"success":"warn");
-    }catch(e){
-      if(mine!==rev)return;
-      message("OSRM tidak dapat sahkan jalan masuk ke pengecas. "+
-        String(e.message||e).slice(0,130)+" · Jangan bergantung pada hentian ini.","error");
+      const best=inspected.find(x=>x.battery?.safe);
+      if(!best){
+        verified=null;
+        const unsafe=inspected.find(x=>x.battery);
+        message(unsafe?
+          "⚠ OSRM menjumpai laluan tetapi baki bateri tidak selamat: SOC akhir ±"+
+          fmt(unsafe.battery.finishSoc,1)+"%. Cari stesen lain atau cas sebelum bertolak.":
+          "OSRM tidak dapat sahkan laluan ke pengecas. Jangan bergantung pada cadangan ini.","warn");
+        return;
+      }
+      plan={...best.candidate,stops:best.stops,
+        totalMinutesKnown:best.totalMinutesKnown,
+        message:"Jalan melalui hentian disemak oleh OSRM. SOC dan masa cas ialah anggaran; status pengecas mesti disahkan dengan operator."};
+      verified={...best.road,...best.battery,
+        totalMinutesKnown:best.totalMinutesKnown,checkedWith:"OSRM"};
+      renderPlan();
+      message("✓ Jalan ke hentian telah disemak · "+fmt(best.road.totalKm,1)+
+        " km termasuk lencongan (+"+fmt(Math.max(0,best.road.deltaKm),1)+" km) · "+
+        best.battery.steps.map(x=>x.name+" tiba "+fmt(x.arrivalSoc,1)+"%").join(" · ")+
+        " · baki destinasi "+fmt(best.battery.finishSoc,1)+"% · "+
+        (best.totalMinutesKnown===null?"masa cas tidak diketahui":
+          "masa mengecas ±"+fmt(best.totalMinutesKnown,0)+" min")+
+        ". Ini bukan pengesahan stesen beroperasi, kadar cas sebenar atau kesesuaian akses.","success");
+    }catch(error){
+      if(mine===rev)message("Semakan laluan gagal: "+
+        String(error?.message||error).slice(0,140),"error");
     }finally{
       clearTimeout(timeout);
       if(mine===rev){verifyController=null;working=false;$("phase5-verify").disabled=!plan?.stops?.length;}
