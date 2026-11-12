@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="./drive-phase5.css?v=20261112b">
 <link rel="stylesheet" href="./drive-journey-experience.css?v=20261112a">
 <link rel="stylesheet" href="./drive-map-explained.css?v=20261112a">
+<link rel="stylesheet" href="./drive-charging-v2.css?v=20261112v2">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -31,7 +32,7 @@
     <a class="active" aria-current="page" href="/studio3d/drive-simulator.html">⚡ Drive Simulator</a>
   </nav>
 </header>
-<div class="live-banner"><span class="live-dot"></span> MALAYSIA · LIVE ROAD & CHARGING INTELLIGENCE · PHASE 05</div>
+<div class="live-banner"><span class="live-dot"></span> MALAYSIA · SMART CHARGING 2.0 · OSRM + OSM + OPTIONAL OCM</div>
 
 <section class="mast" aria-label="Ringkasan simulasi">
   <div class="metric metric--soc"><div class="metric-label"><span class="mini-led"></span> ARRIVAL BATTERY</div><div class="metric-number" id="m-arrival">—</div><div class="metric-unit">anggaran SOC · bukan BMS</div><div class="metric-dial" id="metric-dial" aria-hidden="true"></div></div>
@@ -251,6 +252,31 @@
         </div>
         <small>Tekan titik pada peta untuk penerangan dan kilometer. Penanda bateri ialah <b>anggaran simulasi</b>, bukan lokasi stesen cas. Status pengecas OSM perlu disahkan dengan operator.</small>
       </div>
+<section class="charge-v2" id="charge-v2" aria-label="Smart Charging Planner 2.0" data-state="idle">
+  <div class="charge-v2-top">
+    <span class="charge-v2-kicker">⚡ FARIS SMART CHARGING <b>2.0</b></span>
+    <span class="charge-v2-state" id="charge-v2-state">BELUM ADA LALUAN</span>
+  </div>
+  <div class="charge-v2-heading">
+    <div><h3>Rancang perjalanan. <em>Cas dengan yakin.</em></h3>
+      <p id="charge-v2-message" role="status" aria-live="polite">Pilih lokasi mula dan destinasi, kemudian kira laluan jalan sebenar.</p>
+    </div>
+    <button type="button" id="charge-v2-action" disabled>① Kira laluan dahulu</button>
+  </div>
+  <div class="charge-v2-steps" aria-label="Tiga langkah Smart Charging">
+    <span id="charge-v2-step1">1 · Laluan OSRM</span><span id="charge-v2-step2">2 · Cari stesen AC/DC</span><span id="charge-v2-step3">3 · Sahkan hentian</span>
+  </div>
+  <div class="charge-v2-grid" aria-live="polite">
+    <div><small>REKOD PENGECAS</small><strong id="charge-v2-count">—</strong><span id="charge-v2-source">OSM / OCM jika tersedia</span></div>
+    <div><small>HENTIAN CADANGAN</small><strong id="charge-v2-stops">—</strong><span>Belum dianggap aktif</span></div>
+    <div><small>MASA MENGECAS</small><strong id="charge-v2-time">—</strong><span>Anggaran jika ada data kuasa</span></div>
+    <div><small>SOC DESTINASI</small><strong id="charge-v2-soc">—</strong><span>Anggaran model bateri</span></div>
+  </div>
+  <div class="charge-v2-bottom">
+    <p id="charge-v2-evidence">Tiada pengecas disahkan aktif atau tersedia secara langsung. Semak pengendali sebelum bergerak.</p>
+    <button type="button" id="charge-v2-detail">Lihat semua stesen dan butiran ↓</button>
+  </div>
+</section>
 <details class="journey-timeline" id="journey-timeline" aria-labelledby="journey-timeline-heading">
         <summary>
           <span class="journey-timeline-title"><span class="journey-timeline-icon">▤</span>
@@ -485,6 +511,6 @@
 Pengiraan untuk pendidikan/perancangan, bukan alat navigasi. Jangan bergantung pada anggaran bateri sahaja untuk memandu. Sumber kapasiti/Jarak WLTP: <a href="https://emas.proton.com/wp-content/uploads/2026/01/PROTON-e.MAS-5-e-Brochure.pdf" target="_blank" rel="noopener noreferrer">brosur Proton</a>. Peta: <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>. Tiada API peta berbayar digunakan.
 </footer>
 </main>
-<script type="module" src="./drive-simulator-ui.js?v=20261112g"></script>
+<script type="module" src="./drive-simulator-ui.js?v=20261112v2"></script>
 </body>
 </html>
