@@ -272,13 +272,16 @@ function updateMap(focus="route"){
 }
 function installMapGuide(){
   if(!map)return;
+  // Both style.load and load can fire on the initial render. Avoid a second
+  // batch of source setup and an unwanted camera jump on the same style.
+  if(mapReady&&map.getSource("guide"))return;
   if(!map.getSource("guide"))map.addSource("guide",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
   if(!map.getLayer("guideHalo"))map.addLayer({id:"guideHalo",type:"line",source:"guide",
     paint:{"line-color":"#ff5378","line-width":8,"line-opacity":.22,"line-blur":4}});
   if(!map.getLayer("guideLine"))map.addLayer({id:"guideLine",type:"line",source:"guide",
     paint:{"line-color":"#ff6d95","line-width":3.5,"line-opacity":.96,"line-dasharray":[1.6,2]}});
   mapReady=true;$("map-fallback").hidden=true;
-  updateMap(mapInitialized?"region":"overview");
+  updateMap(mapInitialized?"region":PRESETS[routeKey]?"route":"region");
   routePlanner?.onMapReady();
   phase5?.onMapReady();
   journey?.onMapReady();
@@ -292,9 +295,14 @@ function initMap(){
     return;
   }
   try{
+    const startPreset=PRESETS[routeKey];
+    const startCenter=startPreset?
+      [(startPreset.from[0]+startPreset.to[0])/2,(startPreset.from[1]+startPreset.to[1])/2]:
+      (REGIONS[regionKey]||REGIONS.malaysia).center;
+    const startZoom=startPreset?6.4:(REGIONS[regionKey]||REGIONS.malaysia).zoom;
     map=new window.maplibregl.Map({
       container:"map",style:"https://tiles.openfreemap.org/styles/"+activeMapStyle,
-      center:REGIONS.malaysia.center,zoom:window.innerWidth<760?3.05:REGIONS.malaysia.zoom,minZoom:2.6,maxZoom:17,
+      center:startCenter,zoom:startZoom,minZoom:2.6,maxZoom:17,
       cooperativeGestures:true,attributionControl:true,renderWorldCopies:false
     });
     map.addControl(new window.maplibregl.NavigationControl({showCompass:false}),"top-right");
