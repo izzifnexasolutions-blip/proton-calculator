@@ -11,7 +11,7 @@ const emptyGeo=()=>({type:"FeatureCollection",features:[]});
 export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdated}){
   let route=null,line=null,profile=[],stations=[],elevations=null,plan=null,verified=null;
   let roadData=emptyGeo(),lastRenderedZone=null,lastRenderedKm=-1,
-    chargerDataVerified=false,chargerScanStatus="not_checked",places=[];
+    chargerDataVerified=false,chargerScanStatus="not_checked",places=[],areaLookupStarted=false;
   let cache=new Map(),rev=0,controller=null,verifyController=null,working=false,
     placeLookupController=null,placeLookupCache=new Map(),popupMap=null;
   let lastScan=0,lastVerify=0;
@@ -231,7 +231,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
     controller=null;verifyController=null;placeLookupController=null;
     working=false;route=null;line=null;profile=[];stations=[];elevations=null;plan=null;verified=null;
     roadData=emptyGeo();lastRenderedZone=null;lastRenderedKm=-1;
-    chargerDataVerified=false;chargerScanStatus="not_checked";places=[];
+    chargerDataVerified=false;chargerScanStatus="not_checked";places=[];areaLookupStarted=false;
     $("phase5-scan").disabled=false;$("phase5-verify").disabled=true;$("phase5-copy").disabled=true;
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
@@ -265,8 +265,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
   async function resolveRouteAreaNames(requestRevision){
     if(!route||!line||!line.lengthKm)return;
     const parent=new AbortController();placeLookupController=parent;
-    const samples=route.km>300?[.11,.25,.39,.53,.67,.81,.92]:
-      route.km>90?[.16,.34,.52,.70,.88]:[.3,.67];
+    const samples=route.km>300?[.2,.5,.8]:
+      route.km>90?[.25,.65]:[.5];
     let successes=0,failures=0;
     const info=$("journey-area-source");
     if(info)info.textContent="Menyemak nama bandar/pekan berhampiran laluan OSM…";
@@ -348,8 +348,8 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       stations.length?"success":"");
     replan();
     onUpdated?.();
-    const requestRevision=rev;
-    void resolveRouteAreaNames(requestRevision);
+    // Keep route calculation quick; optional reverse place labels run only
+    // after the user explicitly requests detailed charger/road analysis.
   }
   function renderRoads(){
     const list=$("phase5-road-list"),strip=$("phase5-road-strip");
@@ -540,6 +540,10 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
       if(mine!==rev)return;
       elevations=data.elevations;stations=data.stations;
       addPlaces(data.places||[]);
+      if(!places.length&&!areaLookupStarted){
+        areaLookupStarted=true;
+        void resolveRouteAreaNames(rev);
+      }
       chargerDataVerified=!data.stationError;
       chargerScanStatus=data.stationError?"error":"success";
       profile=buildRouteSituations(route,elevations);
