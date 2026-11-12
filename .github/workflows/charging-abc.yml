@@ -1,0 +1,26 @@
+name: Charging ABC regression
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/charging-planner-abc-20261112]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: JavaScript syntax
+        run: |
+          node --check public/studio3d/drive-phase5-core.js
+          node --check public/studio3d/drive-phase5-api.js
+          node --check public/studio3d/drive-phase5.js
+          node --check api/ev-route-context.js
+      - name: Charger and prior journey regression tests
+        run: node --test tests/*.test.mjs
