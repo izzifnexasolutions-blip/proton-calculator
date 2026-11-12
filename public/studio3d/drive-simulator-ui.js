@@ -523,6 +523,8 @@ function refreshJourneyView(){
     profile:phase5?.profile||[],
     places:phase5?.places||[],
     plan:phase5?.plan||null,
+    stations:phase5?.stations||[],
+    chargerStatus:phase5?.chargerScanStatus||"not_checked",
     settings:{speed:inputs.speed,people:inputs.people,cargoKg:inputs.cargo,
       rain:inputs.rain,traffic:inputs.traffic,mode:inputs.mode}
   });
