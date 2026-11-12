@@ -582,12 +582,13 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady,onUpdate
         (best.totalMinutesKnown===null?"masa cas tidak diketahui":
           "masa mengecas ±"+fmt(best.totalMinutesKnown,0)+" min")+
         ". Ini bukan pengesahan stesen beroperasi, kadar cas sebenar atau kesesuaian akses.","success");
+      onUpdated?.();
     }catch(error){
       if(mine===rev)message("Semakan laluan gagal: "+
         String(error?.message||error).slice(0,140),"error");
     }finally{
       clearTimeout(timeout);
-      if(mine===rev){verifyController=null;working=false;$("phase5-verify").disabled=!plan?.stops?.length;}
+      if(mine===rev){onUpdated?.();verifyController=null;working=false;$("phase5-verify").disabled=!plan?.stops?.length;}
     }
   }
   function customerReport(){
