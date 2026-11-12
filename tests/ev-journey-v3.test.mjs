@@ -31,6 +31,7 @@ test("private or incompatible public records are excluded even with OSM source",
  assert.equal(stationEvidence({...base,access:"private"}).planningCandidate,false);
  assert.equal(stationEvidence({...base,knownConnector:false}).planningCandidate,false);
  assert.equal(stationEvidence(base).planningCandidate,true);
+ assert.equal(stationEvidence({...base,sourceConflict:true}).planningCandidate,false);
  assert.equal(routeChargerShortlist([{...base,access:"private"},base]).length,1);
 });
 test("shortlist obeys type filter and is ranked by geometric offset (not road distance)",()=>{
