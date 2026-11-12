@@ -3,7 +3,7 @@
  * Not EV navigation, real-time traffic or charger availability telemetry.
  */
 import {cumulativeLine,pointAtFraction,haversine,buildRouteSituations,zoneAtDistance,planCharging,chargeSafetyWindow,nearKnownPlace,chargeDuration} from "./drive-phase5-core.js";
-import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js";
+import {fetchRouteContext,verifyDrivingStops,verifyChargeEnergy} from "./drive-phase5-api.js?v=20261112wc";
 import {WEST_COAST_CHARGERS,WEST_COAST_CATALOG_DATE} from "./west-coast-public-chargers.js";
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>Number(n).toLocaleString("ms-MY",{minimumFractionDigits:d,maximumFractionDigits:d});
