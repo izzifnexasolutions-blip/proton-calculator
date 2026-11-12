@@ -384,10 +384,10 @@ export function parseOcmStations(records,line,routeKm){
     const connections=Array.isArray(item.Connections)?item.Connections:[];
     const compatible=connections.filter(c=>/\b(CCS|Type 2)\b/i.test(String(c?.ConnectionType?.Title||"")));
     const dc=compatible.some(c=>/CCS/i.test(String(c.ConnectionType?.Title||"")));
-    const ac=compatible.some(c=>/Type 2/i.test(String(c.ConnectionType?.Title||"")));
+    const ac=compatible.some(c=>/Type 2/i.test(String(c.ConnectionType?.Title||""))&&!/CCS/i.test(String(c.ConnectionType?.Title||"")));
     const power=(list)=>list.map(c=>Number(c.PowerKW)).filter(v=>isNum(v)&&v>0&&v<=500);
     const dcPower=power(compatible.filter(c=>/CCS/i.test(String(c.ConnectionType?.Title||""))));
-    const acPower=power(compatible.filter(c=>/Type 2/i.test(String(c.ConnectionType?.Title||""))));
+    const acPower=power(compatible.filter(c=>/Type 2/i.test(String(c.ConnectionType?.Title||""))&&!/CCS/i.test(String(c.ConnectionType?.Title||""))));
     const access=item?.UsageType?.IsPayAtLocation===true?"unknown":
       item?.UsageType?.IsPublicAccess===false?"private":"unknown";
     const name=String(address.Title||"Stesen cas (nama OCM tidak direkodkan)").slice(0,100);
