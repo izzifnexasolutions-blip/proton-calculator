@@ -116,7 +116,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     write("phase5-route-source","Tiada laluan OSRM");
     write("phase5-data-source","SRTM belum dimuatkan");
     write("phase5-charger-source","OSM belum dimuatkan");
-    write("phase5-scan-count","0 stesen");
+    write("phase5-scan-count","Belum dicari");
     write("phase5-road-count","0 zon");
     write("phase5-plan-title","Kira laluan dahulu");
     write("phase5-plan-desc","Dapatkan geometri OSRM sebelum merancang hentian.");
@@ -191,6 +191,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
     if(!items.length){
       const text=document.createElement("p");text.className="phase5-empty";
       text.textContent=stations.length?"Tiada stesen dalam kategori ini.":
+        !chargerDataVerified?"Carian OSM belum berjaya. Zon cas di atas tetap sah sebagai anggaran, tetapi lokasi pengecas belum dapat disahkan.":
         "Tiada rekod pengecas daripada carian semasa. Ini bukan bukti tiada pengecas di kawasan tersebut.";
       list.append(text);return;
     }
@@ -333,7 +334,7 @@ export function createPhase5Planner({getRoute,getResult,getMap,mapReady}){
       write("phase5-data-source",elevations?"SRTM 90m · anggaran":"SRTM tiada data");
       write("phase5-charger-source",data.stationError?"Overpass gagal":
         "OSM · "+stations.length+" rekod");
-      write("phase5-scan-count",stations.length+" stesen");
+      write("phase5-scan-count",data.stationError?"Carian gagal":stations.length+" stesen");
       if(data.stationError||data.elevationError)
         status("Data separa. "+
           (data.stationError?data.stationError+" ":"")+
