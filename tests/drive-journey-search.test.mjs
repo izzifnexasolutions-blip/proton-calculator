@@ -12,13 +12,13 @@ const coreSrc=await read("drive-phase5-core.js"),coreUrl=uri(coreSrc);
 const routeUrl=uri(await read("drive-phase2.js"));
 const evUrl=uri(await read("drive-sim-core.js"));
 const modelCode=(await read("drive-journey-model.js"))
-  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(coreUrl))
-  .replace('from "./malaysia-place-index-v3.js"', "from "+JSON.stringify(new URL("malaysia-place-index-v3.js",base).href));
+  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(coreUrl));
 const modelUrl=uri(modelCode);
 const appCode=(await read("drive-journey-experience.js"))
   .replace('from "./drive-phase2.js"', "from "+JSON.stringify(routeUrl))
   .replace('from "./drive-journey-model.js"', "from "+JSON.stringify(modelUrl))
-  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(coreUrl));
+  .replace('from "./drive-phase5-core.js"', "from "+JSON.stringify(coreUrl))
+  .replace('from "./malaysia-place-index-v3.js"', "from "+JSON.stringify(new URL("malaysia-place-index-v3.js",base).href));
 const {parsePhotonResults,initialPoints}=await import(uri(appCode));
 const {buildJourneyTimeline,suggestDriveMode,estimatedPressure}=await import(modelUrl);
 const {buildRouteSituations,chargeSafetyWindow}=await import(coreUrl);
