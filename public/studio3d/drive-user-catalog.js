@@ -17,7 +17,7 @@ function formatPlace(record){
  return [record.name,record.area,record.state,record.operator].filter(Boolean).join(" · ");
 }
 export function createUserEvCatalog(getMap){
- let records=[],enabled=false,layerMap=null;
+ let records=[],enabled=false,layerMap=null,loadRequested=null;
  const feedback=$("ev-upload-status"),listing=$("ev-upload-results"),
    search=$("ev-upload-search"),toggle=$("ev-upload-toggle");
  function pointGeo(){
@@ -87,17 +87,44 @@ export function createUserEvCatalog(getMap){
    feedback.textContent=matches.length+" daripada "+records.length+
      " rekod dipadankan · menunjukkan "+visible.length+" pertama. Data belum disahkan.";
  }
- toggle.addEventListener("change",()=>{enabled=toggle.checked;install();});
- search.addEventListener("input",updateList);
- loadCatalog().then(data=>{
-   if(!Array.isArray(data?.records)||data.records.length!==510)throw Error("Data import tidak lengkap");
-   records=data.records;
-   pointCache=pointGeo();
-   $("ev-upload-count").textContent=records.length+" rekod";
-   $("ev-upload-geopins").textContent=pointCache.features.length+" pin calon";
-   $("ev-upload-quarantine").textContent=records.filter(r=>r.reviewStatus==="needs_review_placeholder").length+" nama umum";
-   $("ev-upload-geocode").textContent=records.filter(r=>r.reviewStatus==="needs_geocode").length+" tiada koordinat";
-   updateList();install();
- }).catch(error=>{feedback.textContent="Katalog tidak dapat dibaca: "+String(error.message||error);});
+ // The 510-row reference dataset is not required for route search or the
+ // initial map. Load only when the user opens the review list or enables pins.
+ function ensureLoaded(){
+   if(records.length)return Promise.resolve(records);
+   if(loadRequested)return loadRequested;
+   feedback.textContent="Memuat senarai rujukan EV…";
+   loadRequested=loadCatalog().then(data=>{
+     if(!Array.isArray(data?.records)||data.records.length!==510)
+       throw Error("Data import tidak lengkap");
+     records=data.records;
+     pointCache=pointGeo();
+     $("ev-upload-count").textContent=records.length+" rekod";
+     $("ev-upload-geopins").textContent=pointCache.features.length+" pin calon";
+     $("ev-upload-quarantine").textContent=records.filter(r=>r.reviewStatus==="needs_review_placeholder").length+" nama umum";
+     $("ev-upload-geocode").textContent=records.filter(r=>r.reviewStatus==="needs_geocode").length+" tiada koordinat";
+     updateList();install();
+     return records;
+   }).catch(error=>{
+     loadRequested=null;
+     feedback.textContent="Katalog tidak dapat dibaca: "+String(error.message||error);
+     throw error;
+   });
+   return loadRequested;
+ }
+ const details=$("ev-upload-catalog").querySelector(".ev-upload-details");
+ details.addEventListener("toggle",()=>{
+   if(details.open)void ensureLoaded().catch(()=>{});
+ });
+ toggle.addEventListener("change",()=>{
+   enabled=toggle.checked;
+   if(enabled)void ensureLoaded().catch(()=>{});
+   else install();
+ });
+ search.addEventListener("input",()=>{if(records.length)updateList();});
+ $("ev-upload-count").textContent="510 rekod";
+ $("ev-upload-geopins").textContent="215 calon";
+ $("ev-upload-quarantine").textContent="235 nama umum";
+ $("ev-upload-geocode").textContent="60 tiada koordinat";
+ feedback.textContent="Buka senarai atau aktifkan pin untuk membaca data. Status lokasi belum disahkan.";
  return {onMapReady:install};
 }
