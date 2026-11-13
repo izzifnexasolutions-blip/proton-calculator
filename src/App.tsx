@@ -70,7 +70,6 @@ const CAR_MODELS: CarModel[] = [
     image: "/images/x50.jpg",
     video: "/cars/x50.mp4",
     variants: [
-      { name: "Standard 1.5T i-GT DCT", otr: 86000, insurance: 2500 },
       { name: "Executive 1.5T i-GT DCT", otr: 92700, insurance: 2900 },
       { name: "Premium 1.5T i-GT DCT", otr: 105070, insurance: 3270 },
       { name: "Flagship 1.5T i-GT DCT", otr: 116900, insurance: 3600 },
@@ -82,10 +81,8 @@ const CAR_MODELS: CarModel[] = [
     shortName: "X70",
     image: "/images/x70.jpg",
     variants: [
-      { name: "Standard 1.5T i-GT DCT", otr: 102500, insurance: 2600 },
       { name: "Executive 1.5T i-GT DCT", otr: 110320, insurance: 3520 },
       { name: "Premium 1.5T i-GT DCT", otr: 123680, insurance: 3880 },
-      { name: "Premium X 1.5T i-GT DCT", otr: 127000, insurance: 3100 },
     ],
   },
   {
@@ -116,7 +113,6 @@ const CAR_MODELS: CarModel[] = [
     shortName: "E7 EV",
     image: "/images/e7.jpg",
     variants: [
-      { name: "Prime EV", otr: 103800, insurance: 3379 },
       { name: "Premium EV", otr: 119800, insurance: 3689 },
       { name: "Premium Plus EV", otr: 125800, insurance: 3900 },
     ],
